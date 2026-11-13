@@ -1,0 +1,6 @@
+{
+  "name": "Cashflow Board Online",
+  "description": "Authentic online Cashflow 101 board game with solo Robot mode, 6-player real-time rooms, bilingual TH/EN support, deal auctions, and automatic financial statements.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
