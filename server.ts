@@ -65,22 +65,34 @@ io.on('connection', (socket: Socket) => {
       language = 'th',
       botCount = 0,
       adminPlays = false,
+      adminPassword = '',
     }: {
       playerId: string;
       playerName: string;
       language?: Language;
       botCount?: number;
       adminPlays?: boolean;
+      adminPassword?: string;
     }) => {
+      if (!adminPlays && adminPassword !== 'Bradley') {
+        socket.emit('room:error', {
+          th: 'รหัสผ่าน Admin ไม่ถูกต้อง กรุณากรอกรหัสผ่านให้ถูกต้อง',
+          en: 'Incorrect Admin password. Please enter the valid password.',
+        });
+        return;
+      }
+
       const code = generateRoomCode();
       const safeName = playerName?.trim() || (adminPlays ? 'Player 1' : 'Admin');
+      const isSoloMode = Boolean(adminPlays);
       const room = new GameRoom(
         code,
         playerId,
         language,
         () => broadcastRoom(code),
         safeName,
-        !adminPlays
+        !adminPlays,
+        isSoloMode
       );
 
       if (adminPlays) {
@@ -88,7 +100,8 @@ io.on('connection', (socket: Socket) => {
       }
 
       const maxBots = adminPlays ? 5 : 6;
-      const safeBots = Math.min(maxBots, Math.max(0, Math.floor(botCount)));
+      const defaultBots = adminPlays ? Math.max(1, botCount) : botCount;
+      const safeBots = Math.min(maxBots, Math.max(0, Math.floor(defaultBots)));
       for (let i = 0; i < safeBots; i++) {
         room.addBot(playerId);
       }

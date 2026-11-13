@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bot, Copy, Check, Play, Plus, Sparkles, Trash2, Users, UserPlus } from 'lucide-react';
+import { Bot, Copy, Check, Lock, Play, Plus, Sparkles, Trash2, Users, UserPlus } from 'lucide-react';
 import { DREAM_OPTIONS } from '../../shared/board';
 import { CAREERS } from '../../shared/careers';
 import { GameRoomState, Language } from '../../shared/types';
@@ -10,7 +10,12 @@ interface LobbyViewProps {
   roomState: GameRoomState | null;
   playerId: string;
   errorMsg: string | null;
-  onCreateRoom: (playerName: string, botCount: number, adminPlays: boolean) => void;
+  onCreateRoom: (
+    playerName: string,
+    botCount: number,
+    adminPlays: boolean,
+    adminPassword?: string
+  ) => void;
   onJoinRoom: (roomCode: string, playerName: string) => void;
   onAddBot: () => void;
   onRemovePlayer: (targetId: string) => void;
@@ -33,8 +38,9 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   onStartGame,
 }) => {
   const [playerName, setPlayerName] = useState(language === 'th' ? 'ผู้เล่น 1' : 'Player 1');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [localError, setLocalError] = useState<string | null>(null);
   const [joinCode, setJoinCode] = useState('');
-  const [soloBots, setSoloBots] = useState(2);
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -44,163 +50,125 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
     setTimeout(() => setCopied(false), 1800);
   };
 
+  const handleCreateAdminRoom = () => {
+    if (adminPassword !== 'Bradley') {
+      setLocalError(t(language, 'wrongAdminPassword'));
+      return;
+    }
+    setLocalError(null);
+    onCreateRoom(playerName, 0, false, adminPassword);
+  };
+
+  const displayedError = localError || errorMsg;
+
   if (!roomState) {
     return (
       <main className="flex-1 overflow-y-auto px-6 py-10 flex items-center justify-center">
-        <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-          {/* Left Hero Overview */}
-          <section className="lg:col-span-6 flex flex-col justify-between bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+        <section className="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+          <div className="space-y-5">
+            {/* 1. ชื่อผู้เล่นของคุณ & 2. text box กรอกชื่อ */}
             <div>
-              <p className="text-xs font-semibold text-emerald-600 mb-3">
-                {language === 'th'
-                  ? 'Rat Race · Fast Track · 12 อาชีพ · 4 กองการ์ด'
-                  : 'Rat Race · Fast Track · 12 Careers · 4 Card Decks'}
-              </p>
-              <h1 className="font-display text-3xl lg:text-4xl font-extrabold text-slate-900 leading-tight text-balance mb-4">
-                {t(language, 'heroTitle')}
-              </h1>
-              <p className="text-sm lg:text-base text-slate-600 leading-relaxed mb-8">
-                {t(language, 'heroSubtitle')}
-              </p>
-
-              <div className="space-y-3 text-sm text-slate-700 border-t border-slate-100 pt-6">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">
-                    {language === 'th' ? 'ระบบงบการเงินอัตโนมัติ' : 'Auto Financial Statement'}
-                  </span>
-                  <span className="font-mono font-semibold text-emerald-600">
-                    {language === 'th' ? 'งบดุล + แสดงส่วนต่าง' : 'Live Ledger + Deltas'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">
-                    {language === 'th' ? 'สินเชื่อธนาคาร' : 'Bank Loan Rule'}
-                  </span>
-                  <span className="font-mono font-semibold text-orange-600">
-                    {language === 'th' ? 'ดอกเบี้ย 10% · สูงสุด 10x Cashflow' : '10%/mo · Max 10x Cashflow'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">
-                    {language === 'th' ? 'ประมูลสิทธิ์ & หุ้น' : 'Deal Auction & Stocks'}
-                  </span>
-                  <span className="font-mono font-semibold text-sky-600">
-                    {language === 'th' ? 'ขายค่านายหน้า · ขายหุ้นทุกผู้เล่น' : "Finder's Fee · Simultaneous Sell"}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">
-                    {language === 'th' ? 'โหมดฝึกสอน / Robot' : 'Coaching / Robot Mode'}
-                  </span>
-                  <span className="font-mono font-semibold text-violet-600">
-                    {language === 'th' ? 'กดถัดไปทีละ Step' : 'Manual Step-by-Step'}
-                  </span>
-                </div>
-              </div>
+              <label className="block text-sm font-semibold text-slate-800 mb-2">
+                {t(language, 'yourName')}
+              </label>
+              <input
+                type="text"
+                value={playerName}
+                onChange={(e) => setPlayerName(e.target.value)}
+                placeholder={t(language, 'namePlaceholder')}
+                maxLength={24}
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:bg-white"
+              />
             </div>
 
-            <div className="mt-8 pt-4 border-t border-slate-100 text-xs text-slate-500">
-              {language === 'th'
-                ? 'เหมาะสำหรับเล่นส่วนตัว สอนทีมงาน หรือจัดกิจกรรมเวิร์กชอปการเงิน'
-                : 'Built for solo practice, team workshops, and live financial training events.'}
-            </div>
-          </section>
-
-          {/* Right Action Forms */}
-          <section className="lg:col-span-6 flex flex-col justify-between bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-semibold text-slate-800 mb-2">
-                  {t(language, 'yourName')}
-                </label>
+            {/* 3. เข้าร่วมห้องด้วยรหัส & 4. text box กรอกรหัส และปุ่มเข้าห้องเกม */}
+            <div className="pt-4 border-t border-slate-100">
+              <label className="block text-sm font-semibold text-slate-800 mb-2">
+                {t(language, 'joinRoom')}
+              </label>
+              <div className="flex gap-2">
                 <input
                   type="text"
-                  value={playerName}
-                  onChange={(e) => setPlayerName(e.target.value)}
-                  placeholder={t(language, 'namePlaceholder')}
-                  maxLength={24}
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:bg-white"
+                  value={joinCode}
+                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && joinCode.trim()) {
+                      setLocalError(null);
+                      onJoinRoom(joinCode, playerName);
+                    }
+                  }}
+                  placeholder={t(language, 'roomCodePlaceholder')}
+                  maxLength={8}
+                  className="flex-1 min-w-0 px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 font-mono tracking-widest uppercase placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:bg-white"
                 />
-              </div>
-
-              {errorMsg && (
-                <div className="px-4 py-2.5 rounded-xl bg-pink-50 border border-pink-200 text-pink-700 text-sm">
-                  {errorMsg}
-                </div>
-              )}
-
-              {/* Create Room / Solo vs Robot */}
-              <div className="pt-4 border-t border-slate-100 space-y-3">
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-sm font-semibold text-slate-800">
-                    {t(language, 'robotCount')}
-                  </span>
-                  <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
-                    {[0, 1, 2, 3, 4, 5].map((num) => (
-                      <button
-                        key={num}
-                        type="button"
-                        onClick={() => setSoloBots(num)}
-                        className={`w-8 h-8 text-xs font-mono font-bold rounded-lg transition-colors ${
-                          soloBots === num
-                            ? 'bg-orange-500 text-white shadow-xs'
-                            : 'text-slate-600 hover:bg-white'
-                        }`}
-                      >
-                        {num}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => onCreateRoom(playerName, 0, false)}
-                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm transition-colors whitespace-nowrap shadow-xs"
-                  >
-                    <Users className="w-4 h-4" />
-                    <span>{t(language, 'createRoom')}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onCreateRoom(playerName, Math.max(1, soloBots), true)}
-                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm transition-colors whitespace-nowrap shadow-xs"
-                  >
-                    <Bot className="w-4 h-4" />
-                    <span>{t(language, 'soloMode')} ({Math.max(1, soloBots)})</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Join Room by Code */}
-              <div className="pt-5 border-t border-slate-100">
-                <label className="block text-sm font-semibold text-slate-800 mb-2">
-                  {t(language, 'joinRoom')}
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={joinCode}
-                    onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                    placeholder={t(language, 'roomCodePlaceholder')}
-                    maxLength={8}
-                    className="flex-1 px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 font-mono tracking-widest uppercase placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:bg-white"
-                  />
-                  <button
-                    type="button"
-                    disabled={!joinCode.trim()}
-                    onClick={() => onJoinRoom(joinCode, playerName)}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-sm transition-colors whitespace-nowrap shrink-0"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                    <span>{t(language, 'joinButton')}</span>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  disabled={!joinCode.trim()}
+                  onClick={() => {
+                    setLocalError(null);
+                    onJoinRoom(joinCode, playerName);
+                  }}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-sm transition-colors whitespace-nowrap shrink-0"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>{t(language, 'joinButton')}</span>
+                </button>
               </div>
             </div>
-          </section>
-        </div>
+
+            {displayedError && (
+              <div className="px-4 py-2.5 rounded-xl bg-pink-50 border border-pink-200 text-pink-700 text-sm">
+                {displayedError}
+              </div>
+            )}
+
+            {/* 5. ปุ่มเล่นคนเดียวกับ Robot */}
+            <div className="pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setLocalError(null);
+                  onCreateRoom(playerName, 1, true);
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm transition-colors whitespace-nowrap shadow-xs"
+              >
+                <Bot className="w-4 h-4" />
+                <span>{t(language, 'soloMode')}</span>
+              </button>
+            </div>
+
+            {/* 6. ปุ่มสร้างห้องใหม่ (Admin) & 7. textbox ใส่รหัสผ่าน admin */}
+            <div className="pt-4 border-t border-slate-100 space-y-2.5">
+              <button
+                type="button"
+                onClick={handleCreateAdminRoom}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm transition-colors whitespace-nowrap shadow-xs"
+              >
+                <Users className="w-4 h-4" />
+                <span>{t(language, 'createRoom')}</span>
+              </button>
+
+              <div className="relative">
+                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="password"
+                  value={adminPassword}
+                  onChange={(e) => {
+                    setAdminPassword(e.target.value);
+                    if (localError) setLocalError(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleCreateAdminRoom();
+                  }}
+                  placeholder={t(language, 'adminPasswordPlaceholder')}
+                  aria-label={t(language, 'adminPasswordLabel')}
+                  autoComplete="off"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:border-orange-500 focus:bg-white"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
     );
   }
@@ -217,20 +185,22 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
             <p className="text-sm text-slate-500 mt-0.5">{t(language, 'maxPlayersNote')}</p>
           </div>
 
-          <div className="flex items-center gap-3 bg-orange-50 px-4 py-2.5 rounded-xl border border-orange-200">
-            <span className="text-xs text-orange-700 font-medium">{t(language, 'roomCode')}</span>
-            <span className="font-mono text-2xl font-extrabold tracking-widest text-orange-600">
-              {roomState.roomCode}
-            </span>
-            <button
-              type="button"
-              onClick={handleCopy}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white hover:bg-orange-100 text-orange-700 border border-orange-200 text-xs font-semibold transition-colors"
-            >
-              {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copied ? t(language, 'copied') : t(language, 'copyCode')}</span>
-            </button>
-          </div>
+          {!roomState.isSoloMode && (
+            <div className="flex items-center gap-3 bg-orange-50 px-4 py-2.5 rounded-xl border border-orange-200">
+              <span className="text-xs text-orange-700 font-medium">{t(language, 'roomCode')}</span>
+              <span className="font-mono text-2xl font-extrabold tracking-widest text-orange-600">
+                {roomState.roomCode}
+              </span>
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white hover:bg-orange-100 text-orange-700 border border-orange-200 text-xs font-semibold transition-colors"
+              >
+                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copied ? t(language, 'copied') : t(language, 'copyCode')}</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {roomState.isAdminSpectator && isHost && (

@@ -281,6 +281,7 @@ export interface GameRoomState {
   hostId: string;
   hostName: string;
   isAdminSpectator: boolean;
+  isSoloMode: boolean;
   language: Language;
   players: Player[];
   currentTurnIndex: number;

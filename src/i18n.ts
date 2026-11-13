@@ -148,6 +148,9 @@ export const UI_TEXT = {
     yourStatementBadge: 'งบการเงินของคุณ',
     activeTurnBadge: 'ตาเดินนี้',
     totalDebtLabel: 'หนี้สินรวม',
+    adminPasswordLabel: 'รหัสผ่าน Admin',
+    adminPasswordPlaceholder: 'กรอกรหัสผ่าน Admin',
+    wrongAdminPassword: 'รหัสผ่าน Admin ไม่ถูกต้อง กรุณากรอกให้ถูกต้อง',
   },
   en: {
     appTitle: 'Cashflow Board Game',
@@ -296,6 +299,9 @@ export const UI_TEXT = {
     yourStatementBadge: 'Your Statement',
     activeTurnBadge: 'Active Turn',
     totalDebtLabel: 'Total Debt',
+    adminPasswordLabel: 'Admin Password',
+    adminPasswordPlaceholder: 'Enter Admin password',
+    wrongAdminPassword: 'Incorrect Admin password. Please try again.',
   },
 } as const;
 

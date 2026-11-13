@@ -58,7 +58,8 @@ export class GameRoom {
     language: Language = 'th',
     onStateChange?: () => void,
     hostName = 'Admin',
-    isAdminSpectator = false
+    isAdminSpectator = false,
+    isSoloMode = false
   ) {
     this.onStateChange = onStateChange;
     this.smallDealDeck = shuffle(SMALL_DEAL_CARDS);
@@ -71,6 +72,7 @@ export class GameRoom {
       hostId,
       hostName,
       isAdminSpectator,
+      isSoloMode,
       language,
       players: [],
       currentTurnIndex: 0,

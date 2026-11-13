@@ -156,6 +156,7 @@ export default function App() {
         muted={muted}
         onToggleMute={handleToggleMute}
         roomCode={roomState?.roomCode}
+        hideRoomCode={Boolean(roomState?.isSoloMode)}
         turnCount={uiState && uiState.phase !== 'LOBBY' ? uiState.turnCount : undefined}
         activePlayerName={uiState && uiState.phase !== 'LOBBY' ? currentPlayer?.name : undefined}
         isAdminObserver={isAdminSpectator}
@@ -168,13 +169,14 @@ export default function App() {
           roomState={roomState}
           playerId={playerId}
           errorMsg={errorMsg}
-          onCreateRoom={(playerName, botCount, adminPlays) =>
+          onCreateRoom={(playerName, botCount, adminPlays, adminPassword) =>
             socketRef.current?.emit('room:create', {
               playerId,
               playerName,
               language,
               botCount,
               adminPlays,
+              adminPassword,
             })
           }
           onJoinRoom={(roomCode, playerName) =>

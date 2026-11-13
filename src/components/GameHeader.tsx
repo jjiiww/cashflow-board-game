@@ -9,6 +9,7 @@ interface GameHeaderProps {
   muted: boolean;
   onToggleMute: () => void;
   roomCode?: string;
+  hideRoomCode?: boolean;
   turnCount?: number;
   activePlayerName?: string;
   isAdminObserver?: boolean;
@@ -21,11 +22,14 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
   muted,
   onToggleMute,
   roomCode,
+  hideRoomCode = false,
   turnCount,
   activePlayerName,
   isAdminObserver = false,
   onLeaveRoom,
 }) => {
+  const showRoomCode = Boolean(roomCode && !hideRoomCode);
+
   return (
     <header className="h-14 border-b border-slate-200 bg-white/95 backdrop-blur px-5 flex items-center justify-between gap-8 shrink-0 shadow-xs">
       {/* Zone 1: Brand wordmark only */}
@@ -37,12 +41,14 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
       <div className="hidden md:flex items-center gap-3 text-xs text-slate-600 whitespace-nowrap truncate">
         {roomCode ? (
           <>
-            <span>
-              {t(language, 'roomCode')}: <strong className="font-mono text-amber-600">{roomCode}</strong>
-            </span>
+            {showRoomCode && (
+              <span>
+                {t(language, 'roomCode')}: <strong className="font-mono text-amber-600">{roomCode}</strong>
+              </span>
+            )}
             {isAdminObserver && (
               <>
-                <span aria-hidden="true" className="text-slate-300">·</span>
+                {showRoomCode && <span aria-hidden="true" className="text-slate-300">·</span>}
                 <span className="font-semibold text-orange-600">
                   {t(language, 'adminObserverBadge')}
                 </span>
@@ -50,7 +56,9 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
             )}
             {typeof turnCount === 'number' && (
               <>
-                <span aria-hidden="true" className="text-slate-300">·</span>
+                {(showRoomCode || isAdminObserver) && (
+                  <span aria-hidden="true" className="text-slate-300">·</span>
+                )}
                 <span>
                   {t(language, 'turnLabel')} <strong className="font-mono text-slate-900">{turnCount}</strong>
                 </span>
@@ -58,7 +66,9 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
             )}
             {activePlayerName && (
               <>
-                <span aria-hidden="true" className="text-slate-300">·</span>
+                {(showRoomCode || isAdminObserver || typeof turnCount === 'number') && (
+                  <span aria-hidden="true" className="text-slate-300">·</span>
+                )}
                 <span className="truncate max-w-[240px]">
                   {t(language, 'activeTurn')}: <strong className="text-emerald-600">{activePlayerName}</strong>
                 </span>
