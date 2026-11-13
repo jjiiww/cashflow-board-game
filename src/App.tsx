@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { Trophy } from 'lucide-react';
 import { BilingualText, GameRoomState, Language } from '../shared/types';
+import { AdminDashboard } from './components/AdminDashboard';
 import { CashflowBoard } from './components/CashflowBoard';
 import { FinancialStatement } from './components/FinancialStatement';
 import { GameHeader } from './components/GameHeader';
@@ -145,6 +146,7 @@ export default function App() {
 
   const uiState = settledState || roomState;
   const currentPlayer = uiState?.players[uiState.currentTurnIndex];
+  const isAdminSpectator = Boolean(roomState?.isAdminSpectator && roomState?.hostId === playerId);
 
   return (
     <div className="h-screen w-screen flex flex-col felt-surface overflow-hidden">
@@ -156,6 +158,7 @@ export default function App() {
         roomCode={roomState?.roomCode}
         turnCount={uiState && uiState.phase !== 'LOBBY' ? uiState.turnCount : undefined}
         activePlayerName={uiState && uiState.phase !== 'LOBBY' ? currentPlayer?.name : undefined}
+        isAdminObserver={isAdminSpectator}
         onLeaveRoom={roomState ? handleLeaveRoom : undefined}
       />
 
@@ -165,12 +168,13 @@ export default function App() {
           roomState={roomState}
           playerId={playerId}
           errorMsg={errorMsg}
-          onCreateRoom={(playerName, botCount) =>
+          onCreateRoom={(playerName, botCount, adminPlays) =>
             socketRef.current?.emit('room:create', {
               playerId,
               playerName,
               language,
               botCount,
+              adminPlays,
             })
           }
           onJoinRoom={(roomCode, playerName) =>
@@ -199,6 +203,34 @@ export default function App() {
             })
           }
           onStartGame={() => emit('game:start')}
+        />
+      ) : isAdminSpectator ? (
+        <AdminDashboard
+          roomState={roomState}
+          uiState={uiState || roomState}
+          localPlayerId={playerId}
+          language={language}
+          errorMsg={errorMsg}
+          isBoardAnimating={isBoardAnimating}
+          onSelectDealDeck={(deckType) => emit('game:choose_deal_type', { deckType })}
+          onAnimationChange={handleAnimationChange}
+          onRollDice={(diceCount = 1) => emit('game:roll_dice', { diceCount })}
+          onNextBotStep={() => emit('game:next_bot_step')}
+          onChooseDealType={(deckType) => emit('game:choose_deal_type', { deckType })}
+          onBuyDeal={(shareQuantity = 1) => emit('game:buy_deal', { shareQuantity })}
+          onSellStock={(shareQuantity) => emit('game:sell_stock', { shareQuantity })}
+          onSkipStockSell={() => emit('game:skip_stock_sell')}
+          onPassDeal={() => emit('game:pass_deal')}
+          onStartAuction={(startingBid) => emit('game:start_auction', { startingBid })}
+          onPlaceBid={(amount) => emit('game:place_bid', { amount })}
+          onPassAuction={() => emit('game:pass_auction')}
+          onCloseAuction={() => emit('game:close_auction')}
+          onMarketRespond={(sellAssetIds) => emit('game:market_respond', { sellAssetIds })}
+          onPayDoodad={() => emit('game:pay_doodad')}
+          onDecideCharity={(donate) => emit('game:decide_charity', { donate })}
+          onChooseDream={(dreamId) => emit('game:choose_dream', { dreamId })}
+          onDecideFastTrack={(buy) => emit('game:decide_fast_track', { buy })}
+          onEndTurn={() => emit('game:end_turn')}
         />
       ) : (
         <main className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)_320px] xl:grid-cols-[320px_minmax(0,1fr)_340px] overflow-y-auto lg:overflow-hidden">

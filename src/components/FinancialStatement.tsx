@@ -35,16 +35,12 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
   onRepayLoan,
   onPayOffLiability,
 }) => {
-  const [selectedPlayerId, setSelectedPlayerId] = useState<string>(localPlayerId);
   const [ledgerTab, setLedgerTab] = useState<'fast_track' | 'rat_race'>('rat_race');
   const [showLoanModal, setShowLoanModal] = useState(false);
   const [loanInput, setLoanInput] = useState('10000');
   const [repayInput, setRepayInput] = useState('10000');
 
-  const inspected =
-    players.find((p) => p.id === selectedPlayerId) ||
-    players.find((p) => p.id === localPlayerId) ||
-    players[0];
+  const inspected = players.find((p) => p.id === localPlayerId) || players[0];
 
   useEffect(() => {
     if (inspected) {
@@ -56,6 +52,7 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
 
   const f = inspected.finance;
   const isOwnPlayer = inspected.id === localPlayerId;
+  const isMyTurn = inspected.id === activeTurnPlayerId;
   const totalBankPrincipal = f.bankLoans.reduce((s, l) => s + l.principal, 0);
   const escapeRatio = Math.min(100, Math.round((f.passiveIncome / Math.max(1, f.totalExpenses)) * 100));
   const delta = f.lastDelta;
@@ -80,9 +77,9 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
 
   return (
     <aside className="h-full flex flex-col bg-white border-r border-slate-200 overflow-hidden">
-      {/* Player Switcher Tabs */}
-      <div className="p-3 border-b border-slate-200 bg-slate-50/80 shrink-0">
-        <div className="flex items-center justify-between mb-2">
+      {/* Own Player Statement Header (No other players visible) */}
+      <div className="p-3 border-b border-slate-200 bg-slate-50/80 shrink-0 space-y-2">
+        <div className="flex items-center justify-between gap-2">
           <h2 className="text-xs font-bold text-slate-600">
             {t(language, 'financialStatement')}
           </h2>
@@ -93,30 +90,22 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
           </span>
         </div>
 
-        <div className="flex flex-wrap gap-1">
-          {players.map((p) => {
-            const isSelected = p.id === inspected.id;
-            const isTurn = p.id === activeTurnPlayerId;
-            return (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => setSelectedPlayerId(p.id)}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${
-                  isSelected
-                    ? 'bg-emerald-500 text-white shadow-xs'
-                    : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
-                }`}
-              >
-                <span
-                  className="w-2.5 h-2.5 rounded-full shrink-0 border border-black/15"
-                  style={{ backgroundColor: p.color }}
-                />
-                <span className="truncate max-w-[74px]">{p.name}</span>
-                {isTurn && <span className={`text-[10px] ${isSelected ? 'text-yellow-200' : 'text-orange-500'}`}>★</span>}
-              </button>
-            );
-          })}
+        <div className="flex items-center justify-between gap-2 bg-white border border-slate-200 rounded-lg px-2.5 py-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span
+              className="w-3 h-3 rounded-full shrink-0 border border-black/15"
+              style={{ backgroundColor: inspected.color }}
+            />
+            <span className="text-xs font-bold text-slate-900 truncate">{inspected.name}</span>
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+              {t(language, 'yourStatementBadge')}
+            </span>
+          </div>
+          {isMyTurn && (
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-800 border border-orange-300 shrink-0">
+              {t(language, 'activeTurnBadge')}
+            </span>
+          )}
         </div>
       </div>
 

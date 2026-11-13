@@ -11,6 +11,7 @@ interface GameHeaderProps {
   roomCode?: string;
   turnCount?: number;
   activePlayerName?: string;
+  isAdminObserver?: boolean;
   onLeaveRoom?: () => void;
 }
 
@@ -22,6 +23,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
   roomCode,
   turnCount,
   activePlayerName,
+  isAdminObserver = false,
   onLeaveRoom,
 }) => {
   return (
@@ -38,6 +40,14 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
             <span>
               {t(language, 'roomCode')}: <strong className="font-mono text-amber-600">{roomCode}</strong>
             </span>
+            {isAdminObserver && (
+              <>
+                <span aria-hidden="true" className="text-slate-300">·</span>
+                <span className="font-semibold text-orange-600">
+                  {t(language, 'adminObserverBadge')}
+                </span>
+              </>
+            )}
             {typeof turnCount === 'number' && (
               <>
                 <span aria-hidden="true" className="text-slate-300">·</span>

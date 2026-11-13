@@ -19,6 +19,7 @@ import {
 import { t } from '../i18n';
 
 interface StepActionPanelProps {
+  layoutMode?: 'sidebar' | 'adminBottom';
   roomState: GameRoomState;
   localPlayerId: string;
   language: Language;
@@ -44,6 +45,7 @@ interface StepActionPanelProps {
 }
 
 export const StepActionPanel: React.FC<StepActionPanelProps> = ({
+  layoutMode = 'sidebar',
   roomState,
   localPlayerId,
   language,
@@ -540,7 +542,7 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
             {canSellRight && sameTrackCount >= 2 ? (
               <div className="pt-2.5 border-t border-slate-200 space-y-1.5">
                 <p className="text-[11px] text-orange-700 font-medium">{t(language, 'auctionRuleHint')}</p>
-                <div className="flex items-center gap-2">
+                <div className="flex items-stretch gap-2 min-w-0">
                   <input
                     type="number"
                     min={0}
@@ -549,16 +551,19 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
                     onChange={(e) => setAuctionStartFee(e.target.value)}
                     aria-label={t(language, 'startingFee')}
                     placeholder="0"
-                    className="w-28 px-2.5 py-1.5 rounded-lg bg-white border border-orange-300 text-slate-900 font-mono text-xs"
+                    className="w-24 shrink-0 px-2 py-1.5 rounded-lg bg-white border border-orange-300 text-slate-900 font-mono text-xs"
                   />
                   <button
                     type="button"
                     onClick={() => onStartAuction(parsedStartFee)}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs whitespace-nowrap"
+                    className="flex-1 min-w-0 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs text-center leading-tight"
                   >
-                    <Gavel className="w-3.5 h-3.5" />
+                    <Gavel className="w-3.5 h-3.5 shrink-0" />
                     <span>
-                      {t(language, 'sellDealRight')} ({parsedStartFee.toLocaleString()} ฿)
+                      {t(language, 'sellDealRight')}
+                      <span className="block font-mono text-[11px] font-semibold">
+                        ({parsedStartFee.toLocaleString()} ฿)
+                      </span>
                     </span>
                   </button>
                 </div>
@@ -673,26 +678,29 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
 
           {!isSeller && isSameTrack && !hasPassed && !isHighest && (
             <div className="space-y-2">
-              <div className="flex items-center gap-2">
+              <div className="flex items-stretch gap-1.5 min-w-0">
                 <input
                   type="number"
                   min={nextMinBid}
                   step={100}
                   value={bidAmount}
                   onChange={(e) => setBidAmount(e.target.value)}
-                  className="w-28 px-2.5 py-2 rounded-lg bg-white border border-orange-300 text-slate-900 font-mono text-xs"
+                  className="w-20 shrink-0 px-2 py-2 rounded-lg bg-white border border-orange-300 text-slate-900 font-mono text-xs"
                 />
                 <button
                   type="button"
                   onClick={() => onPlaceBid(parsedBid)}
-                  className="flex-1 py-2 px-3 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs whitespace-nowrap"
+                  className="flex-1 min-w-0 py-1.5 px-2.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs leading-tight text-center"
                 >
-                  {t(language, 'placeBid')} ({parsedBid.toLocaleString()} ฿)
+                  <span className="block">{t(language, 'placeBid')}</span>
+                  <span className="block font-mono text-[11px] font-semibold">
+                    ({parsedBid.toLocaleString()} ฿)
+                  </span>
                 </button>
                 <button
                   type="button"
                   onClick={onPassAuction}
-                  className="py-2 px-3 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold whitespace-nowrap"
+                  className="shrink-0 py-2 px-3 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold whitespace-nowrap"
                 >
                   {t(language, 'passAuction')}
                 </button>
@@ -997,98 +1005,126 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
     return null;
   };
 
+  const isAdminBottom = layoutMode === 'adminBottom';
+
+  const narrationZone = (
+    <div
+      className={
+        isAdminBottom
+          ? 'p-3 space-y-2.5 overflow-y-auto h-full'
+          : 'p-3.5 border-b border-slate-200 space-y-3 shrink-0 max-h-[65%] overflow-y-auto'
+      }
+    >
+      <div>
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-xs font-bold text-orange-600">
+            {t(language, 'stepExplanation')}
+          </span>
+          {currentPlayer && (
+            <span className="text-xs text-slate-700 font-semibold">
+              {currentPlayer.name}
+            </span>
+          )}
+        </div>
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm text-slate-900 leading-relaxed font-medium space-y-2.5">
+          {isAnimating ? (
+            <span className="flex items-center gap-2 text-orange-600 font-bold">
+              <Dices className="w-4 h-4 animate-spin" />
+              <span>{t(language, 'rollingWait')}</span>
+            </span>
+          ) : (
+            <>
+              <p>{roomState.currentStepText[language]}</p>
+              {activeCard && renderCardBox()}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Last Step Financial Delta Highlight (waits until pawn finishes walking) */}
+      {!isAnimating && roomState.lastStepDelta && (
+        <div className="flex flex-wrap items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-mono tabular-nums">
+          <TrendingUp className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+          <span className="text-slate-700 font-sans font-medium">{roomState.lastStepDelta.reason[language]}:</span>
+          {roomState.lastStepDelta.cashDelta !== 0 && (
+            <span
+              className={
+                roomState.lastStepDelta.cashDelta > 0 ? 'text-emerald-600 font-bold' : 'text-pink-600 font-bold'
+              }
+            >
+              Cash {roomState.lastStepDelta.cashDelta > 0 ? '+' : ''}
+              {roomState.lastStepDelta.cashDelta.toLocaleString()} ฿
+            </span>
+          )}
+          {roomState.lastStepDelta.passiveIncomeDelta !== 0 && (
+            <span className="text-violet-600 font-bold">
+              Passive {roomState.lastStepDelta.passiveIncomeDelta > 0 ? '+' : ''}
+              {roomState.lastStepDelta.passiveIncomeDelta.toLocaleString()} ฿/m
+            </span>
+          )}
+        </div>
+      )}
+
+      {errorMsg && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-pink-50 border border-pink-200 text-pink-700 text-xs font-medium">
+          <XCircle className="w-4 h-4 shrink-0" />
+          <span>{errorMsg}</span>
+        </div>
+      )}
+
+      {!isAnimating && renderPhaseControls()}
+    </div>
+  );
+
+  const activityLogZone = (
+    <div
+      className={
+        isAdminBottom
+          ? 'flex flex-col min-h-0 h-full overflow-hidden bg-slate-50/70 border-t md:border-t-0 md:border-l border-slate-200'
+          : 'flex-1 flex flex-col min-h-0 overflow-hidden bg-slate-50/70'
+      }
+    >
+      <div className="px-4 py-2 border-b border-slate-200 text-xs font-bold text-slate-500 shrink-0">
+        {t(language, 'activityLog')}
+      </div>
+      <div className="flex-1 overflow-y-auto p-3 space-y-2">
+        {roomState.logs.map((entry) => (
+          <div
+            key={entry.id}
+            className="text-xs bg-white border border-slate-200 rounded-lg p-2.5 space-y-1 shadow-2xs"
+          >
+            <div className="flex items-center justify-between text-[11px] text-slate-400">
+              <span className="font-bold text-emerald-600">
+                {entry.actorName} {entry.isBot ? '· Robot' : ''}
+              </span>
+              <span className="font-mono">
+                {new Date(entry.timestamp).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                })}
+              </span>
+            </div>
+            <p className="text-slate-700 leading-relaxed">{entry.message[language]}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  if (isAdminBottom) {
+    return (
+      <aside className="h-full grid grid-cols-1 md:grid-cols-[1.25fr_0.95fr] bg-white overflow-hidden">
+        {narrationZone}
+        {activityLogZone}
+      </aside>
+    );
+  }
+
   return (
     <aside className="h-full flex flex-col bg-white border-l border-slate-200 overflow-hidden">
-      {/* Top Narration & Decision Zone */}
-      <div className="p-3.5 border-b border-slate-200 space-y-3 shrink-0 max-h-[65%] overflow-y-auto">
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs font-bold text-orange-600">
-              {t(language, 'stepExplanation')}
-            </span>
-            {currentPlayer && (
-              <span className="text-xs text-slate-700 font-semibold">
-                {currentPlayer.name}
-              </span>
-            )}
-          </div>
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm text-slate-900 leading-relaxed font-medium space-y-2.5">
-            {isAnimating ? (
-              <span className="flex items-center gap-2 text-orange-600 font-bold">
-                <Dices className="w-4 h-4 animate-spin" />
-                <span>{t(language, 'rollingWait')}</span>
-              </span>
-            ) : (
-              <>
-                <p>{roomState.currentStepText[language]}</p>
-                {activeCard && renderCardBox()}
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Last Step Financial Delta Highlight (waits until pawn finishes walking) */}
-        {!isAnimating && roomState.lastStepDelta && (
-          <div className="flex flex-wrap items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-mono tabular-nums">
-            <TrendingUp className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-            <span className="text-slate-700 font-sans font-medium">{roomState.lastStepDelta.reason[language]}:</span>
-            {roomState.lastStepDelta.cashDelta !== 0 && (
-              <span
-                className={
-                  roomState.lastStepDelta.cashDelta > 0 ? 'text-emerald-600 font-bold' : 'text-pink-600 font-bold'
-                }
-              >
-                Cash {roomState.lastStepDelta.cashDelta > 0 ? '+' : ''}
-                {roomState.lastStepDelta.cashDelta.toLocaleString()} ฿
-              </span>
-            )}
-            {roomState.lastStepDelta.passiveIncomeDelta !== 0 && (
-              <span className="text-violet-600 font-bold">
-                Passive {roomState.lastStepDelta.passiveIncomeDelta > 0 ? '+' : ''}
-                {roomState.lastStepDelta.passiveIncomeDelta.toLocaleString()} ฿/m
-              </span>
-            )}
-          </div>
-        )}
-
-        {errorMsg && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-pink-50 border border-pink-200 text-pink-700 text-xs font-medium">
-            <XCircle className="w-4 h-4 shrink-0" />
-            <span>{errorMsg}</span>
-          </div>
-        )}
-
-        {!isAnimating && renderPhaseControls()}
-      </div>
-
-      {/* Bottom Scrollable Activity Log */}
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-slate-50/70">
-        <div className="px-4 py-2.5 border-b border-slate-200 text-xs font-bold text-slate-500 shrink-0">
-          {t(language, 'activityLog')}
-        </div>
-        <div className="flex-1 overflow-y-auto p-3 space-y-2">
-          {roomState.logs.map((entry) => (
-            <div
-              key={entry.id}
-              className="text-xs bg-white border border-slate-200 rounded-lg p-2.5 space-y-1 shadow-2xs"
-            >
-              <div className="flex items-center justify-between text-[11px] text-slate-400">
-                <span className="font-bold text-emerald-600">
-                  {entry.actorName} {entry.isBot ? '· Robot' : ''}
-                </span>
-                <span className="font-mono">
-                  {new Date(entry.timestamp).toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                  })}
-                </span>
-              </div>
-              <p className="text-slate-700 leading-relaxed">{entry.message[language]}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+      {narrationZone}
+      {activityLogZone}
     </aside>
   );
 };

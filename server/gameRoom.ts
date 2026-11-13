@@ -52,7 +52,14 @@ export class GameRoom {
   private botAuctionTimer: NodeJS.Timeout | null = null;
   private onStateChange?: () => void;
 
-  constructor(roomCode: string, hostId: string, language: Language = 'th', onStateChange?: () => void) {
+  constructor(
+    roomCode: string,
+    hostId: string,
+    language: Language = 'th',
+    onStateChange?: () => void,
+    hostName = 'Admin',
+    isAdminSpectator = false
+  ) {
     this.onStateChange = onStateChange;
     this.smallDealDeck = shuffle(SMALL_DEAL_CARDS);
     this.bigDealDeck = shuffle(BIG_DEAL_CARDS);
@@ -62,6 +69,8 @@ export class GameRoom {
     this.state = {
       roomCode,
       hostId,
+      hostName,
+      isAdminSpectator,
       language,
       players: [],
       currentTurnIndex: 0,

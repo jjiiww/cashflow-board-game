@@ -279,6 +279,8 @@ export interface GameLogEntry {
 export interface GameRoomState {
   roomCode: string;
   hostId: string;
+  hostName: string;
+  isAdminSpectator: boolean;
   language: Language;
   players: Player[];
   currentTurnIndex: number;

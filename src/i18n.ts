@@ -141,6 +141,13 @@ export const UI_TEXT = {
     auctionRuleHint: 'ผู้เปิดการ์ดเรียกค่านายหน้าเริ่มต้นเท่าไรก็ได้ (0 ฿ ขึ้นไป) หากมีผู้ต้องการมากกว่า 1 คน สามารถประมูลแข่งกันได้',
     minAcceptablePrice: 'ค่านายหน้าขั้นต่ำ',
     leadingBidNote: 'คุณเป็นผู้เสนอสูงสุดในขณะนี้ รอผู้เล่นอื่นประมูลเพิ่มหรือกดไม่ประมูล',
+    adminObserverBadge: 'มุมมอง Admin (ผู้คุมเกม · ไม่ได้ลงเดินหมาก)',
+    adminSpectatorLobbyNote: 'คุณเป็นผู้ดูแลห้อง (Admin) ไม่ได้ร่วมเดินหมากในกระดาน — รอผู้เล่นเข้าร่วมด้วยรหัสห้องหรือกดเพิ่ม Robot (1-6 คน)',
+    allPlayersFinanceTitle: 'ข้อมูลงบการเงินผู้เล่นทั้งหมด',
+    noPlayersYetLobby: 'ยังไม่มีผู้เล่นในห้อง กรุณาส่งรหัสห้องให้ผู้เล่นเข้าร่วม หรือกด "เพิ่ม Robot"',
+    yourStatementBadge: 'งบการเงินของคุณ',
+    activeTurnBadge: 'ตาเดินนี้',
+    totalDebtLabel: 'หนี้สินรวม',
   },
   en: {
     appTitle: 'Cashflow Board Game',
@@ -282,6 +289,13 @@ export const UI_TEXT = {
     auctionRuleHint: 'Drawer may ask any starting commission (0 ฿+). If >1 player wants the deal, players bid in auction.',
     minAcceptablePrice: 'Min Commission',
     leadingBidNote: 'You are currently the highest bidder. Waiting for other players to bid or pass.',
+    adminObserverBadge: 'Admin View (Host · Non-Playing)',
+    adminSpectatorLobbyNote: 'You are the room Admin (non-playing host). Share the room code for players to join or add Robots (1–6 players).',
+    allPlayersFinanceTitle: 'All Players Financial Statements',
+    noPlayersYetLobby: 'No players in room yet. Share the room code or click "Add Robot".',
+    yourStatementBadge: 'Your Statement',
+    activeTurnBadge: 'Active Turn',
+    totalDebtLabel: 'Total Debt',
   },
 } as const;
 

@@ -64,17 +64,31 @@ io.on('connection', (socket: Socket) => {
       playerName,
       language = 'th',
       botCount = 0,
+      adminPlays = false,
     }: {
       playerId: string;
       playerName: string;
       language?: Language;
       botCount?: number;
+      adminPlays?: boolean;
     }) => {
       const code = generateRoomCode();
-      const room = new GameRoom(code, playerId, language, () => broadcastRoom(code));
-      room.addPlayer(playerId, playerName, true);
+      const safeName = playerName?.trim() || (adminPlays ? 'Player 1' : 'Admin');
+      const room = new GameRoom(
+        code,
+        playerId,
+        language,
+        () => broadcastRoom(code),
+        safeName,
+        !adminPlays
+      );
 
-      const safeBots = Math.min(5, Math.max(0, Math.floor(botCount)));
+      if (adminPlays) {
+        room.addPlayer(playerId, safeName, true);
+      }
+
+      const maxBots = adminPlays ? 5 : 6;
+      const safeBots = Math.min(maxBots, Math.max(0, Math.floor(botCount)));
       for (let i = 0; i < safeBots; i++) {
         room.addBot(playerId);
       }
@@ -109,7 +123,16 @@ io.on('connection', (socket: Socket) => {
         return;
       }
 
-      // Idempotent reconnect check
+      // Idempotent reconnect check for non-playing Admin Host
+      if (room.state.isAdminSpectator && room.state.hostId === playerId) {
+        socketToPlayer.set(socket.id, { roomCode: code, playerId });
+        socket.join(code);
+        socket.emit('room:joined', { roomCode: code, playerId, state: room.state });
+        broadcastRoom(code);
+        return;
+      }
+
+      // Idempotent reconnect check for existing player
       const existing = room.state.players.find((p) => p.id === playerId);
       if (existing) {
         existing.connected = true;
@@ -454,7 +477,7 @@ io.on('connection', (socket: Socket) => {
 });
 
 async function startServer() {
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');

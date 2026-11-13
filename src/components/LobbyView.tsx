@@ -10,7 +10,7 @@ interface LobbyViewProps {
   roomState: GameRoomState | null;
   playerId: string;
   errorMsg: string | null;
-  onCreateRoom: (playerName: string, botCount: number) => void;
+  onCreateRoom: (playerName: string, botCount: number, adminPlays: boolean) => void;
   onJoinRoom: (roomCode: string, playerName: string) => void;
   onAddBot: () => void;
   onRemovePlayer: (targetId: string) => void;
@@ -156,7 +156,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                   <button
                     type="button"
-                    onClick={() => onCreateRoom(playerName, 0)}
+                    onClick={() => onCreateRoom(playerName, 0, false)}
                     className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm transition-colors whitespace-nowrap shadow-xs"
                   >
                     <Users className="w-4 h-4" />
@@ -164,7 +164,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => onCreateRoom(playerName, Math.max(1, soloBots))}
+                    onClick={() => onCreateRoom(playerName, Math.max(1, soloBots), true)}
                     className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm transition-colors whitespace-nowrap shadow-xs"
                   >
                     <Bot className="w-4 h-4" />
@@ -233,6 +233,15 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
           </div>
         </div>
 
+        {roomState.isAdminSpectator && isHost && (
+          <div className="px-4 py-3 rounded-xl bg-orange-50 border border-orange-200 text-orange-900 text-xs sm:text-sm font-medium flex items-center justify-between gap-3">
+            <span>{t(language, 'adminSpectatorLobbyNote')}</span>
+            <span className="font-mono text-xs font-bold text-orange-700 shrink-0">
+              {t(language, 'hostLabel')}: {roomState.hostName}
+            </span>
+          </div>
+        )}
+
         {errorMsg && (
           <div className="px-4 py-2.5 rounded-xl bg-pink-50 border border-pink-200 text-pink-700 text-sm">
             {errorMsg}
@@ -257,7 +266,12 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {roomState.players.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+              {t(language, 'noPlayersYetLobby')}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {roomState.players.map((p) => {
               const canEdit = isHost || p.id === playerId;
               const selectedDream =
@@ -342,7 +356,8 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                 </div>
               );
             })}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Start Game Footer */}
@@ -361,8 +376,9 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
           {isHost && (
             <button
               type="button"
+              disabled={roomState.players.length < 1}
               onClick={onStartGame}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm transition-colors whitespace-nowrap shadow-sm"
+              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-sm transition-colors whitespace-nowrap shadow-sm"
             >
               <Play className="w-4 h-4 fill-current" />
               <span>{t(language, 'startGame')}</span>
