@@ -39,6 +39,7 @@ const RAT_SPACE_COLORS: Record<RatRaceSpaceType, { fill: string; stroke: string;
 // Center of inner circle = (644, 460)
 const BOARD_CX = 644;
 const BOARD_CY = 460;
+const RAT_RACE_START_ANGLE = 225;
 
 function getFastTrackRect(
   index: number
@@ -400,6 +401,22 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
         }, walkStart + 180);
         timersRef.current.push(finishId);
       }
+
+      const maxAnimMs = walkStart + Math.max(1, stepCount) * stepInterval + 900;
+      const watchdogId = window.setTimeout(() => {
+        setDisplayPositions(nextSnap);
+        setDisplayDice(targetDice);
+        setIsRollingDice(false);
+        onAnimRef.current?.(false);
+      }, maxAnimMs);
+      timersRef.current.push(watchdogId);
+    } else {
+      const watchdogId = window.setTimeout(() => {
+        setDisplayDice(targetDice);
+        setIsRollingDice(false);
+        onAnimRef.current?.(false);
+      }, elapsed + 700);
+      timersRef.current.push(watchdogId);
     }
 
     return () => {
@@ -432,7 +449,7 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
     let baseY = BOARD_CY;
 
     if (visual.track === 'rat_race') {
-      const angleDeg = -90 + visual.position * 15;
+      const angleDeg = RAT_RACE_START_ANGLE + visual.position * 15;
       const pt = polarToCartesian(BOARD_CX, BOARD_CY, 255, angleDeg);
       baseX = pt.x;
       baseY = pt.y;
@@ -481,12 +498,12 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
             const isActivePos =
               visualCurrent?.track === 'fast_track' && visualCurrent.position === space.index;
 
-            const maxChars = rect.isCorner ? 12 : rect.isSide ? 16 : 9;
+            const maxChars = rect.isCorner ? 11 : rect.isSide ? 14 : 8;
             const lines = wrapLabelLines(space.label[language], maxChars, rect.isSide ? 2 : 3);
-            const fontSize = rect.isCorner ? 16 : rect.isSide ? 12.5 : 10.5;
-            const lineH = rect.isSide ? 14 : 12.5;
+            const fontSize = rect.isCorner ? 18 : rect.isSide ? 14 : 12;
+            const lineH = rect.isSide ? 16 : 14;
             const hasSub = Boolean(space.subLabel || space.cashFlow || space.type === 'dream');
-            const totalTextH = lines.length * lineH + (hasSub ? 15 : 0);
+            const totalTextH = lines.length * lineH + (hasSub ? 17 : 0);
             const startY = rect.cy - totalTextH / 2 + lineH / 2;
 
             return (
@@ -543,22 +560,22 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
                   <>
                     <text
                       x={rect.cx}
-                      y={rect.cy - 10}
+                      y={rect.cy - 11}
                       textAnchor="middle"
                       dominantBaseline="central"
                       fill={colors.text}
-                      fontSize="16"
+                      fontSize="18"
                       fontWeight="900"
                     >
                       CASHFLOW
                     </text>
                     <text
                       x={rect.cx}
-                      y={rect.cy + 12}
+                      y={rect.cy + 13}
                       textAnchor="middle"
                       dominantBaseline="central"
                       fill={colors.sub}
-                      fontSize="14"
+                      fontSize="16"
                       fontWeight="800"
                     >
                       DAY
@@ -584,11 +601,11 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
                     {space.subLabel && (
                       <text
                         x={rect.cx}
-                        y={startY + lines.length * lineH + 2}
+                        y={startY + lines.length * lineH + 3}
                         textAnchor="middle"
                         dominantBaseline="central"
                         fill={colors.sub}
-                        fontSize={rect.isSide ? 11 : 9.5}
+                        fontSize={rect.isSide ? 12.5 : 10.8}
                         fontFamily="IBM Plex Mono, monospace"
                         fontWeight="700"
                       >
@@ -598,14 +615,14 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
 
                     {isDreamMatch && (
                       <g>
-                        <circle cx={rect.x + rect.w - 12} cy={rect.y + 12} r="8" fill="#0f172a" />
+                        <circle cx={rect.x + rect.w - 12} cy={rect.y + 12} r="8.5" fill="#0f172a" />
                         <text
                           x={rect.x + rect.w - 12}
                           y={rect.y + 12.5}
                           textAnchor="middle"
                           dominantBaseline="central"
                           fill="#facc15"
-                          fontSize="11"
+                          fontSize="12.5"
                           fontWeight="900"
                         >
                           ★
@@ -625,17 +642,17 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
               y="184"
               textAnchor="middle"
               fill="#0f172a"
-              fontSize="14"
+              fontSize="16"
               fontWeight="800"
             >
               {language === 'th' ? 'เป้าหมายชนะสนามแข่งหนู' : 'RAT RACE GOAL'}
             </text>
             <text
               x="228"
-              y="206"
+              y="207"
               textAnchor="middle"
               fill="#059669"
-              fontSize="13"
+              fontSize="14.5"
               fontWeight="700"
             >
               {language === 'th' ? 'รายได้จากทรัพย์สิน > รายจ่ายรวม' : 'Passive > Total Expenses'}
@@ -646,17 +663,17 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
               y="716"
               textAnchor="middle"
               fill="#0f172a"
-              fontSize="14"
+              fontSize="16"
               fontWeight="800"
             >
               {language === 'th' ? 'เป้าหมายชนะเส้นทางเศรษฐี' : 'FAST TRACK WIN'}
             </text>
             <text
               x="228"
-              y="738"
+              y="739"
               textAnchor="middle"
               fill="#7c3aed"
-              fontSize="12.5"
+              fontSize="14"
               fontWeight="700"
             >
               {language === 'th' ? '+500,000 ฿/ด. หรือ ซื้อความฝัน' : '+500k/mo or Buy Your Dream'}
@@ -669,17 +686,17 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
               y="184"
               textAnchor="middle"
               fill="#0f172a"
-              fontSize="14"
+              fontSize="16"
               fontWeight="800"
             >
               {language === 'th' ? 'ความฝันของคุณ' : 'YOUR DREAM'}
             </text>
             <text
               x="1060"
-              y="208"
+              y="209"
               textAnchor="middle"
               fill="#db2777"
-              fontSize="12.5"
+              fontSize="14"
               fontWeight="800"
             >
               ★ {localDream ? localDream.name[language].slice(0, 20) : '-'}
@@ -687,10 +704,10 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
             {localDream && (
               <text
                 x="1060"
-                y="228"
+                y="231"
                 textAnchor="middle"
                 fill="#475569"
-                fontSize="12"
+                fontSize="13.5"
                 fontFamily="IBM Plex Mono, monospace"
                 fontWeight="700"
               >
@@ -711,7 +728,8 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
 
           {/* Rat Race 24 Spaces */}
           {RAT_RACE_SPACES.map((space: RatRaceSpace) => {
-            const centerAngle = -90 + space.index * 15;
+            const centerAngle = RAT_RACE_START_ANGLE + space.index * 15;
+            const normAngle = ((centerAngle % 360) + 360) % 360;
             const startAngle = centerAngle - 7.5;
             const endAngle = centerAngle + 7.5;
             const path = describeAnnularSector(BOARD_CX, BOARD_CY, 194, 316, startAngle, endAngle);
@@ -729,7 +747,7 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
             const labelPos = polarToCartesian(BOARD_CX, BOARD_CY, 274, centerAngle);
             const numPos = polarToCartesian(BOARD_CX, BOARD_CY, 212, centerAngle);
             let textRotation = centerAngle + 90;
-            if (centerAngle > 0 && centerAngle < 180) {
+            if (normAngle > 0 && normAngle < 180) {
               textRotation = centerAngle - 90;
             }
 
@@ -753,7 +771,7 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
                   textAnchor="middle"
                   dominantBaseline="central"
                   fill={colors.text}
-                  fontSize="13.5"
+                  fontSize="15.5"
                   fontWeight="800"
                   transform={`rotate(${textRotation}, ${labelPos.x}, ${labelPos.y})`}
                 >
@@ -764,8 +782,8 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
                   y={numPos.y}
                   textAnchor="middle"
                   dominantBaseline="central"
-                  fill={space.type === 'payday' ? 'rgba(15,23,42,0.78)' : 'rgba(255,255,255,0.9)'}
-                  fontSize="11.5"
+                  fill={space.type === 'payday' ? 'rgba(15,23,42,0.82)' : 'rgba(255,255,255,0.92)'}
+                  fontSize="13"
                   fontFamily="IBM Plex Mono, monospace"
                   fontWeight="700"
                 >
@@ -787,10 +805,10 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
 
           <text
             x={BOARD_CX}
-            y="314"
+            y="313"
             textAnchor="middle"
             fill="#0f172a"
-            fontSize="21"
+            fontSize="24"
             fontWeight="900"
             letterSpacing="2"
           >
@@ -819,7 +837,7 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
               textAnchor="middle"
               dominantBaseline="central"
               fill="#ffffff"
-              fontSize="19"
+              fontSize="21.5"
               fontWeight="800"
             >
               {language === 'th' ? 'โอกาสเล็ก' : 'Small Deal'}
@@ -847,7 +865,7 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
               textAnchor="middle"
               dominantBaseline="central"
               fill="#ffffff"
-              fontSize="19"
+              fontSize="21.5"
               fontWeight="800"
             >
               {language === 'th' ? 'โอกาสใหญ่' : 'Big Deal'}
@@ -872,7 +890,7 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
               textAnchor="middle"
               dominantBaseline="central"
               fill="#ffffff"
-              fontSize="19"
+              fontSize="21.5"
               fontWeight="800"
             >
               {language === 'th' ? 'ซื้อขาย' : 'Market'}
@@ -897,7 +915,7 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
               textAnchor="middle"
               dominantBaseline="central"
               fill="#ffffff"
-              fontSize="19"
+              fontSize="21.5"
               fontWeight="800"
             >
               {language === 'th' ? 'จ่ายซะ' : 'Doodads'}
@@ -934,20 +952,20 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
               >
                 {isCurrent && (
                   <circle
-                    r="21"
+                    r="22"
                     fill="none"
                     stroke="#0f172a"
                     strokeWidth="3"
                     strokeDasharray="4 3"
                   />
                 )}
-                <circle r="15" fill={p.color} stroke="#ffffff" strokeWidth="3" />
+                <circle r="16" fill={p.color} stroke="#ffffff" strokeWidth="3" />
                 <text
                   y="0.5"
                   textAnchor="middle"
                   dominantBaseline="central"
-                  fill="#0f172a"
-                  fontSize="13"
+                  fill="#ffffff"
+                  fontSize="15"
                   fontWeight="800"
                 >
                   {p.isBot ? 'B' : idx + 1}

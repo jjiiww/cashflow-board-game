@@ -60,6 +60,13 @@ export interface FastTrackAsset {
   cashFlow: number;
 }
 
+export interface FastTrackPinkPurchase {
+  id: string;
+  name: BilingualText;
+  cost: number;
+  isDreamGoal?: boolean;
+}
+
 export interface BankLoan {
   id: string;
   principal: number;
@@ -112,6 +119,7 @@ export interface PlayerFinance {
   fastTrackCashFlowDay: number;
   fastTrackAddedCashFlow: number;
   fastTrackAssets: FastTrackAsset[];
+  fastTrackPinkPurchases: FastTrackPinkPurchase[];
   lastDelta: FinancialDelta | null;
 }
 

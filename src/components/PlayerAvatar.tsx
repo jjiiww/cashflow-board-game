@@ -9,6 +9,7 @@ import {
   Rocket,
   Shield,
   Bot,
+  X,
 } from 'lucide-react';
 import { AVATAR_OPTIONS, PLAYER_COLOR_OPTIONS } from '../../shared/avatars';
 import { Language } from '../../shared/types';
@@ -89,6 +90,7 @@ interface AvatarCustomizerPanelProps {
   language: Language;
   currentAvatarId?: string;
   currentColor: string;
+  takenColors?: string[];
   onSelectAvatar: (avatarId: string) => void;
   onSelectColor: (color: string) => void;
   onClose?: () => void;
@@ -98,10 +100,12 @@ export const AvatarCustomizerPanel: React.FC<AvatarCustomizerPanelProps> = ({
   language,
   currentAvatarId = 'investor',
   currentColor,
+  takenColors = [],
   onSelectAvatar,
   onSelectColor,
   onClose,
 }) => {
+  const takenSet = new Set(takenColors.map((c) => c.toLowerCase()));
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-2.5 shadow-sm space-y-2.5 text-xs">
       <div className="flex items-center justify-between gap-2">
@@ -150,19 +154,32 @@ export const AvatarCustomizerPanel: React.FC<AvatarCustomizerPanelProps> = ({
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           {PLAYER_COLOR_OPTIONS.map((c) => {
-            const selected = c.hex.toLowerCase() === currentColor.toLowerCase();
+            const hexLower = c.hex.toLowerCase();
+            const selected = hexLower === currentColor.toLowerCase();
+            const isTaken = !selected && takenSet.has(hexLower);
             return (
               <button
                 key={c.hex}
                 type="button"
-                onClick={() => onSelectColor(c.hex)}
-                title={c.label[language]}
+                disabled={isTaken}
+                onClick={() => !isTaken && onSelectColor(c.hex)}
+                title={
+                  isTaken
+                    ? `${c.label[language]} (${t(language, 'colorTakenNote')})`
+                    : c.label[language]
+                }
                 aria-label={c.label[language]}
-                className={`w-6 h-6 rounded-full border-2 transition-transform ${
-                  selected ? 'border-slate-900 scale-110 ring-2 ring-slate-300' : 'border-white shadow-xs hover:scale-105'
+                className={`relative w-6 h-6 rounded-full border-2 flex items-center justify-center transition-transform ${
+                  selected
+                    ? 'border-slate-900 scale-110 ring-2 ring-slate-300'
+                    : isTaken
+                    ? 'border-slate-300 opacity-35 cursor-not-allowed'
+                    : 'border-white shadow-xs hover:scale-105'
                 }`}
                 style={{ backgroundColor: c.hex }}
-              />
+              >
+                {isTaken && <X className="w-3.5 h-3.5 text-white drop-shadow" />}
+              </button>
             );
           })}
         </div>

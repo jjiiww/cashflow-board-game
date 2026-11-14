@@ -52,6 +52,7 @@ export class FinancialEngine {
       fastTrackCashFlowDay: 0,
       fastTrackAddedCashFlow: 0,
       fastTrackAssets: [],
+      fastTrackPinkPurchases: [],
       lastDelta: null,
     };
 

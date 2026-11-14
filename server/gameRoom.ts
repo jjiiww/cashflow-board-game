@@ -9,6 +9,7 @@ import {
 import {
   BIG_DEAL_CARDS,
   DOODAD_CARDS,
+  formatStockSymbol,
   MARKET_CARDS,
   SMALL_DEAL_CARDS,
 } from '../shared/cards';
@@ -25,15 +26,6 @@ import {
   Player,
 } from '../shared/types';
 import { FinancialEngine } from './finance';
-
-const PLAYER_COLORS = [
-  '#F59E0B', // Amber
-  '#06B6D4', // Cyan
-  '#F43F5E', // Rose
-  '#A855F7', // Purple
-  '#10B981', // Emerald
-  '#FB923C', // Orange
-];
 
 function shuffle<T>(arr: T[]): T[] {
   const copy = [...arr];
@@ -143,6 +135,12 @@ export class GameRoom {
     return pool[Math.floor(Math.random() * pool.length)];
   }
 
+  private pickUnusedColor(): string {
+    const usedColors = new Set(this.state.players.map((p) => p.color.toLowerCase()));
+    const available = PLAYER_COLOR_OPTIONS.find((c) => !usedColors.has(c.hex.toLowerCase()));
+    return available ? available.hex : PLAYER_COLOR_OPTIONS[0].hex;
+  }
+
   public addPlayer(id: string, name: string, isHost: boolean): { success: boolean; error?: BilingualText } {
     if (this.state.phase !== 'LOBBY') {
       return {
@@ -158,7 +156,7 @@ export class GameRoom {
     }
 
     const career = this.pickUnusedCareer();
-    const color = PLAYER_COLORS[this.state.players.length % PLAYER_COLORS.length];
+    const color = this.pickUnusedColor();
     const avatarId = AVATAR_OPTIONS[this.state.players.length % AVATAR_OPTIONS.length].id;
     const player: Player = {
       id,
@@ -194,7 +192,7 @@ export class GameRoom {
 
     const botIndex = this.state.players.filter((p) => p.isBot).length + 1;
     const career = this.pickUnusedCareer();
-    const color = PLAYER_COLORS[this.state.players.length % PLAYER_COLORS.length];
+    const color = this.pickUnusedColor();
     const avatarId = AVATAR_OPTIONS[this.state.players.length % AVATAR_OPTIONS.length].id;
     const randomDream = DREAM_OPTIONS[Math.floor(Math.random() * DREAM_OPTIONS.length)];
     const bot: Player = {
@@ -224,9 +222,6 @@ export class GameRoom {
     if (targetId === this.state.hostId) return { success: false };
 
     this.state.players = this.state.players.filter((p) => p.id !== targetId);
-    this.state.players.forEach((p, idx) => {
-      p.color = PLAYER_COLORS[idx % PLAYER_COLORS.length];
-    });
     return { success: true };
   }
 
@@ -254,18 +249,40 @@ export class GameRoom {
     targetId: string,
     avatarId?: string,
     color?: string
-  ): { success: boolean } {
+  ): { success: boolean; error?: BilingualText } {
     if (requesterId !== targetId && requesterId !== this.state.hostId) {
       return { success: false };
     }
     const player = this.state.players.find((p) => p.id === targetId);
     if (!player) return { success: false };
 
+    if (color) {
+      const validColor = PLAYER_COLOR_OPTIONS.find(
+        (c) => c.hex.toLowerCase() === color.toLowerCase()
+      );
+      if (!validColor) {
+        return {
+          success: false,
+          error: { th: 'สีที่เลือกไม่ถูกต้อง', en: 'Invalid color selected.' },
+        };
+      }
+      const isTaken = this.state.players.some(
+        (p) => p.id !== player.id && p.color.toLowerCase() === validColor.hex.toLowerCase()
+      );
+      if (isTaken) {
+        return {
+          success: false,
+          error: {
+            th: 'สีนี้ถูกผู้เล่นอื่นเลือกไปแล้ว กรุณาเลือกสีที่เหลือ',
+            en: 'This color is already taken. Please pick another color.',
+          },
+        };
+      }
+      player.color = validColor.hex;
+    }
+
     if (avatarId && AVATAR_OPTIONS.some((a) => a.id === avatarId)) {
       player.avatarId = avatarId;
-    }
-    if (color && PLAYER_COLOR_OPTIONS.some((c) => c.hex === color)) {
-      player.color = color;
     }
     return { success: true };
   }
@@ -341,9 +358,10 @@ export class GameRoom {
     }
     if (card.kind === 'stock_split') {
       const ratioText = card.splitRatio === 2 ? '2:1' : '1:2';
+      const symEn = formatStockSymbol(card.symbol, 'en');
       return {
         th: `${card.title.th} (${card.symbol} ${ratioText}) — ${card.description.th}`,
-        en: `${card.title.en} (${card.symbol} ${ratioText}) — ${card.description.en}`,
+        en: `${card.title.en} (${symEn} ${ratioText}) — ${card.description.en}`,
       };
     }
     if (card.kind === 'deal_expense') {
@@ -943,6 +961,7 @@ export class GameRoom {
       const before = FinancialEngine.snapshot(player.finance);
       player.finance.cash -= totalCost;
 
+      const symEn = formatStockSymbol(card.symbol, 'en');
       const existing = player.finance.assets.find((a) => a.category === 'stock' && a.symbol === card.symbol);
       const monthlyDiv = (card.dividendPerMonth || 0) * qty;
       if (existing) {
@@ -953,7 +972,10 @@ export class GameRoom {
       } else {
         player.finance.assets.push({
           id: `asset_${Date.now()}`,
-          name: { th: `หุ้น ${card.symbol}`, en: `${card.symbol} Stock` },
+          name: {
+            th: card.symbol === 'กองทุนรวม' ? 'กองทุนรวม' : `หุ้น ${card.symbol}`,
+            en: symEn,
+          },
           category: 'stock',
           tag: card.symbol || card.tag,
           symbol: card.symbol,
@@ -968,7 +990,7 @@ export class GameRoom {
       FinancialEngine.recalculate(player.finance, player.career);
       const delta = FinancialEngine.buildDelta(before, player.finance, {
         th: `ซื้อหุ้น ${card.symbol} จำนวน ${qty.toLocaleString()} หุ้น (${totalCost.toLocaleString()} ฿)`,
-        en: `Bought ${qty.toLocaleString()} shares of ${card.symbol} (${totalCost.toLocaleString()} ฿)`,
+        en: `Bought ${qty.toLocaleString()} shares of ${symEn} (${totalCost.toLocaleString()} ฿)`,
       });
 
       this.addLog(
@@ -976,7 +998,7 @@ export class GameRoom {
         'BUY_STOCK',
         {
           th: `${player.name} ซื้อหุ้น ${card.symbol} จำนวน ${qty.toLocaleString()} หุ้น ที่ราคา ${price.toLocaleString()} ฿/หุ้น (รวม ${totalCost.toLocaleString()} ฿)`,
-          en: `${player.name} bought ${qty.toLocaleString()} shares of ${card.symbol} at ${price.toLocaleString()} ฿/share (${totalCost.toLocaleString()} ฿).`,
+          en: `${player.name} bought ${qty.toLocaleString()} shares of ${symEn} at ${price.toLocaleString()} ฿/share (${totalCost.toLocaleString()} ฿).`,
         },
         delta
       );
@@ -1066,9 +1088,10 @@ export class GameRoom {
     const player = this.state.players.find((p) => p.id === playerId);
     if (!player) return { success: false };
 
+    const symEn = formatStockSymbol(card.symbol, 'en');
     const holding = player.finance.assets.find((a) => a.category === 'stock' && a.symbol === card.symbol);
     if (!holding || !holding.shares || holding.shares <= 0) {
-      return { success: false, error: { th: `คุณไม่มีหุ้น ${card.symbol} ที่จะขาย`, en: `You do not own any ${card.symbol} shares.` } };
+      return { success: false, error: { th: `คุณไม่มีหุ้น ${card.symbol} ที่จะขาย`, en: `You do not own any ${symEn} shares.` } };
     }
 
     const qty = Math.min(Math.max(1, Math.floor(shareQuantity)), holding.shares);
@@ -1090,7 +1113,7 @@ export class GameRoom {
     FinancialEngine.recalculate(player.finance, player.career);
     const delta = FinancialEngine.buildDelta(before, player.finance, {
       th: `ขายหุ้น ${card.symbol} จำนวน ${qty.toLocaleString()} หุ้น (+${proceeds.toLocaleString()} ฿)`,
-      en: `Sold ${qty.toLocaleString()} shares of ${card.symbol} (+${proceeds.toLocaleString()} ฿)`,
+      en: `Sold ${qty.toLocaleString()} shares of ${symEn} (+${proceeds.toLocaleString()} ฿)`,
     });
 
     this.addLog(
@@ -1098,7 +1121,7 @@ export class GameRoom {
       'SELL_STOCK',
       {
         th: `${player.name} ขายหุ้น ${card.symbol} จำนวน ${qty.toLocaleString()} หุ้น ที่ราคา ${price.toLocaleString()} ฿/หุ้น รับเงิน +${proceeds.toLocaleString()} ฿`,
-        en: `${player.name} sold ${qty.toLocaleString()} shares of ${card.symbol} at ${price.toLocaleString()} ฿/share (+${proceeds.toLocaleString()} ฿).`,
+        en: `${player.name} sold ${qty.toLocaleString()} shares of ${symEn} at ${price.toLocaleString()} ฿/share (+${proceeds.toLocaleString()} ฿).`,
       },
       delta
     );
@@ -1124,6 +1147,7 @@ export class GameRoom {
 
   private afterActiveStockDecision(activePlayer: Player, card: DealCard): void {
     // Check if OTHER players hold this stock so they can choose to SELL ONLY at card price
+    const symEn = formatStockSymbol(card.symbol, 'en');
     const pending: typeof this.state.pendingStockSells = [];
     for (const p of this.state.players) {
       if (p.id === activePlayer.id || p.track !== activePlayer.track) continue;
@@ -1141,14 +1165,14 @@ export class GameRoom {
             FinancialEngine.recalculate(p.finance, p.career);
             const delta = FinancialEngine.buildDelta(before, p.finance, {
               th: `${p.name} ขายหุ้น ${card.symbol} (+${proceeds.toLocaleString()} ฿)`,
-              en: `${p.name} sold ${card.symbol} (+${proceeds.toLocaleString()} ฿)`,
+              en: `${p.name} sold ${symEn} (+${proceeds.toLocaleString()} ฿)`,
             });
             this.addLog(
               p,
               'BOT_SELL_STOCK',
               {
                 th: `${p.name} (Robot) ตัดสินใจขายหุ้น ${card.symbol} ทั้งหมด รับเงิน +${proceeds.toLocaleString()} ฿`,
-                en: `${p.name} (Robot) sold all ${card.symbol} shares for +${proceeds.toLocaleString()} ฿.`,
+                en: `${p.name} (Robot) sold all ${symEn} shares for +${proceeds.toLocaleString()} ฿.`,
               },
               delta
             );
@@ -1173,7 +1197,7 @@ export class GameRoom {
         'STOCK_OTHERS_SELL',
         {
           th: `ผู้เล่นอื่นที่ถือหุ้น ${card.symbol} สามารถเลือกขายหุ้นได้ที่ราคา ${card.pricePerShare?.toLocaleString()} ฿/หุ้น (ขายได้อย่างเดียว)`,
-          en: `Other players holding ${card.symbol} may SELL ONLY at ${card.pricePerShare?.toLocaleString()} ฿/share.`,
+          en: `Other players holding ${symEn} may SELL ONLY at ${card.pricePerShare?.toLocaleString()} ฿/share.`,
         },
         null
       );
@@ -1710,7 +1734,7 @@ export class GameRoom {
         null,
         {
           th: `📢 ${drawer.name} เปิดการ์ดซื้อขาย${botNoteTh}`,
-          en: `������ ${drawer.name} drew Market Card${botNoteEn}`,
+          en: `📢 ${drawer.name} drew Market Card${botNoteEn}`,
         }
       );
       if (drawer.isBot) {
@@ -1961,7 +1985,14 @@ export class GameRoom {
     if (space.type === 'dream') {
       const before = FinancialEngine.snapshot(player.finance);
       player.finance.cash -= cost;
-      if (space.dreamId === player.dreamId) {
+      const isOwnDream = space.dreamId === player.dreamId;
+      player.finance.fastTrackPinkPurchases.push({
+        id: `pink_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
+        name: space.label,
+        cost,
+        isDreamGoal: isOwnDream,
+      });
+      if (isOwnDream) {
         const delta = FinancialEngine.buildDelta(before, player.finance, {
           th: `ซื้อความฝันสำเร็จ: ${space.label.th}!`,
           en: `Purchased your Dream: ${space.label.en}!`,
@@ -2468,7 +2499,14 @@ export class GameRoom {
   private executeBotFastTrackEffect(bot: Player, space: typeof FAST_TRACK_SPACES[number]): void {
     if (space.type === 'dream' && space.dreamId === bot.dreamId && bot.finance.cash >= (space.cost || 0)) {
       const before = FinancialEngine.snapshot(bot.finance);
-      bot.finance.cash -= space.cost || 0;
+      const cost = space.cost || 0;
+      bot.finance.cash -= cost;
+      bot.finance.fastTrackPinkPurchases.push({
+        id: `pink_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
+        name: space.label,
+        cost,
+        isDreamGoal: true,
+      });
       const delta = FinancialEngine.buildDelta(before, bot.finance, {
         th: `${bot.name} ซื้อความฝันชนะเกม!`,
         en: `${bot.name} bought Dream and won!`,
@@ -2709,6 +2747,7 @@ export class GameRoom {
     }
 
     if (card.kind === 'stock') {
+      const symEn = formatStockSymbol(card.symbol, 'en');
       const price = card.pricePerShare || card.cost;
       const holding = bot.finance.assets.find((a) => a.category === 'stock' && a.symbol === card.symbol);
 
@@ -2722,14 +2761,14 @@ export class GameRoom {
         FinancialEngine.recalculate(bot.finance, bot.career);
         const delta = FinancialEngine.buildDelta(before, bot.finance, {
           th: `${bot.name} ขายหุ้น ${card.symbol} (+${proceeds.toLocaleString()} ฿)`,
-          en: `${bot.name} sold ${card.symbol} (+${proceeds.toLocaleString()} ฿)`,
+          en: `${bot.name} sold ${symEn} (+${proceeds.toLocaleString()} ฿)`,
         });
         this.addLog(
           bot,
           'BOT_SELL_STOCK',
           {
             th: `${bot.name} (Robot) ขายหุ้น ${card.symbol} จำนวน ${qty} หุ้น รับเงิน +${proceeds.toLocaleString()} ฿`,
-            en: `${bot.name} (Robot) sold ${qty} shares of ${card.symbol} for +${proceeds.toLocaleString()} ฿.`,
+            en: `${bot.name} (Robot) sold ${qty} shares of ${symEn} for +${proceeds.toLocaleString()} ฿.`,
           },
           delta
         );
@@ -2745,7 +2784,10 @@ export class GameRoom {
         } else {
           bot.finance.assets.push({
             id: `asset_${Date.now()}`,
-            name: { th: `หุ้น ${card.symbol}`, en: `${card.symbol} Stock` },
+            name: {
+              th: card.symbol === 'กองทุนรวม' ? 'กองทุนรวม' : `หุ้น ${card.symbol}`,
+              en: symEn,
+            },
             category: 'stock',
             tag: card.symbol || card.tag,
             symbol: card.symbol,
@@ -2760,14 +2802,14 @@ export class GameRoom {
         FinancialEngine.recalculate(bot.finance, bot.career);
         const delta = FinancialEngine.buildDelta(before, bot.finance, {
           th: `${bot.name} ซื้อหุ้น ${card.symbol} ${qty} หุ้น (-${totalCost.toLocaleString()} ฿)`,
-          en: `${bot.name} bought ${qty} shares of ${card.symbol}`,
+          en: `${bot.name} bought ${qty} shares of ${symEn}`,
         });
         this.addLog(
           bot,
           'BOT_BUY_STOCK',
           {
             th: `${bot.name} (Robot) ซื้อหุ้น ${card.symbol} จำนวน ${qty} หุ้น ราคา ${price.toLocaleString()} ฿/หุ้น`,
-            en: `${bot.name} (Robot) bought ${qty} shares of ${card.symbol} at ${price.toLocaleString()} ฿/share.`,
+            en: `${bot.name} (Robot) bought ${qty} shares of ${symEn} at ${price.toLocaleString()} ฿/share.`,
           },
           delta
         );
@@ -2777,7 +2819,7 @@ export class GameRoom {
           'BOT_PASS_STOCK',
           {
             th: `${bot.name} (Robot) ไม่ซื้อขายหุ้น ${card.symbol}`,
-            en: `${bot.name} (Robot) passed on ${card.symbol}.`,
+            en: `${bot.name} (Robot) passed on ${symEn}.`,
           },
           null
         );

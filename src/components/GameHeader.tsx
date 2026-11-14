@@ -1,5 +1,5 @@
 import React from 'react';
-import { Volume2, VolumeX, LogOut } from 'lucide-react';
+import { Volume2, VolumeX, LogOut, Power } from 'lucide-react';
 import { Language } from '../../shared/types';
 import { t } from '../i18n';
 
@@ -14,6 +14,7 @@ interface GameHeaderProps {
   activePlayerName?: string;
   isAdminObserver?: boolean;
   onLeaveRoom?: () => void;
+  onCloseGame?: () => void;
 }
 
 export const GameHeader: React.FC<GameHeaderProps> = ({
@@ -27,6 +28,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
   activePlayerName,
   isAdminObserver = false,
   onLeaveRoom,
+  onCloseGame,
 }) => {
   const showRoomCode = Boolean(roomCode && !hideRoomCode);
 
@@ -118,7 +120,18 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
           {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
         </button>
 
-        {onLeaveRoom && (
+        {onCloseGame && (
+          <button
+            type="button"
+            onClick={onCloseGame}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-pink-600 hover:bg-pink-700 text-white transition-colors whitespace-nowrap shrink-0 shadow-xs"
+          >
+            <Power className="w-3.5 h-3.5" />
+            <span>{t(language, 'closeGame')}</span>
+          </button>
+        )}
+
+        {onLeaveRoom && !onCloseGame && (
           <button
             type="button"
             onClick={onLeaveRoom}

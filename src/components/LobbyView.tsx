@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Bot, Copy, Check, Lock, Palette, Play, Plus, Sparkles, Trash2, Users, UserPlus } from 'lucide-react';
+import { Bot, Copy, Check, Lock, Palette, Play, Plus, Sparkles, Trash2, Users, UserPlus, X } from 'lucide-react';
+import { PLAYER_COLOR_OPTIONS } from '../../shared/avatars';
 import { DREAM_OPTIONS } from '../../shared/board';
 import { CAREERS } from '../../shared/careers';
 import { GameRoomState, Language } from '../../shared/types';
@@ -334,10 +335,55 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                       language={language}
                       currentAvatarId={p.avatarId}
                       currentColor={p.color}
+                      takenColors={roomState.players.filter((other) => other.id !== p.id).map((other) => other.color)}
                       onSelectAvatar={(avatarId) => onCustomizePlayer(p.id, avatarId, undefined)}
                       onSelectColor={(color) => onCustomizePlayer(p.id, undefined, color)}
                       onClose={() => setEditingAppearanceId(null)}
                     />
+                  )}
+
+                  {canEdit && onCustomizePlayer && (
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200/80">
+                      <span className="text-[11px] font-semibold text-slate-600">
+                        {t(language, 'chooseColorLabel')}
+                      </span>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {PLAYER_COLOR_OPTIONS.map((c) => {
+                          const hexLower = c.hex.toLowerCase();
+                          const isSelected = hexLower === p.color.toLowerCase();
+                          const isTaken =
+                            !isSelected &&
+                            roomState.players.some(
+                              (other) => other.id !== p.id && other.color.toLowerCase() === hexLower
+                            );
+                          return (
+                            <button
+                              key={c.hex}
+                              type="button"
+                              disabled={isTaken}
+                              onClick={() => !isTaken && onCustomizePlayer(p.id, undefined, c.hex)}
+                              title={
+                                isTaken
+                                  ? `${c.label[language]} (${t(language, 'colorTakenNote')})`
+                                  : c.label[language]
+                              }
+                              aria-label={c.label[language]}
+                              className={`relative w-6 h-6 rounded-full border-2 flex items-center justify-center transition-transform ${
+                                isSelected
+                                  ? 'border-slate-900 scale-110 ring-2 ring-slate-300'
+                                  : isTaken
+                                  ? 'border-slate-300 opacity-30 cursor-not-allowed'
+                                  : 'border-white shadow-xs hover:scale-110'
+                              }`}
+                              style={{ backgroundColor: c.hex }}
+                            >
+                              {isSelected && <Check className="w-3.5 h-3.5 text-white drop-shadow" />}
+                              {isTaken && <X className="w-3.5 h-3.5 text-white drop-shadow" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   )}
 
                   {canEdit && (

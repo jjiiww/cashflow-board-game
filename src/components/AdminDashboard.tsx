@@ -342,6 +342,38 @@ const PlayerAdminFinanceCard: React.FC<{
         )}
       </div>
 
+      {/* Fast Track Pink Space Purchases Frame */}
+      {player.track === 'fast_track' && (
+        <div className="bg-pink-50 border-2 border-pink-300 rounded-lg p-2 space-y-1">
+          <div className="font-bold text-pink-800 text-[11px] flex items-center justify-between">
+            <span>{t(language, 'ftPinkPurchasesTitle')}</span>
+            <span className="font-mono text-pink-700">
+              ({(f.fastTrackPinkPurchases || []).length})
+            </span>
+          </div>
+          {!f.fastTrackPinkPurchases || f.fastTrackPinkPurchases.length === 0 ? (
+            <div className="text-[11px] text-pink-500/80 italic">{t(language, 'ftNoPinkPurchases')}</div>
+          ) : (
+            <div className="space-y-1 max-h-24 overflow-y-auto pr-0.5">
+              {f.fastTrackPinkPurchases.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between gap-1.5 bg-white border border-pink-200 rounded px-2 py-1 text-[11px]"
+                >
+                  <span className="truncate font-semibold text-pink-950">
+                    {item.isDreamGoal ? '★ ' : ''}
+                    {item.name[language]}
+                  </span>
+                  <span className="font-mono font-bold text-pink-600 shrink-0 tabular-nums">
+                    {item.cost.toLocaleString()} ฿
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Compact Liabilities List (Rat Race balances > 0) */}
       {player.track === 'rat_race' && liabilityRows.length > 0 && (
         <div className="border-t border-slate-100 pt-2 space-y-1">

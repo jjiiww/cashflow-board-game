@@ -1,4 +1,16 @@
-import { DealCard, DoodadCard, MarketCard } from './types';
+import { DealCard, DoodadCard, Language, MarketCard } from './types';
+
+export const STOCK_SYMBOL_LABELS: Record<string, { th: string; en: string }> = {
+  กองทุนรวม: { th: 'กองทุนรวม', en: 'Mutual Fund' },
+  ยา: { th: 'ยา', en: 'Medical stock' },
+  โฮมอิเล็กทรอนิกส์: { th: 'โฮมอิเล็กทรอนิกส์', en: 'Home Electronics stock' },
+  เอ็นเตอร์เทนเมนต์: { th: 'เอ็นเตอร์เทนเมนต์', en: 'Entertainment stock' },
+};
+
+export function formatStockSymbol(symbol: string | undefined, language: Language): string {
+  if (!symbol) return '';
+  return STOCK_SYMBOL_LABELS[symbol]?.[language] || symbol;
+}
 
 // ============================================================================
 // 1. กองการ์ด โอกาสเล็ก (SMALL DEAL) — 40 ใบ
@@ -20,7 +32,7 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     title: { th: 'กองทุนรวม (ราคา 200 ฿)', en: 'Mutual Fund (200 ฿)' },
     description: {
       th: 'ผู้จัดการกองทุนผู้ชาญฉลาด บริหารกองทุนมีผลกำไรมาก จนทุกคนเชื่อว่าเขาเป็นเทพเจ้าแห่งโชคลาภ · คุณเท่านั้นมีสิทธิ์ซื้อหุ้นได้ที่ราคานี้ (ไม่จำกัดจำนวน) ทุกคนสามารถขายหุ้นได้ที่ราคานี้',
-      en: 'Brilliant fund manager delivers strong profits. Only you may buy at this price (unlimited); anyone may sell.',
+      en: 'A brilliant fund manager generates huge profits—everyone believes he is a god of fortune. · Only you may buy at this price (unlimited); anyone may sell at this price.',
     },
   },
   {
@@ -36,10 +48,10 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     downPayment: 100,
     mortgage: 0,
     cashFlow: 0,
-    title: { th: 'หุ้น - บริษัท ยา จำกัด (ราคา 100 ฿)', en: 'Pharma Co. Stock (100 ฿)' },
+    title: { th: 'หุ้น - บริษัท ยา จำกัด (ราคา 100 ฿)', en: 'Medical stock (100 ฿)' },
     description: {
       th: 'ดอกเบี้ยสูง ส่งผลให้ราคาหุ้นของผู้ผลิตยาต่ำลงมาก · คุณเท่านั้นมีสิทธิ์ซื้อหุ้นได้ที่ราคานี้ (ไม่จำกัดจำนวน) ทุกคนสามารถขายหุ้นได้ที่ราคานี้',
-      en: 'High interest rates push pharmaceutical stock down. Only you may buy at this price; anyone may sell.',
+      en: 'High interest rates push the pharmaceutical maker’s stock price sharply down. · Only you may buy at this price (unlimited); anyone may sell at this price.',
     },
   },
   {
@@ -55,7 +67,7 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     title: { th: 'ต้องการขายบ้านเช่า', en: 'Rental House For Sale' },
     description: {
       th: 'บ้านเช่าเก่า ถูกยึดเป็นสมบัติของหน่วยงานราชการ ขายพร้อมเงื่อนไขการจดจำนองที่น่าสนใจ มีผู้เช่าอยู่แล้วด้วย (อาจจะขายได้ราคา 650,000 - 1,350,000 บาท)',
-      en: 'Foreclosed rental house with attractive mortgage terms and existing tenant (potential resale 650,000 - 1,350,000 ฿).',
+      en: 'Old rental house seized by a government agency, sold with attractive mortgage terms and an existing tenant (potential resale 650,000 - 1,350,000 ฿).',
     },
   },
   {
@@ -68,10 +80,10 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     downPayment: 40000,
     mortgage: 360000,
     cashFlow: 1400,
-    title: { th: 'ต้องการขายห้องพักคอนโดมิเนียม', en: 'Condo Unit For Sale' },
+    title: { th: 'ต้องการขายห้องพักคอนโดมิเนียม', en: 'Condominium Unit For Sale' },
     description: {
       th: 'พ่อต้องการขายห้องพักคอนโดมิเนียมใกล้มหาวิทยาลัย ที่ซื้อไว้ให้ลูกพักอาศัยช่วงเรียนหนังสือ มีผู้สนใจรอเช่าอยู่หลายคน (อาจจะขายได้ราคา 450,000 - 650,000 บาท)',
-      en: 'Condo near university with many prospective tenants (potential resale 450,000 - 650,000 ฿).',
+      en: 'Father sells a condo near a university originally bought for his child during college; many prospective tenants are waiting (potential resale 450,000 - 650,000 ฿).',
     },
   },
   {
@@ -87,10 +99,10 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     downPayment: 50,
     mortgage: 0,
     cashFlow: 0,
-    title: { th: 'หุ้น - บริษัท โฮมอิเล็กทรอนิกส์ จำกัด (ราคา 50 ฿)', en: 'Home Electronics Stock (50 ฿)' },
+    title: { th: 'หุ้น - บริษัท โฮมอิเล็กทรอนิกส์ จำกัด (ราคา 50 ฿)', en: 'Home Electronics stock (50 ฿)' },
     description: {
       th: 'อัตราเงินเฟ้อสูง ส่งผลให้ราคาหุ้นของกิจการโฮมอิเล็กทรอนิกส์ลดลง · คุณเท่านั้นมีสิทธิ์ซื้อหุ้นได้ที่ราคานี้ (ไม่จำกัดจำนวน) ทุกคนสามารถขายหุ้นได้ที่ราคานี้',
-      en: 'High inflation depresses home electronics stock. Only you may buy at this price; anyone may sell.',
+      en: 'High inflation drives Home Electronics stock prices down. · Only you may buy at this price (unlimited); anyone may sell at this price.',
     },
   },
   {
@@ -106,10 +118,10 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     downPayment: 300,
     mortgage: 0,
     cashFlow: 0,
-    title: { th: 'หุ้น - บริษัท เอ็นเตอร์เทนเมนต์ จำกัด (ราคา 300 ฿)', en: 'Entertainment Co. Stock (300 ฿)' },
+    title: { th: 'หุ้น - บริษัท เอ็นเตอร์เทนเมนต์ จำกัด (ราคา 300 ฿)', en: 'Entertainment stock (300 ฿)' },
     description: {
       th: 'เพลงสำหรับผู้ใหญ่กำลังฮิตติดอันดับ ส่งผลให้ราคาหุ้นสูงขึ้นเป็นอย่างมาก · คุณเท่านั้นมีสิทธิ์ซื้อหุ้นได้ที่ราคานี้ (ไม่จำกัดจำนวน) ทุกคนสามารถขายหุ้นได้ที่ราคานี้',
-      en: 'Chart-topping hits push Entertainment stock sharply higher. Only you may buy at this price; anyone may sell.',
+      en: 'Adult contemporary music hits top the charts, driving the stock price sharply higher. · Only you may buy at this price (unlimited); anyone may sell at this price.',
     },
   },
   {
@@ -125,7 +137,7 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     title: { th: 'ต้องการขายที่ดิน 10 ไร่', en: '10 Rai Raw Land For Sale' },
     description: {
       th: 'ที่ดินสวยอยู่ต่างจังหวัด เหมาะสำหรับสร้างสวนสาธารณะ มีลำธารไหลผ่าน อยู่ในบริเวณที่ยังไม่พัฒนา ไม่มีถนนผ่าน ไม่มีไฟฟ้า ไม่มีน้ำประปา และไม่มีเสียงรบกวน (ไม่รู้ว่าจะขายได้ราคาเท่าใด)',
-      en: 'Scenic rural 10-rai land parcel with a stream, undeveloped and quiet (resale price unknown).',
+      en: 'Scenic rural 10-rai land ideal for a public park, with a stream running through; undeveloped area with no roads, no electricity, no running water, and no noise (resale price unknown).',
     },
   },
   {
@@ -144,7 +156,7 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     title: { th: 'กองทุนรวม (ราคา 300 ฿)', en: 'Mutual Fund (300 ฿)' },
     description: {
       th: 'ดอกเบี้ยลดลง ทำให้ผู้คนเปลี่ยนมาลงทุนในกองทุนรวมมากขึ้น · คุณเท่านั้นมีสิทธิ์ซื้อหุ้นได้ที่ราคานี้ (ไม่จำกัดจำนวน) ทุกคนสามารถขายหุ้นได้ที่ราคานี้',
-      en: 'Lower interest rates draw investors into mutual funds. Only you may buy at this price; anyone may sell.',
+      en: 'Lower interest rates prompt more people to invest in mutual funds. · Only you may buy at this price (unlimited); anyone may sell at this price.',
     },
   },
   {
@@ -160,10 +172,10 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     downPayment: 50,
     mortgage: 0,
     cashFlow: 0,
-    title: { th: 'หุ้น - บริษัท ยา จำกัด (ราคา 50 ฿)', en: 'Pharma Co. Stock (50 ฿)' },
+    title: { th: 'หุ้น - บริษัท ยา จำกัด (ราคา 50 ฿)', en: 'Medical stock (50 ฿)' },
     description: {
       th: 'อัตราดอกเบี้ยต่ำ ทำให้ราคาหุ้นของผู้ผลิตยาลดลง · คุณเท่านั้นมีสิทธิ์ซื้อหุ้นได้ที่ราคานี้ (ไม่จำกัดจำนวน) ทุกคนสามารถขายหุ้นได้ที่ราคานี้',
-      en: 'Low rates weigh on pharmaceutical share price. Only you may buy at this price; anyone may sell.',
+      en: 'Low interest rates cause the pharmaceutical manufacturer’s share price to fall. · Only you may buy at this price (unlimited); anyone may sell at this price.',
     },
   },
   {
@@ -176,10 +188,10 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     downPayment: 20000,
     mortgage: 430000,
     cashFlow: 2500,
-    title: { th: 'ต้องการขายบ้านเช่า', en: 'Company Manager Rental House' },
+    title: { th: 'ต้องการขายบ้านเช่า', en: 'Company Manager Rental House For Sale' },
     description: {
       th: 'บริษัทประกาศขายบ้านเช่า ที่เคยเป็นบ้านพักของผู้จัดการที่ย้ายออกไป ปัจจุบันไม่มีผู้เช่า ราคาปรับลดลงมาจากราคาเดิม (อาจจะขายได้ราคา 650,000 - 1,350,000 บาท)',
-      en: 'Company-owned manager house offered at a discount, currently vacant (potential resale 650,000 - 1,350,000 ฿).',
+      en: 'Company sells a rental house formerly lived in by a relocated manager; currently vacant and discounted from its original price (potential resale 650,000 - 1,350,000 ฿).',
     },
   },
   {
@@ -195,7 +207,7 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     title: { th: 'ต้องการขายห้องพักคอนโดมิเนียม', en: 'Young Couple Condo For Sale' },
     description: {
       th: 'คู่หนุ่มสาวขายห้องพักคอนโดมิเนียมเก่า ย้ายไปอยู่บ้านที่ซื้อไว้เพื่อรองรับสมาชิกใหม่ของครอบครัว (อาจจะขายได้ราคา 450,000 - 650,000 บาท)',
-      en: 'Young couple upgrading to a family home sells their condo (potential resale 450,000 - 650,000 ฿).',
+      en: 'Young couple sells their old condo to move into a new house bought for their growing family (potential resale 450,000 - 650,000 ฿).',
     },
   },
   {
@@ -211,7 +223,7 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     title: { th: 'บริษัทผลิตตัวนำไฟฟ้า', en: 'Semiconductor Company' },
     description: {
       th: 'คุณได้ประดิษฐ์คิดค้นตัวนำไฟฟ้าชนิดใหม่ ซึ่งยังไม่เคยมีใครทำได้ คุณจึงตั้งบริษัทเพื่อผลิตและขายมัน บริษัทยังไม่มีกำไรในช่วงแรก และคุณต้องทุ่มเทเวลาทำงานให้กับบริษัทใหม่มากขึ้น (ยังไม่รู้ว่าจะกำไรหรือขายได้หรือไม่)',
-      en: 'You invented a new semiconductor and started a company to produce it. Zero initial cashflow (resale outcome unknown).',
+      en: 'You invented a brand-new semiconductor nobody has ever made before and founded a company to produce and sell it. No profit initially, and you must dedicate extra work hours to the new company (profit or resale outcome unknown).',
     },
   },
   {
@@ -227,10 +239,10 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     downPayment: 10,
     mortgage: 0,
     cashFlow: 0,
-    title: { th: 'หุ้น - บริษัท โฮมอิเล็กทรอนิกส์ จำกัด (ราคา 10 ฿)', en: 'Home Electronics Stock (10 ฿)' },
+    title: { th: 'หุ้น - บริษัท โฮมอิเล็กทรอนิกส์ จำกัด (ราคา 10 ฿)', en: 'Home Electronics stock (10 ฿)' },
     description: {
       th: 'บริษัทคู่แข่งเปิดสงครามการค้าอย่างรุนแรง ส่งผลให้ราคาหุ้นในกลุ่ม โฮมอิเล็กทรอนิกส์ตกต่ำอย่างมาก · คุณเท่านั้นมีสิทธิ์ซื้อหุ้นได้ที่ราคานี้ (ไม่จำกัดจำนวน) ทุกคนสามารถขายหุ้นได้ที่ราคานี้',
-      en: 'Fierce competitor trade war crashes Home Electronics shares to 10 ฿. Only you may buy; anyone may sell.',
+      en: 'Competitor launches a fierce trade war, crashing Home Electronics shares to rock-bottom prices. · Only you may buy at this price (unlimited); anyone may sell at this price.',
     },
   },
   {
@@ -246,10 +258,10 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     downPayment: 400,
     mortgage: 0,
     cashFlow: 0,
-    title: { th: 'หุ้น - บริษัท เอ็นเตอร์เทนเมนต์ จำกัด (ราคา 400 ฿)', en: 'Entertainment Co. Stock (400 ฿)' },
+    title: { th: 'หุ้น - บริษัท เอ็นเตอร์เทนเมนต์ จำกัด (ราคา 400 ฿)', en: 'Entertainment stock (400 ฿)' },
     description: {
       th: 'เพลงสำหรับเด็กกำลังฮิตติดอันดับ ส่งผลให้ราคาหุ้นพุ่งสูงขึ้นเป็นประวัติการณ์ · คุณเท่านั้นมีสิทธิ์ซื้อหุ้นได้ที่ราคานี้ (ไม่จำกัดจำนวน) ทุกคนสามารถขายหุ้นได้ที่ราคานี้',
-      en: 'Children’s hit songs send Entertainment stock to a record high. Only you may buy; anyone may sell.',
+      en: 'Children’s hit songs top the charts, sending Entertainment stock to an all-time record high. · Only you may buy at this price (unlimited); anyone may sell at this price.',
     },
   },
   {
@@ -262,10 +274,10 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     downPayment: 0,
     mortgage: 500000,
     cashFlow: -1000,
-    title: { th: 'ต้องการขายบ้านเช่า', en: 'Zero-Down Rental House' },
+    title: { th: 'ต้องการขายบ้านเช่า', en: 'Zero-Down Rental House For Sale' },
     description: {
       th: 'การทางพิเศษเสนอขายบ้านเช่าเก่า ตลาดซื้อขายซบเซา จึงไม่มีการเปิดประมูล (อาจจะขายได้ราคา 650,000 - 1,350,000 บาท)',
-      en: 'Expressway authority sells an old rental house with 0 down and -1,000 ฿/mo cashflow (potential resale 650,000 - 1,350,000 ฿).',
+      en: 'Expressway authority offers an old rental house; the market is sluggish so no auction is held (0 down, -1,000 ฿/mo cashflow; potential resale 650,000 - 1,350,000 ฿).',
     },
   },
   {
@@ -278,10 +290,10 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     downPayment: 50000,
     mortgage: 350000,
     cashFlow: 2200,
-    title: { th: 'ต้องการขายห้องพักคอนโดมิเนียม', en: 'Bank Foreclosure Condo' },
+    title: { th: 'ต้องการขายห้องพักคอนโดมิเนียม', en: 'Bank-Foreclosed Condo For Sale' },
     description: {
       th: 'ห้องพักคอนโดมิเนียมหลุดจำนองธนาคาร ทำเลดีเพื่อนบ้านน่ารัก ใกล้แหล่งที่ทำงานและร้านค้า (อาจจะขายได้ราคา 450,000 - 650,000 บาท)',
-      en: 'Bank-foreclosed condo in a great neighborhood near offices and shops (potential resale 450,000 - 650,000 ฿).',
+      en: 'Bank-foreclosed condo in a great location with friendly neighbors, close to workplaces and shops (potential resale 450,000 - 650,000 ฿).',
     },
   },
   {
@@ -300,7 +312,7 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     title: { th: 'กองทุนรวม (ราคา 400 ฿)', en: 'Mutual Fund (400 ฿)' },
     description: {
       th: 'ตลาดมีกำลังซื้อสูง ส่งผลให้ราคากองทุนรวมพุ่งทะยานสูงสุด · คุณเท่านั้นมีสิทธิ์ซื้อหุ้นได้ที่ราคานี้ (ไม่จำกัดจำนวน) ทุกคนสามารถขายหุ้นได้ที่ราคานี้',
-      en: 'Strong market buying power lifts Mutual Fund to a peak. Only you may buy; anyone may sell.',
+      en: 'Strong market buying power sends Mutual Fund prices soaring to a peak. · Only you may buy at this price (unlimited); anyone may sell at this price.',
     },
   },
   {
@@ -316,10 +328,10 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     downPayment: 10,
     mortgage: 0,
     cashFlow: 0,
-    title: { th: 'หุ้น - บริษัท ยา จำกัด (ราคา 10 ฿)', en: 'Pharma Co. Stock (10 ฿)' },
+    title: { th: 'หุ้น - บริษัท ยา จำกัด (ราคา 10 ฿)', en: 'Medical stock (10 ฿)' },
     description: {
       th: 'ตลาดยาตื่นตระหนก จนทำให้ราคาหุ้นของผู้ผลิตยา ตกลงอย่างมาก · คุณเท่านั้นมีสิทธิ์ซื้อหุ้นได้ที่ราคานี้ (ไม่จำกัดจำนวน) ทุกคนสามารถขายหุ้นได้ที่ราคานี้',
-      en: 'Market panic sends pharmaceutical shares tumbling to 10 ฿. Only you may buy; anyone may sell.',
+      en: 'Panic in the pharmaceutical market sends Medical stock tumbling sharply to 10 ฿. · Only you may buy at this price (unlimited); anyone may sell at this price.',
     },
   },
   {
@@ -335,7 +347,7 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     title: { th: 'บริษัทซอฟต์แวร์', en: 'Software Company' },
     description: {
       th: 'คุณมีไอเดียที่น่าสนใจสำหรับโปรแกรมซอฟต์แวร์ตัวใหม่ คุณจึงตั้งบริษัทเพื่อผลิตและขายซอฟต์แวร์ของคุณ บริษัทยังไม่มีกำไรในช่วงแรกและคุณต้องทุ่มเทเวลาทำงานให้กับบริษัทใหม่ (ยังไม่รู้ว่าจะกำไรหรือขายได้หรือไม่)',
-      en: 'You launch a new software company from a promising idea. Zero initial cashflow (resale outcome unknown).',
+      en: 'You have an exciting idea for a new software program and start a company to build and sell it. No profit initially, and you must dedicate extra work hours to the startup (profit or resale outcome unknown).',
     },
   },
   {
@@ -348,10 +360,10 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     downPayment: 40000,
     mortgage: 460000,
     cashFlow: 2000,
-    title: { th: 'ต้องการขายบ้านเช่า', en: 'Laid-Off Owner Rental House' },
+    title: { th: 'ต้องการขายบ้านเช่า', en: 'Laid-Off Owner Rental House For Sale' },
     description: {
       th: 'บ้านสวยน่าอยู่ เนื่องจากภาวะเศรษฐกิจตกต่ำ เจ้าของบ้านถูกเลิกจ้าง จึงเหมาะที่จะซื้อไว้ลงทุน (อาจจะขายได้ราคา 650,000 - 1,350,000 บาท)',
-      en: 'Lovely home sold by laid-off owner during downturn (potential resale 650,000 - 1,350,000 ฿).',
+      en: 'Lovely, livable home; the owner was laid off during the economic downturn, making it ideal to buy as an investment (potential resale 650,000 - 1,350,000 ฿).',
     },
   },
   {
@@ -364,10 +376,10 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     downPayment: 50000,
     mortgage: 450000,
     cashFlow: 1000,
-    title: { th: 'ต้องการขายห้องพักคอนโดมิเนียม', en: 'Upgraded Condo For Sale' },
+    title: { th: 'ต้องการขายห้องพักคอนโดมิเนียม', en: 'Renovated Condo For Sale' },
     description: {
       th: 'ห้องพักคอนโดมิเนียมสวยมาก ไม่มีผู้พักอาศัยเนื่องจากเจ้าของเดิมแต่งงาน ทำเลดีและทำการตกแต่งห้องเพิ่มเติมไว้ (อาจจะขายได้ราคา 450,000 - 650,000 บาท)',
-      en: 'Nicely renovated vacant condo in prime location (potential resale 450,000 - 650,000 ฿).',
+      en: 'Gorgeous vacant condo because the previous owner got married; prime location with extra interior upgrades (potential resale 450,000 - 650,000 ฿).',
     },
   },
   {
@@ -383,7 +395,7 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     title: { th: 'เหรียญทองหายาก', en: 'Rare Gold Coin' },
     description: {
       th: 'ผู้เสนอขายเหรียญทองโบราณหายากสภาพดีมาก เสนอขายเหรียญนี้ให้คุณราคา 5,000 บาท (อาจจะขายได้ราคา 0 - 40,000 บาท)',
-      en: 'Rare antique gold coin in mint condition offered for 5,000 ฿ (potential resale 0 - 40,000 ฿).',
+      en: 'Seller offers a rare antique gold coin in very good condition for 5,000 ฿ (potential resale 0 - 40,000 ฿).',
     },
   },
   {
@@ -398,10 +410,10 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     downPayment: 0,
     mortgage: 0,
     cashFlow: 0,
-    title: { th: 'หุ้น - บริษัท ยา จำกัด (เพิ่มจำนวนหุ้นเป็น 2 เท่า)', en: 'Pharma Co. 2-for-1 Stock Split' },
+    title: { th: 'หุ้น - บริษัท ยา จำกัด (เพิ่มจำนวนหุ้นเป็น 2 เท่า)', en: 'Medical stock (2-for-1 Stock Split)' },
     description: {
       th: 'ธุรกิจเติบโตอย่างมาก และบริษัทดำเนินธุรกิจได้เป็นอย่างดี จนมีการแตกหุ้นเพิ่ม · ทุกคนที่มีหุ้น ได้รับจำนวนหุ้นเพิ่มเป็นสองเท่า (ไม่ต้องชำระเงินเพิ่ม และราคาหุ้นยังคงเดิม)',
-      en: 'Strong growth triggers a 2-for-1 stock split! All holders double their share count.',
+      en: 'Business grows rapidly and operations perform so well that the company splits its stock · All shareholders double their number of shares (no extra payment required, share price stays the same).',
     },
   },
   {
@@ -417,10 +429,10 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     downPayment: 200,
     mortgage: 0,
     cashFlow: 0,
-    title: { th: 'หุ้น - บริษัท เอ็นเตอร์เทนเมนต์ จำกัด (ราคา 200 ฿)', en: 'Entertainment Co. Stock (200 ฿)' },
+    title: { th: 'หุ้น - บริษัท เอ็นเตอร์เทนเมนต์ จำกัด (ราคา 200 ฿)', en: 'Entertainment stock (200 ฿)' },
     description: {
       th: 'การควบรวมกิจการได้สร้างความเข้มแข็งให้กับส่วนแบ่งทางการตลาดของบริษัทชั้นนำที่มีชื่อเสียง · คุณเท่านั้นมีสิทธิ์ซื้อหุ้นได้ที่ราคานี้ (ไม่จำกัดจำนวน) ทุกคนสามารถขายหุ้นได้ที่ราคานี้',
-      en: 'Merger strengthens market share of the leading entertainment company. Only you may buy; anyone may sell.',
+      en: 'A corporate merger strengthens the market share of this renowned leading entertainment company. · Only you may buy at this price (unlimited); anyone may sell at this price.',
     },
   },
   {
@@ -433,10 +445,10 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     downPayment: 30000,
     mortgage: 470000,
     cashFlow: 1000,
-    title: { th: 'ต้องการขายบ้านเช่า', en: 'Urgent Relocation Rental House' },
+    title: { th: 'ต้องการขายบ้านเช่า', en: 'Urgent Relocation Rental House For Sale' },
     description: {
       th: 'บ้านเช่าราคาต่ำ เจ้าของต้องการย้ายไปต่างประเทศกะทันหันประกาศขายด่วน สำหรับผู้ที่เห็นโอกาสควรคว้าไว้ (อาจจะขายได้ราคา 650,000 - 1,350,000 บาท)',
-      en: 'Low-priced house due to owner relocating abroad urgently (potential resale 650,000 - 1,350,000 ฿).',
+      en: 'Low-priced rental house; the owner is relocating abroad suddenly and selling urgently—those who spot the opportunity should grab it (potential resale 650,000 - 1,350,000 ฿).',
     },
   },
   {
@@ -452,10 +464,10 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     downPayment: 200,
     mortgage: 0,
     cashFlow: 0,
-    title: { th: 'หุ้น - บริษัท โฮมอิเล็กทรอนิกส์ จำกัด (ราคา 200 ฿)', en: 'Home Electronics Stock (200 ฿)' },
+    title: { th: 'หุ้น - บริษัท โฮมอิเล็กทรอนิกส์ จำกัด (ราคา 200 ฿)', en: 'Home Electronics stock (200 ฿)' },
     description: {
       th: 'กิจการโฮมอิเล็กทรอนิกส์เติบโตอย่างรวดเร็ว จากการนำของผู้บริหารวัย 32 ปี จากมหาวิทยาลัย ฮาร์วาร์ด · คุณเท่านั้นมีสิทธิ์ซื้อหุ้นได้ที่ราคานี้ (ไม่จำกัดจำนวน) ทุกคนสามารถขายหุ้นได้ที่ราคานี้',
-      en: 'Home Electronics grows rapidly under new leadership. Only you may buy at this price; anyone may sell.',
+      en: 'Home Electronics grows rapidly under the leadership of a 32-year-old Harvard graduate executive. · Only you may buy at this price (unlimited); anyone may sell at this price.',
     },
   },
   {
@@ -471,7 +483,7 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     title: { th: 'ต้องการขายห้องพักคอนโดมิเนียม', en: 'Luxury Condo For Sale' },
     description: {
       th: 'ห้องพักคอนโดมิเนียมชั้นเลิศ พร้อมสิ่งอำนวยความสะดวกมากมาย เปิดโอกาสให้คุณเป็นเจ้าของแล้ว (อาจจะขายได้ราคา 450,000 - 650,000 บาท)',
-      en: 'High-amenity condo available with -1,000 ฿/mo cashflow (potential resale 450,000 - 650,000 ฿).',
+      en: 'Top-tier condominium with abundant amenities is now open for you to own (-1,000 ฿/mo cashflow; potential resale 450,000 - 650,000 ฿).',
     },
   },
   {
@@ -487,10 +499,10 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     downPayment: 300,
     mortgage: 0,
     cashFlow: 0,
-    title: { th: 'หุ้น - บริษัท ยา จำกัด (ราคา 300 ฿)', en: 'Pharma Co. Stock (300 ฿)' },
+    title: { th: 'หุ้น - บริษัท ยา จำกัด (ราคา 300 ฿)', en: 'Medical stock (300 ฿)' },
     description: {
       th: 'ธุรกิจยาขยายตัวขึ้น โดยเฉพาะยาสำหรับผู้สูงอายุ · คุณเท่านั้นมีสิทธิ์ซื้อหุ้นได้ที่ราคานี้ (ไม่จำกัดจำนวน) ทุกคนสามารถขายหุ้นได้ที่ราคานี้',
-      en: 'Pharmaceutical demand expands, especially senior care drugs. Only you may buy; anyone may sell.',
+      en: 'Pharmaceutical business expands, especially medications for senior citizens. · Only you may buy at this price (unlimited); anyone may sell at this price.',
     },
   },
   {
@@ -506,10 +518,10 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     downPayment: 400,
     mortgage: 0,
     cashFlow: 0,
-    title: { th: 'หุ้น - บริษัท โฮมอิเล็กทรอนิกส์ จำกัด (ราคา 400 ฿)', en: 'Home Electronics Stock (400 ฿)' },
+    title: { th: 'หุ้น - บริษัท โฮมอิเล็กทรอนิกส์ จำกัด (ราคา 400 ฿)', en: 'Home Electronics stock (400 ฿)' },
     description: {
       th: 'ตลาดกำลังบูมมาก ส่งผลให้ราคาหุ้นโฮมอิเล็กทรอนิกส์พุ่งสูงขึ้นเป็นประวัติการณ์ · คุณเท่านั้นมีสิทธิ์ซื้อหุ้นได้ที่ราคานี้ (ไม่จำกัดจำนวน) ทุกคนสามารถขายหุ้นได้ที่ราคานี้',
-      en: 'Booming demand pushes Home Electronics shares to a record high. Only you may buy; anyone may sell.',
+      en: 'Market boom pushes Home Electronics stock to an all-time record high. · Only you may buy at this price (unlimited); anyone may sell at this price.',
     },
   },
   {
@@ -522,10 +534,10 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     downPayment: 50000,
     mortgage: 600000,
     cashFlow: 1600,
-    title: { th: 'ต้องการขายบ้านเช่า', en: 'Well-Kept Rental House' },
+    title: { th: 'ต้องการขายบ้านเช่า', en: 'Well-Kept Rental House For Sale' },
     description: {
       th: 'บ้านสวย ประกาศขายด่วน เนื่องจากภาวะตกต่ำของอสังหาริมทรัพย์ บ้านได้รับการดูแลอย่างดีจากผู้ที่พักอาศัยอยู่ (อาจจะขายได้ราคา 650,000 - 1,350,000 บาท)',
-      en: 'Well-maintained home on urgent sale during property slowdown (potential resale 650,000 - 1,350,000 ฿).',
+      en: 'Beautiful house on urgent sale due to the real estate slump; very well cared for by the current occupant (potential resale 650,000 - 1,350,000 ฿).',
     },
   },
   {
@@ -540,10 +552,10 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     downPayment: 0,
     mortgage: 0,
     cashFlow: 0,
-    title: { th: 'หุ้น - บริษัท โฮมอิเล็กทรอนิกส์ จำกัด (เพิ่มจำนวนหุ้นเป็น 2 เท่า)', en: 'Home Electronics 2-for-1 Split' },
+    title: { th: 'หุ้น - บริษัท โฮมอิเล็กทรอนิกส์ จำกัด (เพิ่มจำนวนหุ้นเป็น 2 เท่า)', en: 'Home Electronics stock (2-for-1 Stock Split)' },
     description: {
       th: 'ธุรกิจเติบโตอย่างมาก และบริษัทดำเนินธุรกิจได้เป็นอย่างดี จนมีการแตกหุ้นเพิ่ม · ทุกคนที่มีหุ้น ได้รับจำนวนหุ้นเพิ่มเป็นสองเท่า (ไม่ต้องชำระเงินเพิ่ม และราคาหุ้นยังคงเดิม)',
-      en: 'Strong growth triggers a 2-for-1 stock split! All holders double their shares.',
+      en: 'Business grows rapidly and operations perform so well that the company splits its stock · All shareholders double their number of shares (no extra payment required, share price stays the same).',
     },
   },
   {
@@ -556,10 +568,10 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     downPayment: 0,
     mortgage: 500000,
     cashFlow: 1000,
-    title: { th: 'ต้องการขายบ้านเช่า', en: 'Bank Repo Zero-Down House' },
+    title: { th: 'ต้องการขายบ้านเช่า', en: 'Bank-Repo Zero-Down Rental House' },
     description: {
       th: 'ธนาคารขายบ้านเช่าที่ถูกยึด ไม่มีผู้อยู่อาศัยมากว่า 6 เดือน ธนาคารยินดีให้วงเงินกู้และประเมินราคาซ่อมให้แล้ว (อาจจะขายได้ราคา 650,000 - 1,350,000 บาท)',
-      en: 'Bank repo house vacant 6+ months with 0 down financing (potential resale 650,000 - 1,350,000 ฿).',
+      en: 'Bank sells a foreclosed rental house vacant for over 6 months; the bank offers full mortgage financing and has already appraised repair costs (potential resale 650,000 - 1,350,000 ฿).',
     },
   },
   {
@@ -575,10 +587,10 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     downPayment: 100,
     mortgage: 0,
     cashFlow: 0,
-    title: { th: 'หุ้น - บริษัท เอ็นเตอร์เทนเมนต์ จำกัด (ราคา 100 ฿)', en: 'Entertainment Co. Stock (100 ฿)' },
+    title: { th: 'หุ้น - บริษัท เอ็นเตอร์เทนเมนต์ จำกัด (ราคา 100 ฿)', en: 'Entertainment stock (100 ฿)' },
     description: {
       th: 'สวนสนุกแห่งใหม่ขาดทุนมหาศาล ส่งผลให้ราคาหุ้นตกต่ำที่สุดในประวัติการณ์ · คุณเท่านั้นมีสิทธิ์ซื้อหุ้นได้ที่ราคานี้ (ไม่จำกัดจำนวน) ทุกคนสามารถขายหุ้นได้ที่ราคานี้',
-      en: 'Theme park losses drop Entertainment shares to a record low. Only you may buy; anyone may sell.',
+      en: 'Huge losses at a new theme park sink Entertainment shares to the lowest price in history. · Only you may buy at this price (unlimited); anyone may sell at this price.',
     },
   },
   {
@@ -594,10 +606,10 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     downPayment: 400,
     mortgage: 0,
     cashFlow: 0,
-    title: { th: 'หุ้น - บริษัท ยา จำกัด (ราคา 400 ฿)', en: 'Pharma Co. Stock (400 ฿)' },
+    title: { th: 'หุ้น - บริษัท ยา จำกัด (ราคา 400 ฿)', en: 'Medical stock (400 ฿)' },
     description: {
       th: 'ความเข้มแข็งของตลาด ส่งผลให้ราคาหุ้นของผู้ผลิตยาพุ่งสูงขึ้น · คุณเท่านั้นมีสิทธิ์ซื้อหุ้นได้ที่ราคานี้ (ไม่จำกัดจำนวน) ทุกคนสามารถขายหุ้นได้ที่ราคานี้',
-      en: 'Strong market momentum lifts pharmaceutical shares to 400 ฿. Only you may buy; anyone may sell.',
+      en: 'Market strength pushes the pharmaceutical manufacturer’s share price sharply higher. · Only you may buy at this price (unlimited); anyone may sell at this price.',
     },
   },
   {
@@ -613,10 +625,10 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     downPayment: 50,
     mortgage: 0,
     cashFlow: 0,
-    title: { th: 'หุ้น - บริษัท เอ็นเตอร์เทนเมนต์ จำกัด (ราคา 50 ฿)', en: 'Entertainment Co. Stock (50 ฿)' },
+    title: { th: 'หุ้น - บริษัท เอ็นเตอร์เทนเมนต์ จำกัด (ราคา 50 ฿)', en: 'Entertainment stock (50 ฿)' },
     description: {
       th: 'ผู้ซื้อภาพยนตร์ถูกไล่ออก หลังจากที่ตลาดธุรกิจบันเทิงตกต่ำอย่างรุนแรง งดโบนัสสำหรับประธานบริษัท · คุณเท่านั้นมีสิทธิ์ซื้อหุ้นได้ที่ราคานี้ (ไม่จำกัดจำนวน) ทุกคนสามารถขายหุ้นได้ที่ราคานี้',
-      en: 'Industry slump sinks Entertainment shares to 50 ฿. Only you may buy; anyone may sell.',
+      en: 'Film buyer fired after a severe slump in the entertainment market; company president’s bonus canceled. · Only you may buy at this price (unlimited); anyone may sell at this price.',
     },
   },
   {
@@ -632,10 +644,10 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     downPayment: 500,
     mortgage: 0,
     cashFlow: 0,
-    title: { th: 'หุ้น - บริษัท ยา จำกัด (ราคา 500 ฿)', en: 'Pharma Co. Stock (500 ฿)' },
+    title: { th: 'หุ้น - บริษัท ยา จำกัด (ราคา 500 ฿)', en: 'Medical stock (500 ฿)' },
     description: {
       th: 'ตลาดกำลังบูมมาก ส่งผลให้ราคาหุ้นของผู้ผลิตยาพุ่งสูงขึ้น · คุณเท่านั้นมีสิทธิ์ซื้อหุ้นได้ที่ราคานี้ (ไม่จำกัดจำนวน) ทุกคนสามารถขายหุ้นได้ที่ราคานี้',
-      en: 'Market boom pushes pharmaceutical shares up to 500 ฿! Only you may buy; anyone may sell.',
+      en: 'Booming market drives Medical stock prices sharply higher! · Only you may buy at this price (unlimited); anyone may sell at this price.',
     },
   },
   {
@@ -651,10 +663,10 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     downPayment: 100,
     mortgage: 0,
     cashFlow: 0,
-    title: { th: 'หุ้น - บริษัท โฮมอิเล็กทรอนิกส์ จำกัด (ราคา 100 ฿)', en: 'Home Electronics Stock (100 ฿)' },
+    title: { th: 'หุ้น - บริษัท โฮมอิเล็กทรอนิกส์ จำกัด (ราคา 100 ฿)', en: 'Home Electronics stock (100 ฿)' },
     description: {
       th: 'ภาวะตลาดกำลังซื้ออ่อนตัวลง ส่งผลให้ยอดขายเครื่องใช้ไฟฟ้าภายในบ้านลดลง · คุณเท่านั้นมีสิทธิ์ซื้อหุ้นได้ที่ราคานี้ (ไม่จำกัดจำนวน) ทุกคนสามารถขายหุ้นได้ที่ราคานี้',
-      en: 'Soft consumer spending lowers appliance sales. Only you may buy at this price; anyone may sell.',
+      en: 'Softening consumer purchasing power reduces home appliance sales. · Only you may buy at this price (unlimited); anyone may sell at this price.',
     },
   },
   {
@@ -669,10 +681,10 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     downPayment: 0,
     mortgage: 0,
     cashFlow: 0,
-    title: { th: 'หุ้น - บริษัท โฮมอิเล็กทรอนิกส์ จำกัด (ลดจำนวนหุ้นลงครึ่งหนึ่ง)', en: 'Home Electronics 1-for-2 Reverse Split' },
+    title: { th: 'หุ้น - บริษัท โฮมอิเล็กทรอนิกส์ จำกัด (ลดจำนวนหุ้นลงครึ่งหนึ่ง)', en: 'Home Electronics stock (1-for-2 Reverse Split)' },
     description: {
       th: 'บริษัทปรับโครงสร้าง เกิดการขาดทุนอย่างมโหฬารจากการขยายตัวเกินความต้องการ และเกิดการซบเซาของอุตสาหกรรม · ทุกคนที่มีหุ้น ถูกลดจำนวนหุ้นลงครึ่งหนึ่ง (ไม่ต้องชำระเงินเพิ่ม และราคาหุ้นยังคงเดิม)',
-      en: 'Restructuring after overexpansion triggers a 1-for-2 reverse split; all holders have shares halved.',
+      en: 'Company restructures after massive losses from overexpansion and an industry downturn · All shareholders have their share count cut in half (no extra payment required, share price stays the same).',
     },
   },
   {
@@ -691,7 +703,7 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     title: { th: 'กองทุนรวม (ราคา 100 ฿)', en: 'Mutual Fund (100 ฿)' },
     description: {
       th: 'ผลประกอบการของบริษัทในตลาดหลักทรัพย์ลดลง ส่งผลให้ราคาหุ้นกองทุนรวมลดลงด้วย · คุณเท่านั้นมีสิทธิ์ซื้อหุ้นได้ที่ราคานี้ (ไม่จำกัดจำนวน) ทุกคนสามารถขายหุ้นได้ที่ราคานี้',
-      en: 'Lower corporate earnings drop Mutual Fund unit price to 100 ฿. Only you may buy; anyone may sell.',
+      en: 'Lower earnings among listed companies pull Mutual Fund unit prices down as well. · Only you may buy at this price (unlimited); anyone may sell at this price.',
     },
   },
   {
@@ -707,7 +719,7 @@ export const SMALL_DEAL_CARDS: DealCard[] = [
     title: { th: 'พี่เขยขอยืมเงิน', en: 'Loan to Brother-in-Law' },
     description: {
       th: 'พี่เขยติดหนี้พนันบอล เขาจำเป็นต้องใช้เงิน 50,000 บาท เพื่อไปใช้หนี้ เขาสัญญาว่าจะคืนเงินให้คุณ 100,000 บาท เมื่อเขาเปลี่ยนงานใหม่ที่ได้เงินเดือนมากขึ้น',
-      en: 'Brother-in-law needs 50,000 ฿ to pay off debt and promises to repay 100,000 ฿ later.',
+      en: 'Your brother-in-law owes 50,000 ฿ in football gambling debts and needs the money to pay them off. He promises to repay you 100,000 ฿ once he lands a higher-paying job.',
     },
   },
 ];
@@ -730,7 +742,7 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     title: { th: 'ต้องการขายตึกแถว 4 คูหา', en: '4-Unit Row House For Sale' },
     description: {
       th: 'เสนอขายในราคายุติธรรม โครงการได้รับการสนับสนุนทางการเงินเรียบร้อยแล้ว คุณเพียงแค่วางเงินดาวน์ก็เป็นเจ้าของได้ (อาจจะขายได้ราคา 2,000,000 - 3,200,000 บาท)',
-      en: 'Fair price with pre-arranged financing. Just pay the down payment to own 4 units (potential resale 2,000,000 - 3,200,000 ฿).',
+      en: 'Offered at a fair price with financing already arranged—just put down the down payment to own this 4-unit row house (potential resale 2,000,000 - 3,200,000 ฿).',
     },
   },
   {
@@ -744,10 +756,10 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     downPayment: 500000,
     mortgage: 5000000,
     cashFlow: 28000,
-    title: { th: 'ต้องการขายกิจการอพาร์ตเม้นท์ (24 ห้อง)', en: '24-Unit Apartment Complex' },
+    title: { th: 'ต้องการขายกิจการอพาร์ตเม้นท์ (24 ห้อง)', en: '24-Unit Apartment Complex For Sale' },
     description: {
       th: 'ห้องชุดเช่าจำนวน 24 ห้อง ในย่านสถานศึกษา เจ้าของต้องการเกษียณ มีผู้เช่าเต็มทุกห้องจึงมีรายได้ต่อเดือนสูง (อาจจะขายได้ราคา 6,000,000 - 9,600,000 บาท)',
-      en: 'Fully leased 24-unit apartment near campus, retiring owner (potential resale 6,000,000 - 9,600,000 ฿).',
+      en: '24 rental units in an education district; owner wishes to retire. All units are fully occupied, generating high monthly income (potential resale 6,000,000 - 9,600,000 ฿).',
     },
   },
   {
@@ -763,7 +775,7 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     title: { th: 'ต้องการขายกิจการเกสต์เฮ้าส์', en: 'Guesthouse Business For Sale' },
     description: {
       th: 'เจ้าของเกษียณ ต้องการขายกิจการเกสต์เฮ้าส์ 5 ห้องนอน 3 ห้องน้ำ (อาจจะขายได้ราคา 2,000,000 - 3,000,000 บาท)',
-      en: 'Retiring owner sells 5-bedroom, 3-bath guesthouse (potential resale 2,000,000 - 3,000,000 ฿).',
+      en: 'Retiring owner is selling a 5-bedroom, 3-bathroom guesthouse business (potential resale 2,000,000 - 3,000,000 ฿).',
     },
   },
   {
@@ -779,7 +791,7 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     title: { th: 'ต้องการขายบ้านเช่า', en: 'Rental House For Sale' },
     description: {
       th: 'เจ้าของบริษัทหมุนต้องการขายบ้านเช่าเพื่อนำเงินไปลงทุนเพิ่มในธุรกิจของเขาที่กำลังเติบโต ปัจจุบันมีผู้เช่านิสัยดีอาศัยอยู่แล้ว (อาจจะขายได้ราคา 650,000 - 1,350,000 บาท)',
-      en: 'Business owner sells rental house with reliable tenant to fund business expansion (potential resale 650,000 - 1,350,000 ฿).',
+      en: 'A busy business owner sells a rental house to invest more capital into his growing company; currently occupied by a polite, reliable tenant (potential resale 650,000 - 1,350,000 ฿).',
     },
   },
   {
@@ -792,10 +804,10 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     downPayment: 200000,
     mortgage: 800000,
     cashFlow: 16000,
-    title: { th: 'ต้องการขายกิจการตู้ขายเครื่องดื่มอัตโนมัติ', en: 'Vending Machine Route Business' },
+    title: { th: 'ต้องการขายกิจการตู้ขายเครื่องดื่มอัตโนมัติ', en: 'Vending Machine Business For Sale' },
     description: {
       th: 'ขายกิจการส่วนตัวของครอบครัว เนื่องจากมีเรื่องทะเลาะวิวาทภายในครอบครัว กิจการอยู่ในทำเลทองที่มีอัตราการขยายตัวสูง (ไม่มีผู้ซื้อต่อ)',
-      en: 'Family vending route in prime high-growth locations (no resale buyer).',
+      en: 'Family-owned vending machine business sold due to internal family disputes; situated in prime high-growth locations (no resale buyer).',
     },
   },
   {
@@ -812,7 +824,7 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     title: { th: 'ต้องการขายตึกแถว 1 คูหา', en: '1-Unit Row House For Sale' },
     description: {
       th: 'น่าลงทุนเพราะมีผู้เช่าอยู่แล้ว เจ้าของกำลังมีปัญหาด้านภาษีจึงต้องการขายด่วน (อาจจะขายได้ราคา 500,000 - 800,000 บาท)',
-      en: 'Already leased 1-unit property; owner sells urgently due to tax issues (potential resale 500,000 - 800,000 ฿).',
+      en: 'Worth investing in since it already has a tenant; owner is facing tax problems and needs an urgent sale (potential resale 500,000 - 800,000 ฿).',
     },
   },
   {
@@ -825,10 +837,10 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     downPayment: 300000,
     mortgage: 1200000,
     cashFlow: 25000,
-    title: { th: 'ต้องการขายกิจการล้างรถอัตโนมัติ', en: 'Automated Car Wash Business' },
+    title: { th: 'ต้องการขายกิจการล้างรถอัตโนมัติ', en: 'Automated Car Wash Business For Sale' },
     description: {
       th: 'เจ้าของเดิมรับเงิน ประกาศขายกิจการล้างรถอัตโนมัติใกล้ทางด่วน กิจการประสบความสำเร็จ มีผู้ใช้บริการจำนวนมาก (ไม่มีผู้ซื้อต่อ)',
-      en: 'Successful automated car wash near expressway with high volume (no resale buyer).',
+      en: 'Former owner retires and sells a successful automated car wash near the expressway with high customer volume (no resale buyer).',
     },
   },
   {
@@ -842,10 +854,10 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     downPayment: 750000,
     mortgage: 5000000,
     cashFlow: 34000,
-    title: { th: 'ต้องการขายกิจการอพาร์ตเม้นท์ (24 ห้อง)', en: '24-Unit Apartment (2 Buildings)' },
+    title: { th: 'ต้องการขายกิจการอพาร์ตเม้นท์ (24 ห้อง)', en: '24-Unit Apartment Complex (2 Buildings)' },
     description: {
       th: '2 ตึก ห้องชุดเช่าจำนวน 24 ห้อง เจ้าของบริหารเองโดยมีผู้ขายอยู่ประจำสถานที่ ขณะนี้ต้องการวางมือประกาศขายด่วน (อาจจะขายได้ราคา 6,000,000 - 9,600,000 บาท)',
-      en: 'Two-building 24-unit apartment with on-site caretaker; owner retiring (potential resale 6,000,000 - 9,600,000 ฿).',
+      en: 'Two buildings totaling 24 rental units; self-managed by the owner with an on-site caretaker, now retiring with an urgent sale (potential resale 6,000,000 - 9,600,000 ฿).',
     },
   },
   {
@@ -858,10 +870,10 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     downPayment: 400000,
     mortgage: 1600000,
     cashFlow: 27000,
-    title: { th: 'ต้องการขายกิจการตู้เกมหยอดเหรียญ', en: 'Coin-Operated Arcade Business' },
+    title: { th: 'ต้องการขายกิจการตู้เกมหยอดเหรียญ', en: 'Coin-Operated Arcade Business For Sale' },
     description: {
       th: 'เจ้าของเสียชีวิตในขณะที่กิจการตู้เกมหยอดเหรียญกำลังไปได้ดี ทายาทอาศัยอยู่ต่างประเทศเลยต้องการขายกิจการ (ไม่มีผู้ซื้อต่อ)',
-      en: 'Profitable arcade business sold by overseas heirs (no resale buyer).',
+      en: 'The owner passed away while the coin-operated arcade business was thriving; heirs live abroad and want to sell the business (no resale buyer).',
     },
   },
   {
@@ -877,7 +889,7 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     title: { th: 'ต้องการหุ้นส่วนร่วมลงทุน (คลินิก)', en: 'Limited Partnership (Medical Clinic)' },
     description: {
       th: 'แพทย์ซึ่งต้องการเพิ่มพื้นที่เพื่อรองรับผู้มาใช้บริการที่เพิ่มมากขึ้น ต้องการหุ้นส่วนร่วมลงทุนก่อสร้างและตกแต่งคลินิก (อาจจะขายซื้อต่อในราคา 500,000 - 750,000 บาท)',
-      en: 'Doctor seeks LP partner to expand and furnish growing clinic (potential buyout 500,000 - 750,000 ฿).',
+      en: 'A doctor needing extra space for growing patient traffic seeks a limited partner to co-invest in building and furnishing the clinic (potential buyout 500,000 - 750,000 ฿).',
     },
   },
   {
@@ -893,7 +905,7 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     title: { th: 'ต้องการหุ้นส่วนร่วมลงทุน (ร้านพิซซ่าแช่แข็ง)', en: 'Limited Partnership (Frozen Pizza)' },
     description: {
       th: 'ร้านพิซซ่าชื่อดังมีสาขามากมาย เพิ่มพิซซ่าแช่แข็งวางขายในร้านสะดวกซื้อ เจ้าของต้องการเงินลงทุนเพิ่ม (อาจจะขายซื้อต่อในราคา 400,000 - 600,000 บาท)',
-      en: 'Popular pizza chain expanding frozen pizza line into convenience stores (potential buyout 400,000 - 600,000 ฿).',
+      en: 'Famous pizza chain with many branches is launching frozen pizza in convenience stores; the owner needs additional investment capital (potential buyout 400,000 - 600,000 ฿).',
     },
   },
   {
@@ -910,7 +922,7 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     title: { th: 'ต้องการขายตึกแถว 4 คูหา', en: '4-Unit Row House For Sale' },
     description: {
       th: 'เจ้าของเดิมถูกบังคับขายเนื่องจากมีปัญหาด้านกฎหมาย สามารถจดจำนองกับธนาคารได้ทันที (อาจจะขายได้ราคา 2,000,000 - 3,200,000 บาท)',
-      en: 'Distressed legal sale with immediate bank mortgage availability (potential resale 2,000,000 - 3,200,000 ฿).',
+      en: 'Previous owner forced to sell due to legal issues; immediate bank mortgage financing available (potential resale 2,000,000 - 3,200,000 ฿).',
     },
   },
   {
@@ -924,10 +936,10 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     downPayment: 500000,
     mortgage: 3000000,
     cashFlow: 24000,
-    title: { th: 'ต้องการขายกิจการอพาร์ตเม้นท์ (12 ห้อง)', en: '12-Unit Apartment House' },
+    title: { th: 'ต้องการขายกิจการอพาร์ตเม้นท์ (12 ห้อง)', en: '12-Unit Apartment Complex For Sale' },
     description: {
       th: 'ห้องชุดเช่าจำนวน 12 ห้อง ทายาทของเจ้าของอยู่ต่างจังหวัดเป็นผู้ประกาศขาย มีผู้สนใจรอเช่าจำนวนมาก (อาจจะขายได้ราคา 3,000,000 - 4,800,000 บาท)',
-      en: '12-unit apartment sold by out-of-province heirs with strong tenant demand (potential resale 3,000,000 - 4,800,000 ฿).',
+      en: '12-unit apartment put up for sale by the owner’s out-of-province heirs; long waiting list of prospective tenants (potential resale 3,000,000 - 4,800,000 ฿).',
     },
   },
   {
@@ -944,7 +956,7 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     title: { th: 'ต้องการขายตึกแถว 2 คูหา', en: '2-Unit Row House For Sale' },
     description: {
       th: 'อยู่ในทำเลที่กำลังปรับปรุง มีผู้เช่าเต็มแล้ว คุณเพียงแค่จ่ายเงินดาวน์และอดทนรอเท่านั้น (อาจจะขายได้ราคา 1,000,000 - 1,600,000 บาท)',
-      en: 'Up-and-coming area, fully leased 2-unit property (potential resale 1,000,000 - 1,600,000 ฿).',
+      en: 'Located in an improving neighborhood and already fully leased—you only need to pay the down payment and be patient (potential resale 1,000,000 - 1,600,000 ฿).',
     },
   },
   {
@@ -960,7 +972,7 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     title: { th: 'ต้องการขายบ้านเช่า', en: 'Rental House For Sale' },
     description: {
       th: 'บ้านเช่าน่าลงทุนมากถ้าคุณมีความอดทนเพียงพอ เพราะรายได้จากค่าเช่าดีมาก (อาจจะขายได้ราคา 650,000 - 1,350,000 บาท)',
-      en: 'Strong rental income makes this house a rewarding hold (potential resale 650,000 - 1,350,000 ฿).',
+      en: 'A very attractive rental house investment if you have enough patience, as its rental income is excellent (potential resale 650,000 - 1,350,000 ฿).',
     },
   },
   {
@@ -976,7 +988,7 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     title: { th: 'ต้องการหุ้นส่วนร่วมลงทุน (ร้านเบเกอรี่)', en: 'Limited Partnership (Bakery)' },
     description: {
       th: 'ร้านขายขนมปังต้องการเพิ่มสาขา เจ้าของร้านต้องการหุ้นส่วนเพื่อช่วยลงทุนเพิ่ม (อาจจะขายซื้อต่อในราคา 600,000 - 900,000 บาท)',
-      en: 'Successful bakery expanding branches seeks limited partner (potential buyout 600,000 - 900,000 ฿).',
+      en: 'Popular bakery wants to open more branches; the shop owner seeks a partner to help invest additional capital (potential buyout 600,000 - 900,000 ฿).',
     },
   },
   {
@@ -993,7 +1005,7 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     title: { th: 'ต้องการขายตึกแถว 2 คูหา', en: '2-Unit Row House For Sale' },
     description: {
       th: 'เจ้าของอยู่ต่างจังหวัดและฐานะการเงินไม่ดี ถูกบังคับขายเพราะถูกเรียกการซ้อนหลัง มีผู้เช่าอยู่บางส่วน (อาจจะขายได้ราคา 1,000,000 - 1,600,000 บาท)',
-      en: 'Partially leased 2-unit property sold by financially strapped owner (potential resale 1,000,000 - 1,600,000 ฿).',
+      en: 'Out-of-province owner in weak financial shape forced to sell due to back-tax demands; partially occupied by tenants (potential resale 1,000,000 - 1,600,000 ฿).',
     },
   },
   {
@@ -1007,10 +1019,10 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     downPayment: 60000,
     mortgage: 540000,
     cashFlow: 3000,
-    title: { th: 'ต้องการขายตึกแถว 1 คูหา', en: '1-Unit Row House (Prime Area)' },
+    title: { th: 'ต้องการขายตึกแถว 1 คูหา', en: '1-Unit Row House (Prime Location)' },
     description: {
       th: 'ตึกแถวได้รับการบำรุงรักษาอย่างดีและอยู่ในทำเลทอง จึงเป็นโอกาสทองของนักลงทุนที่เล็งเห็นโอกาสนี้ (อาจจะขายได้ราคา 500,000 - 800,000 บาท)',
-      en: 'Well-maintained 1-unit commercial building in prime location (potential resale 500,000 - 800,000 ฿).',
+      en: 'Well-maintained 1-unit row house in a prime location—a golden opportunity for investors who recognize the value (potential resale 500,000 - 800,000 ฿).',
     },
   },
   {
@@ -1023,10 +1035,10 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     downPayment: 70000,
     mortgage: 680000,
     cashFlow: 3000,
-    title: { th: 'ต้องการขายบ้านเช่า', en: 'Golf Course Rental House' },
+    title: { th: 'ต้องการขายบ้านเช่า', en: 'Golf Course Rental House For Sale' },
     description: {
       th: 'ขายบ้านในสนามกอล์ฟวิวสวย มีโอกาสที่จะทำกำไรจากการขายและมีโอกาสในการเก็บค่าเช่าที่ดี (อาจจะขายได้ราคา 650,000 - 1,350,000 บาท)',
-      en: 'Scenic golf-course home with strong rental and appreciation upside (potential resale 650,000 - 1,350,000 ฿).',
+      en: 'House on a scenic golf course with great resale profit potential and strong rental income opportunity (potential resale 650,000 - 1,350,000 ฿).',
     },
   },
   {
@@ -1042,7 +1054,7 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     title: { th: 'ต้องการหุ้นส่วนร่วมลงทุน (เต็นท์รถยนต์มือสอง)', en: 'Limited Partnership (Used Car Lot)' },
     description: {
       th: 'ตัวแทนขายรถยนต์ต้องการเปิด เต็นท์ขายรถยนต์มือสอง ต้องการหุ้นส่วนร่วมลงทุน เพราะธนาคารไม่อนุมัติเงินกู้ (อาจจะขายซื้อต่อในราคา 600,000 - 900,000 บาท)',
-      en: 'Auto dealer expanding into used car lot seeks LP equity partner (potential buyout 600,000 - 900,000 ฿).',
+      en: 'Car dealer wants to open a used car lot and seeks a limited partner to co-invest because the bank declined the loan (potential buyout 600,000 - 900,000 ฿).',
     },
   },
   {
@@ -1055,10 +1067,10 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     downPayment: 200000,
     mortgage: 0,
     cashFlow: 0,
-    title: { th: 'ต้องการขายที่ดิน 100 ตารางวา', en: '100 Sq.Wah Commercial Land' },
+    title: { th: 'ต้องการขายที่ดิน 100 ตารางวา', en: '100 Sq.Wah Suburban Land For Sale' },
     description: {
       th: 'ที่ดินไม่มีสิ่งปลูกสร้างบริเวณชานเมือง ปัจจุบันอยู่ในโซนที่พักอาศัย แต่มีโอกาสมากที่จะถูกเปลี่ยนเป็นโซนการค้า เหมาะสำหรับการสร้างตึกแถว (ยังไม่รู้ว่าจะกำไรหรือขายได้หรือไม่)',
-      en: 'Vacant 100 sq.wah suburban plot likely to be rezoned commercial (resale outcome unknown).',
+      en: 'Vacant 100 sq.wah suburban plot currently zoned residential, with a strong chance of being rezoned commercial—ideal for building row houses (profit or resale outcome unknown).',
     },
   },
   {
@@ -1074,7 +1086,7 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     title: { th: 'ต้องการขายบ้านเช่า', en: 'Rental House For Sale' },
     description: {
       th: 'พ่อค้าร่ำรวยขอขายบ้านเช่าย่านต่างจังหวัด ต้องการขายบ้านในสภาพเยี่ยม พร้อมให้เช่าในราคาแพง (อาจจะขายได้ราคา 650,000 - 1,350,000 บาท)',
-      en: 'Well-kept provincial home offered in mint condition with high rent (potential resale 650,000 - 1,350,000 ฿).',
+      en: 'Wealthy merchant sells a provincial rental house in mint condition, ready to command a high rental rate (potential resale 650,000 - 1,350,000 ฿).',
     },
   },
   {
@@ -1091,7 +1103,7 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     title: { th: 'ต้องการขายตึกแถว 2 คูหา', en: '2-Unit Row House For Sale' },
     description: {
       th: 'ตึกแถว 2 คูหาสภาพเยี่ยม ทำเลดี ผู้เช่าย้ายออกน้อยมาก รายได้ดี ปัญหาน้อย (อาจจะขายได้ราคา 1,000,000 - 1,600,000 บาท)',
-      en: 'Low-turnover, high-quality 2-unit building in great location (potential resale 1,000,000 - 1,600,000 ฿).',
+      en: '2-unit row house in mint condition and great location; very low tenant turnover, strong income, and few headaches (potential resale 1,000,000 - 1,600,000 ฿).',
     },
   },
   {
@@ -1104,10 +1116,10 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     downPayment: 240000,
     mortgage: 640000,
     cashFlow: -1000,
-    title: { th: 'ต้องการขายบ้านเช่า', en: 'Upscale Rental House' },
+    title: { th: 'ต้องการขายบ้านเช่า', en: 'Upscale Rental House For Sale' },
     description: {
       th: 'บ้านสวย เจ้าของเดิมตกแต่งไว้น่าอยู่มาก อยู่ต่างจังหวัดและใกล้กับสถานศึกษา (อาจจะขายได้ราคา 650,000 - 1,350,000 บาท)',
-      en: 'Beautifully furnished house near provincial campus with -1,000 ฿/mo cashflow (potential resale 650,000 - 1,350,000 ฿).',
+      en: 'Beautiful provincial house tastefully decorated by its previous owner, located near an educational institution (-1,000 ฿/mo cashflow; potential resale 650,000 - 1,350,000 ฿).',
     },
   },
   {
@@ -1124,7 +1136,7 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     title: { th: 'ต้องการขายตึกแถว 1 คูหา', en: '1-Unit Row House For Sale' },
     description: {
       th: 'ตึกแถวนี้ดีที่สุดในละแวกนี้ เจ้าของรักตึกนี้มากแต่ต้องการเกษียณและย้ายไปเลี้ยงหลานที่ต่างจังหวัด (อาจจะขายได้ราคา 500,000 - 800,000 บาท)',
-      en: 'Best 1-unit building on the block; owner retiring to countryside (potential resale 500,000 - 800,000 ฿).',
+      en: 'Best row house in the neighborhood; the owner loves it dearly but wants to retire and move upcountry to raise grandchildren (potential resale 500,000 - 800,000 ฿).',
     },
   },
   {
@@ -1137,10 +1149,10 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     downPayment: 90000,
     mortgage: 610000,
     cashFlow: 3000,
-    title: { th: 'ต้องการขายบ้านเช่า', en: 'Suburban Rental House' },
+    title: { th: 'ต้องการขายบ้านเช่า', en: 'Suburban Rental House For Sale' },
     description: {
       th: 'ผู้จัดการถูกลดเงินเดือน จึงต้องการขายบ้านทำเลดีใกล้แหล่งชุมชน เพราะเงินเดือนใหม่ของเขาไม่พอที่จะผ่อนบ้านได้ (อาจจะขายได้ราคา 650,000 - 1,350,000 บาท)',
-      en: 'Downsized manager sells well-located home near community hub (potential resale 650,000 - 1,350,000 ฿).',
+      en: 'A manager had his salary reduced and must sell this well-located home near a community hub because his new pay cannot cover the mortgage (potential resale 650,000 - 1,350,000 ฿).',
     },
   },
   {
@@ -1154,10 +1166,10 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     downPayment: 4000,
     mortgage: 0,
     cashFlow: 0,
-    title: { th: 'ผู้เช่าทำลายทรัพย์สิน', en: 'Tenant Trashed Property' },
+    title: { th: 'ผู้เช่าทำลายทรัพย์สิน', en: 'Tenant Trashed Your Property' },
     description: {
       th: 'ผู้เช่าจ่ายเงินช้าเนื่องจากตกงาน คุณจึงต้องเชิญให้ผู้เช่าย้ายออก แต่ผู้เช่าทำลายทรัพย์สินของคุณ บริษัทประกันจ่ายค่าเสียหายให้เกือบทั้งหมด แต่คุณยังต้องจ่ายค่าซ่อมแซมเพิ่มอีก · (เฉพาะคุณคนเดียว) ถ้าคุณเป็นเจ้าของอสังหาริมทรัพย์ให้เช่าทุกชนิด จ่าย 4,000 บาท (กู้ธนาคารได้)',
-      en: 'Evicted tenant damaged your rental property. If you own any rental real estate, pay 4,000 ฿ for repairs.',
+      en: 'Your tenant fell behind on rent after losing a job, so you had to evict them—and they trashed the property. Insurance covers most damages, but you still owe extra repairs. · (You only) If you own any rental real estate, pay 4,000 ฿ (bank loan allowed).',
     },
   },
   {
@@ -1174,7 +1186,7 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     title: { th: 'ต้องการขายตึกแถว 2 คูหา', en: '2-Unit Row House For Sale' },
     description: {
       th: 'ตึกแถว 2 คูหาใกล้ทางด่วน เจ้าของต้องการย้ายไปอยู่ที่ที่การจราจรไม่พลุกพล่าน ราคานี้ขายต่อได้กำไรดี (อาจจะขายได้ราคา 1,000,000 - 1,600,000 บาท)',
-      en: '2-unit building near expressway priced for good profit (potential resale 1,000,000 - 1,600,000 ฿).',
+      en: '2-unit row house near the expressway; the owner wants to move somewhere with less traffic, priced for strong resale profit (potential resale 1,000,000 - 1,600,000 ฿).',
     },
   },
   {
@@ -1187,10 +1199,10 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     downPayment: 250000,
     mortgage: 1000000,
     cashFlow: 18000,
-    title: { th: 'ต้องการขายกิจการล้างรถอัตโนมัติ', en: 'Coin-Op Automated Car Wash' },
+    title: { th: 'ต้องการขายกิจการล้างรถอัตโนมัติ', en: 'Coin-Op Automated Car Wash For Sale' },
     description: {
       th: 'ขายกิจการล้างรถหยอดเหรียญ 4 ช่องล้าง ทำเลดีใกล้แหล่งธุรกิจ เจ้าของต้องการปลดเกษียณตัวเองย้ายไปต่างจังหวัด (ไม่มีผู้ซื้อต่อ)',
-      en: '4-bay self-service car wash near business district (no resale buyer).',
+      en: '4-bay coin-operated car wash in a thriving business district; the owner wishes to retire and move upcountry (no resale buyer).',
     },
   },
   {
@@ -1204,10 +1216,10 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     downPayment: 160000,
     mortgage: 640000,
     cashFlow: 7500,
-    title: { th: 'ต้องการขายตึกแถว 2 คูหา', en: 'Foreclosed 2-Unit Row House' },
+    title: { th: 'ต้องการขายตึกแถว 2 คูหา', en: 'Tax-Foreclosed 2-Unit Row House' },
     description: {
       th: 'ตึกแถวในทำเลที่กำลังฟื้นฟู ถูกอายัดบังคับขายเพื่อนำเงินไปจ่ายภาษี (อาจจะขายได้ราคา 1,000,000 - 1,600,000 บาท)',
-      en: 'Tax-foreclosed 2-unit building in revitalizing area (potential resale 1,000,000 - 1,600,000 ฿).',
+      en: '2-unit row house in a recovering neighborhood, seized and forced into sale to settle back taxes (potential resale 1,000,000 - 1,600,000 ฿).',
     },
   },
   {
@@ -1224,7 +1236,7 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     title: { th: 'ท่อน้ำทิ้งแตก!', en: 'Sewer Line Breaks!' },
     description: {
       th: 'ท่อน้ำทิ้งในตึกแถว 4 คูหาแตกต้องรีบซ่อมแซมด่วน ถ้าคุณเป็นเจ้าของตึกแถว 4 คูหา ต้องจ่ายค่าซ่อมท่อน้ำทิ้ง · (เฉพาะคุณคนเดียว) ถ้าคุณเป็นเจ้าของตึกแถว 4 คูหา จ่ายเพียงแห่งเดียว 20,000 บาท',
-      en: 'Main sewer line breaks in your 4-unit building! Pay 20,000 ฿ once if you own a 4-unit row house.',
+      en: 'The sewer line in a 4-unit row house breaks and needs urgent repair. If you own a 4-unit row house, pay for repairs. · (You only) If you own any 4-unit row house, pay 20,000 ฿ once.',
     },
   },
   {
@@ -1240,7 +1252,7 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     title: { th: 'ต้องการขายกิจการล้างรถ', en: 'Car Wash Business For Sale' },
     description: {
       th: 'ขายกิจการล้างรถของครอบครัว เนื่องจากมีเรื่องทะเลาะวิวาทภายในครอบครัว กิจการอยู่ในทำเลทองที่มีอัตราการขยายตัวสูง (อาจจะขายได้ราคา 12-25 เท่าของรายได้)',
-      en: 'Family car wash business in prime high-growth district (potential resale 12-25x monthly cashflow).',
+      en: 'Family-owned car wash business sold due to internal family disputes; located in a prime high-growth district (potential resale 12-25x monthly cashflow).',
     },
   },
   {
@@ -1254,10 +1266,10 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     downPayment: 2000000,
     mortgage: 10000000,
     cashFlow: 110000,
-    title: { th: 'ต้องการขายกิจการอพาร์ตเม้นท์ (60 ห้อง)', en: '60-Unit Apartment Complex' },
+    title: { th: 'ต้องการขายกิจการอพาร์ตเม้นท์ (60 ห้อง)', en: '60-Unit Apartment Complex For Sale' },
     description: {
       th: 'กองทุนบ้านผู้ต้องการขายกิจการอพาร์ตเม้นท์ ห้องชุดจำนวน 60 ห้อง พร้อมทีมบริหารประจำสถานที่ครบครัน (อาจจะขายได้ราคา 15,000,000 - 27,000,000 บาท)',
-      en: 'Massive 60-unit apartment complex with full on-site management team (potential resale 15,000,000 - 27,000,000 ฿).',
+      en: 'Housing fund sells a 60-unit apartment complex complete with a full on-site management team (potential resale 15,000,000 - 27,000,000 ฿).',
     },
   },
   {
@@ -1274,7 +1286,7 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     title: { th: 'ต้องการขายตึกแถว 1 คูหา', en: '1-Unit Row House For Sale' },
     description: {
       th: 'เจ้าของต้องการเงินไปจ่ายค่ารักษาพยาบาล มีผู้เช่าเดิมอยู่แล้ว ชำระค่าเช่าตรงเวลา น่าลงทุนมาก (อาจจะขายได้ราคา 500,000 - 800,000 บาท)',
-      en: 'Owner sells to pay medical bills; reliable existing tenant (potential resale 500,000 - 800,000 ฿).',
+      en: 'Owner needs cash for medical bills; existing tenant pays rent reliably on time—a very appealing investment (potential resale 500,000 - 800,000 ฿).',
     },
   },
   {
@@ -1290,7 +1302,7 @@ export const BIG_DEAL_CARDS: DealCard[] = [
     title: { th: 'ต้องการขายบ้านเช่า', en: 'Rental House For Sale' },
     description: {
       th: 'เจ้าของบ้านอยากจากกัน ขายบ้านหลังนี้ในบริเวณที่มีผู้พักอาศัยและแนวโน้มดีทุกหลัง ประกาศขายมาแล้ว 5 เดือน (อาจจะขายได้ราคา 650,000 - 1,350,000 บาท)',
-      en: 'High-potential residential area house on market for 5 months (potential resale 650,000 - 1,350,000 ฿).',
+      en: 'Distressed owner sells this house in a populated residential area where all surrounding homes have great prospects; listed for 5 months (potential resale 650,000 - 1,350,000 ฿).',
     },
   },
 ];
@@ -1308,7 +1320,7 @@ export const MARKET_CARDS: MarketCard[] = [
     title: { th: 'ต้องการซื้อตึกแถว (800,000 ฿/คูหา)', en: 'Row House Buyer (800,000 ฿/unit)' },
     description: {
       th: 'ขอซื้อตึกแถว 1 คูหา / 2 คูหา / 4 คูหา ในราคาคูหาละ 800,000 บาท · ทุกคนมีสิทธิ์ขายทรัพย์สินได้ที่ราคานี้ (ไม่จำกัดจำนวน)',
-      en: 'Buyer offers 800,000 ฿ per unit for any 1, 2, or 4-unit row house.',
+      en: 'Buyer offers 800,000 ฿ per unit for any 1-unit, 2-unit, or 4-unit row house. · Everyone may sell at this price (unlimited).',
     },
   },
   {
@@ -1320,7 +1332,7 @@ export const MARKET_CARDS: MarketCard[] = [
     title: { th: 'ต้องการซื้อบ้านเช่า (1,100,000 ฿)', en: 'Rental House Buyer (1,100,000 ฿)' },
     description: {
       th: 'มีผู้ซื้อบ้านเช่า 1 หลัง ในราคา 1,100,000 บาท · ทุกคนมีสิทธิ์ขายทรัพย์สินได้ที่ราคานี้ (ไม่จำกัดจำนวน)',
-      en: 'Buyer offers 1,100,000 ฿ for any rental house.',
+      en: 'Buyer wants to purchase 1 rental house for 1,100,000 ฿. · Everyone may sell at this price (unlimited).',
     },
   },
   {
@@ -1332,7 +1344,7 @@ export const MARKET_CARDS: MarketCard[] = [
     title: { th: 'ต้องการซื้อบ้านเช่า (1,000,000 ฿)', en: 'Rental House Buyer (1,000,000 ฿)' },
     description: {
       th: 'มีผู้ซื้อบ้านเช่า 1 หลัง ในราคา 1,000,000 บาท · ทุกคนมีสิทธิ์ขายทรัพย์สินได้ที่ราคานี้ (ไม่จำกัดจำนวน)',
-      en: 'Buyer offers 1,000,000 ฿ for any rental house.',
+      en: 'Buyer wants to purchase 1 rental house for 1,000,000 ฿. · Everyone may sell at this price (unlimited).',
     },
   },
   {
@@ -1344,7 +1356,7 @@ export const MARKET_CARDS: MarketCard[] = [
     title: { th: 'ต้องการซื้อบริษัทซอฟต์แวร์ (1,000,000 ฿)', en: 'Software Company Buyer (1,000,000 ฿)' },
     description: {
       th: 'บริษัทซอฟต์แวร์ยักษ์ใหญ่เสนอราคา 1,000,000 บาท เพื่อซื้อบริษัทซอฟต์แวร์ที่มีนวัตกรรมของคุณ · ผู้ที่เป็นเจ้าของบริษัทซอฟต์แวร์มีสิทธิ์ขายทรัพย์สินนี้ได้ในคราวนี้',
-      en: 'Tech giant offers 1,000,000 ฿ to acquire your innovative software company.',
+      en: 'A software giant offers 1,000,000 ฿ to buy your innovative software company. · Anyone who owns a software company may sell it now.',
     },
   },
   {
@@ -1356,7 +1368,7 @@ export const MARKET_CARDS: MarketCard[] = [
     title: { th: 'ต้องการซื้อตึกแถว (600,000 ฿/คูหา)', en: 'Row House Buyer (600,000 ฿/unit)' },
     description: {
       th: 'ขอซื้อตึกแถว 1 คูหา / 2 คูหา / 4 คูหา ในราคาคูหาละ 600,000 บาท · ทุกคนมีสิทธิ์ขายทรัพย์สินได้ที่ราคานี้ (ไม่จำกัดจำนวน)',
-      en: 'Buyer offers 600,000 ฿ per unit for any 1, 2, or 4-unit row house.',
+      en: 'Buyer offers 600,000 ฿ per unit for any 1-unit, 2-unit, or 4-unit row house. · Everyone may sell at this price (unlimited).',
     },
   },
   {
@@ -1365,10 +1377,10 @@ export const MARKET_CARDS: MarketCard[] = [
     targetTags: ['apartment'],
     offerType: 'per_unit',
     offerAmount: 250000,
-    title: { th: 'ต้องการซื้อกิจการอพาร์ตเมนต์ (250,000 ฿/ห้อง)', en: 'Apartment Buyer (250,000 ฿/unit)' },
+    title: { th: 'ต้องการซื้อกิจการอพาร์ตเมนต์ (250,000 ฿/ห้อง)', en: 'Apartment Complex Buyer (250,000 ฿/unit)' },
     description: {
       th: 'มีผู้ซื้อกิจการอพาร์ตเมนต์ ไม่จำกัดจำนวนห้อง ในราคาห้องละ 250,000 บาท · ทุกคนมีสิทธิ์ขายทรัพย์สินได้ที่ราคานี้ (ไม่จำกัดจำนวน)',
-      en: 'Buyer offers 250,000 ฿ per unit for any apartment complex.',
+      en: 'Buyer offers 250,000 ฿ per unit for any apartment complex regardless of unit count. · Everyone may sell at this price (unlimited).',
     },
   },
   {
@@ -1377,10 +1389,10 @@ export const MARKET_CARDS: MarketCard[] = [
     targetTags: ['condo'],
     offerType: 'fixed_price',
     offerAmount: 550000,
-    title: { th: 'ต้องการซื้อห้องพักคอนโดมิเนียม (550,000 ฿)', en: 'Condo Buyer (550,000 ฿)' },
+    title: { th: 'ต้องการซื้อห้องพักคอนโดมิเนียม (550,000 ฿)', en: 'Condominium Buyer (550,000 ฿)' },
     description: {
       th: 'มีผู้ซื้อห้องพักคอนโดมิเนียม 1 ห้อง ในราคา 550,000 บาท · ทุกคนมีสิทธิ์ขายทรัพย์สินได้ที่ราคานี้ (ไม่จำกัดจำนวน)',
-      en: 'Buyer offers 550,000 ฿ for any condo unit.',
+      en: 'Buyer wants to purchase 1 condominium unit for 550,000 ฿. · Everyone may sell at this price (unlimited).',
     },
   },
   {
@@ -1389,10 +1401,10 @@ export const MARKET_CARDS: MarketCard[] = [
     targetTags: ['gold'],
     offerType: 'fixed_price',
     offerAmount: 6000,
-    title: { th: 'ราคาทองคำพุ่งสูง (6,000 ฿)', en: 'Gold Price Surge (6,000 ฿)' },
+    title: { th: 'ราคาทองคำพุ่งสูง (6,000 ฿)', en: 'Gold Price Surges (6,000 ฿)' },
     description: {
       th: 'เกิดสงครามในตะวันออกกลาง ราคาน้ำมันผันผวนอย่างหนัก ส่งผลให้ราคาทองคำปรับตัวสูงขึ้นเป็นบาทละ 6,000 บาท · ทุกคนที่มีทองคำมีสิทธิ์ขายได้ที่ราคานี้ (ไม่จำกัดจำนวน)',
-      en: 'Middle East conflict lifts gold price to 6,000 ฿. Any owner may sell.',
+      en: 'War breaks out in the Middle East and oil prices swing wildly, pushing gold up to 6,000 ฿ per unit. · Anyone owning gold may sell at this price (unlimited).',
     },
   },
   {
@@ -1401,10 +1413,10 @@ export const MARKET_CARDS: MarketCard[] = [
     targetTags: ['carwash'],
     offerType: 'fixed_price',
     offerAmount: 1000000,
-    title: { th: 'ต้องการซื้อกิจการล้างรถ (1,000,000 ฿)', en: 'Car Wash Buyer (1,000,000 ฿)' },
+    title: { th: 'ต้องการซื้อกิจการล้างรถ (1,000,000 ฿)', en: 'Car Wash Business Buyer (1,000,000 ฿)' },
     description: {
       th: 'นักลงทุนกระเป๋าหนักมองหากิจการล้างรถราคาถูก เงินสดพร้อมจ่าย เขาให้ราคาสูงสุดที่ 1,000,000 บาท ห้ามต่อรอง · ผู้ที่เป็นเจ้าของกิจการล้างรถมีสิทธิ์ขายทรัพย์สินนี้ได้ในคราวนี้',
-      en: 'Cash investor offers 1,000,000 ฿ firm for your car wash business.',
+      en: 'A deep-pocketed investor seeks a bargain car wash, ready to pay cash—his maximum offer is 1,000,000 ฿, non-negotiable. · Anyone who owns a car wash business may sell it now.',
     },
   },
   {
@@ -1416,7 +1428,7 @@ export const MARKET_CARDS: MarketCard[] = [
     title: { th: 'ต้องการซื้อบ้านเช่า (900,000 ฿)', en: 'Rental House Buyer (900,000 ฿)' },
     description: {
       th: 'มีผู้ซื้อบ้านเช่า 1 หลัง ในราคา 900,000 บาท · ทุกคนมีสิทธิ์ขายทรัพย์สินได้ที่ราคานี้ (ไม่จำกัดจำนวน)',
-      en: 'Buyer offers 900,000 ฿ for any rental house.',
+      en: 'Buyer wants to purchase 1 rental house for 900,000 ฿. · Everyone may sell at this price (unlimited).',
     },
   },
   {
@@ -1428,7 +1440,7 @@ export const MARKET_CARDS: MarketCard[] = [
     title: { th: 'ต้องการซื้อบ้านเช่า (1,350,000 ฿)', en: 'Rental House Buyer (1,350,000 ฿)' },
     description: {
       th: 'มีผู้ซื้อบ้านเช่า 1 หลัง ในราคา 1,350,000 บาท · ทุกคนมีสิทธิ์ขายทรัพย์สินได้ที่ราคานี้ (ไม่จำกัดจำนวน)',
-      en: 'Buyer offers 1,350,000 ฿ for any rental house.',
+      en: 'Buyer wants to purchase 1 rental house for 1,350,000 ฿. · Everyone may sell at this price (unlimited).',
     },
   },
   {
@@ -1437,10 +1449,10 @@ export const MARKET_CARDS: MarketCard[] = [
     targetTags: ['condo'],
     offerType: 'fixed_price',
     offerAmount: 650000,
-    title: { th: 'ต้องการซื้อห้องพักคอนโดมิเนียม (650,000 ฿)', en: 'Condo Buyer (650,000 ฿)' },
+    title: { th: 'ต้องการซื้อห้องพักคอนโดมิเนียม (650,000 ฿)', en: 'Condominium Buyer (650,000 ฿)' },
     description: {
       th: 'มีผู้ซื้อห้องพักคอนโดมิเนียม 1 ห้อง ในราคา 650,000 บาท · ทุกคนมีสิทธิ์ขายทรัพย์สินได้ที่ราคานี้ (ไม่จำกัดจำนวน)',
-      en: 'Buyer offers 650,000 ฿ for any condo unit.',
+      en: 'Buyer wants to purchase 1 condominium unit for 650,000 ฿. · Everyone may sell at this price (unlimited).',
     },
   },
   {
@@ -1452,7 +1464,7 @@ export const MARKET_CARDS: MarketCard[] = [
     title: { th: 'ต้องการซื้อบ้านเช่า (650,000 ฿)', en: 'Rental House Buyer (650,000 ฿)' },
     description: {
       th: 'มีผู้ซื้อบ้านเช่า 1 หลัง ในราคา 650,000 บาท · ทุกคนมีสิทธิ์ขายทรัพย์สินได้ที่ราคานี้ (ไม่จำกัดจำนวน)',
-      en: 'Buyer offers 650,000 ฿ for any rental house.',
+      en: 'Buyer wants to purchase 1 rental house for 650,000 ฿. · Everyone may sell at this price (unlimited).',
     },
   },
   {
@@ -1464,7 +1476,7 @@ export const MARKET_CARDS: MarketCard[] = [
     title: { th: 'นักสะสมต้องการเหรียญทอง (50,000 ฿)', en: 'Collector Wants Gold Coins (50,000 ฿)' },
     description: {
       th: 'นักสะสมหาเหรียญทองโบราณ เสนอซื้อในราคาเหรียญละ 50,000 บาท · ผู้ที่มีเหรียญทองโบราณมีสิทธิ์ขายได้ในคราวนี้',
-      en: 'Collector offers 50,000 ฿ per antique gold coin.',
+      en: 'A collector looking for antique gold coins offers 50,000 ฿ per coin. · Anyone who owns antique gold coins may sell now.',
     },
   },
   {
@@ -1473,10 +1485,10 @@ export const MARKET_CARDS: MarketCard[] = [
     targetTags: ['semiconductor'],
     offerType: 'fixed_price',
     offerAmount: 500000,
-    title: { th: 'ต้องการซื้อบริษัทผลิตตัวนำไฟฟ้า (500,000 ฿)', en: 'Semiconductor Buyout (500,000 ฿)' },
+    title: { th: 'ต้องการซื้อบริษัทผลิตตัวนำไฟฟ้า (500,000 ฿)', en: 'Semiconductor Company Buyer (500,000 ฿)' },
     description: {
       th: 'วิศวกรตกอับเศรษฐีซึ่งเป็นเจ้าของบริษัทผลิตเครื่องจักรอุตสาหกรรมเสนอซื้อเทคโนโลยีการผลิตตัวนำไฟฟ้าที่มีนวัตกรรมของคุณด้วยเงิน 500,000 บาท · ผู้ที่เป็นเจ้าของบริษัทผลิตตัวนำไฟฟ้ามีสิทธิ์ขายทรัพย์สินนี้ได้ในคราวนี้',
-      en: 'Wealthy industrialist offers 500,000 ฿ to buy your semiconductor technology.',
+      en: 'A wealthy former engineer who owns an industrial machinery company offers 500,000 ฿ to buy your innovative semiconductor technology. · Anyone who owns a semiconductor company may sell it now.',
     },
   },
   {
@@ -1485,10 +1497,10 @@ export const MARKET_CARDS: MarketCard[] = [
     targetTags: ['condo'],
     offerType: 'fixed_price',
     offerAmount: 450000,
-    title: { th: 'ต้องการซื้อห้องพักคอนโดมิเนียม (450,000 ฿)', en: 'Condo Buyer (450,000 ฿)' },
+    title: { th: 'ต้องการซื้อห้องพักคอนโดมิเนียม (450,000 ฿)', en: 'Condominium Buyer (450,000 ฿)' },
     description: {
       th: 'มีผู้ซื้อห้องพักคอนโดมิเนียม 1 ห้อง ในราคา 450,000 บาท · ทุกคนมีสิทธิ์ขายทรัพย์สินได้ที่ราคานี้ (ไม่จำกัดจำนวน)',
-      en: 'Buyer offers 450,000 ฿ for any condo unit.',
+      en: 'Buyer wants to purchase 1 condominium unit for 450,000 ฿. · Everyone may sell at this price (unlimited).',
     },
   },
   {
@@ -1500,7 +1512,7 @@ export const MARKET_CARDS: MarketCard[] = [
     title: { th: 'ต้องการซื้อตึกแถว (600,000 ฿/คูหา)', en: 'Row House Buyer (600,000 ฿/unit)' },
     description: {
       th: 'ขอซื้อตึกแถว 1 คูหา / 2 คูหา / 4 คูหา ในราคาคูหาละ 600,000 บาท · ทุกคนมีสิทธิ์ขายทรัพย์สินได้ที่ราคานี้ (ไม่จำกัดจำนวน)',
-      en: 'Buyer offers 600,000 ฿ per unit for any 1, 2, or 4-unit row house.',
+      en: 'Buyer offers 600,000 ฿ per unit for any 1-unit, 2-unit, or 4-unit row house. · Everyone may sell at this price (unlimited).',
     },
   },
   {
@@ -1509,10 +1521,10 @@ export const MARKET_CARDS: MarketCard[] = [
     targetTags: ['lp'],
     offerType: 'fixed_price',
     offerAmount: 2000000,
-    title: { th: 'ต้องการซื้อห้างหุ้นส่วนจำกัด (2,000,000 ฿)', en: 'LP Buyout Offer (2,000,000 ฿)' },
+    title: { th: 'ต้องการซื้อห้างหุ้นส่วนจำกัด (2,000,000 ฿)', en: 'Limited Partnership Buyout (2,000,000 ฿)' },
     description: {
       th: 'เจ้าของห้างหุ้นส่วนจำกัดที่คุณร่วมลงทุนตัดสินใจขายกิจการ คุณได้รับค่าตอบแทน 2 เท่าของเงินลงทุน การ์ดนี้มีผลกับทุกห้างหุ้นส่วนจำกัด (เต็นท์รถยนต์มือสอง, พิซซ่าแช่แข็ง, คลินิก, ร้านเบเกอรี่) · เสนอซื้อในราคา 2,000,000 บาท',
-      en: 'LP business sold! Holders of any Limited Partnership (Used Car Lot, Pizza, Clinic, Bakery) may sell for 2,000,000 ฿.',
+      en: 'The owner of the Limited Partnership you invested in decides to sell the business. This card applies to all Limited Partnerships (Used Car Lot, Frozen Pizza, Clinic, Bakery) · Buyout offer: 2,000,000 ฿.',
     },
   },
   {
@@ -1524,7 +1536,7 @@ export const MARKET_CARDS: MarketCard[] = [
     title: { th: 'ต้องการซื้อที่ดิน 100 ตารางวา (2,000,000 ฿)', en: '100 Sq.Wah Land Buyer (2,000,000 ฿)' },
     description: {
       th: 'บริษัทก่อสร้างต้องการที่ดิน 100 ตารางวา บริเวณชานเมือง เพื่อนำไปจัดโซนบ้านเมืองพักอาศัยให้เป็นเมืองธุรกิจ เสนอซื้อในราคา 2,000,000 บาท',
-      en: 'Construction firm offers 2,000,000 ฿ for 100 sq.wah suburban land.',
+      en: 'A construction firm seeks 100 sq.wah of suburban land to redevelop a residential area into a commercial district, offering 2,000,000 ฿.',
     },
   },
   {
@@ -1536,7 +1548,7 @@ export const MARKET_CARDS: MarketCard[] = [
     title: { th: 'ต้องการซื้อตึกแถว (700,000 ฿/คูหา)', en: 'Row House Buyer (700,000 ฿/unit)' },
     description: {
       th: 'ขอซื้อตึกแถว 1 คูหา / 2 คูหา / 4 คูหา ในราคาคูหาละ 700,000 บาท · ทุกคนมีสิทธิ์ขายทรัพย์สินได้ที่ราคานี้ (ไม่จำกัดจำนวน)',
-      en: 'Buyer offers 700,000 ฿ per unit for any 1, 2, or 4-unit row house.',
+      en: 'Buyer offers 700,000 ฿ per unit for any 1-unit, 2-unit, or 4-unit row house. · Everyone may sell at this price (unlimited).',
     },
   },
   {
@@ -1548,7 +1560,7 @@ export const MARKET_CARDS: MarketCard[] = [
     title: { th: 'ต้องการซื้อบ้านเช่า (1,350,000 ฿)', en: 'Rental House Buyer (1,350,000 ฿)' },
     description: {
       th: 'มีผู้ซื้อบ้านเช่า 1 หลัง ในราคา 1,350,000 บาท · ทุกคนมีสิทธิ์ขายทรัพย์สินได้ที่ราคานี้ (ไม่จำกัดจำนวน)',
-      en: 'Buyer offers 1,350,000 ฿ for any rental house.',
+      en: 'Buyer wants to purchase 1 rental house for 1,350,000 ฿. · Everyone may sell at this price (unlimited).',
     },
   },
   {
@@ -1560,7 +1572,7 @@ export const MARKET_CARDS: MarketCard[] = [
     title: { th: 'ต้องการซื้อตึกแถว (500,000 ฿/คูหา)', en: 'Row House Buyer (500,000 ฿/unit)' },
     description: {
       th: 'ขอซื้อตึกแถว 1 คูหา / 2 คูหา / 4 คูหา ในราคาคูหาละ 500,000 บาท · ทุกคนมีสิทธิ์ขายทรัพย์สินได้ที่ราคานี้ (ไม่จำกัดจำนวน)',
-      en: 'Buyer offers 500,000 ฿ per unit for any 1, 2, or 4-unit row house.',
+      en: 'Buyer offers 500,000 ฿ per unit for any 1-unit, 2-unit, or 4-unit row house. · Everyone may sell at this price (unlimited).',
     },
   },
   {
@@ -1569,10 +1581,10 @@ export const MARKET_CARDS: MarketCard[] = [
     targetTags: ['lp'],
     offerType: 'multiplier',
     offerAmount: 2,
-    title: { th: 'ต้องการซื้อห้างหุ้นส่วนจำกัด (คืนทุน 2 เท่า)', en: 'LP Buyout Offer (2x Cash)' },
+    title: { th: 'ต้องการซื้อห้างหุ้นส่วนจำกัด (คืนทุน 2 เท่า)', en: 'Limited Partnership Buyout (2x Cash)' },
     description: {
       th: 'เจ้าของห้างหุ้นส่วนจำกัดที่คุณร่วมลงทุนตัดสินใจขายกิจการ คุณได้รับค่าตอบแทน 2 เท่าของเงินลงทุน การ์ดนี้มีผลกับทุกห้างหุ้นส่วนจำกัด (เต็นท์รถยนต์มือสอง, พิซซ่าแช่แข็ง, คลินิก, ร้านเบเกอรี่)',
-      en: 'LP business sold! All LP owners receive 2x their original investment.',
+      en: 'The owner of the Limited Partnership you invested in decides to sell the business. You receive 2x your original investment. This card applies to all Limited Partnerships (Used Car Lot, Frozen Pizza, Clinic, Bakery).',
     },
   },
   {
@@ -1581,10 +1593,10 @@ export const MARKET_CARDS: MarketCard[] = [
     targetTags: ['condo'],
     offerType: 'fixed_price',
     offerAmount: 550000,
-    title: { th: 'ต้องการซื้อห้องพักคอนโดมิเนียม (550,000 ฿)', en: 'Condo Buyer (550,000 ฿)' },
+    title: { th: 'ต้องการซื้อห้องพักคอนโดมิเนียม (550,000 ฿)', en: 'Condominium Buyer (550,000 ฿)' },
     description: {
       th: 'มีผู้ซื้อห้องพักคอนโดมิเนียม 1 ห้อง ในราคา 550,000 บาท · ทุกคนมีสิทธิ์ขายทรัพย์สินได้ที่ราคานี้ (ไม่จำกัดจำนวน)',
-      en: 'Buyer offers 550,000 ฿ for any condo unit.',
+      en: 'Buyer wants to purchase 1 condominium unit for 550,000 ฿. · Everyone may sell at this price (unlimited).',
     },
   },
   {
@@ -1593,10 +1605,10 @@ export const MARKET_CARDS: MarketCard[] = [
     targetTags: ['lp'],
     offerType: 'multiplier',
     offerAmount: 3,
-    title: { th: 'ต้องการซื้อห้างหุ้นส่วนจำกัด (คืนทุน 3 เท่า)', en: 'LP Buyout Offer (3x Cash)' },
+    title: { th: 'ต้องการซื้อห้างหุ้นส่วนจำกัด (คืนทุน 3 เท่า)', en: 'Limited Partnership Buyout (3x Cash)' },
     description: {
       th: 'เจ้าของห้างหุ้นส่วนจำกัดที่คุณร่วมลงทุนตัดสินใจขายกิจการ คุณได้รับค่าตอบแทน 3 เท่าของเงินลงทุน การ์ดนี้มีผลกับทุกห้างหุ้นส่วนจำกัด (เต็นท์รถยนต์มือสอง, พิซซ่าแช่แข็ง, คลินิก, ร้านเบเกอรี่)',
-      en: 'LP business sold! All LP owners receive 3x their original investment.',
+      en: 'The owner of the Limited Partnership you invested in decides to sell the business. You receive 3x your original investment. This card applies to all Limited Partnerships (Used Car Lot, Frozen Pizza, Clinic, Bakery).',
     },
   },
   {
@@ -1608,7 +1620,7 @@ export const MARKET_CARDS: MarketCard[] = [
     title: { th: 'ต้องการซื้อบ้านเช่า (1,000,000 ฿)', en: 'Rental House Buyer (1,000,000 ฿)' },
     description: {
       th: 'มีผู้ซื้อบ้านเช่า 1 หลัง ในราคา 1,000,000 บาท · ทุกคนมีสิทธิ์ขายทรัพย์สินได้ที่ราคานี้ (ไม่จำกัดจำนวน)',
-      en: 'Buyer offers 1,000,000 ฿ for any rental house.',
+      en: 'Buyer wants to purchase 1 rental house for 1,000,000 ฿. · Everyone may sell at this price (unlimited).',
     },
   },
   {
@@ -1617,10 +1629,10 @@ export const MARKET_CARDS: MarketCard[] = [
     targetTags: ['apartment'],
     offerType: 'per_unit',
     offerAmount: 450000,
-    title: { th: 'ต้องการซื้อกิจการอพาร์ตเมนต์ (450,000 ฿/ห้อง)', en: 'Apartment Buyer (450,000 ฿/unit)' },
+    title: { th: 'ต้องการซื้อกิจการอพาร์ตเมนต์ (450,000 ฿/ห้อง)', en: 'Apartment Complex Buyer (450,000 ฿/unit)' },
     description: {
       th: 'มีผู้ซื้อกิจการอพาร์ตเมนต์ ไม่จำกัดจำนวนห้อง ในราคาห้องละ 450,000 บาท · ทุกคนมีสิทธิ์ขายทรัพย์สินได้ที่ราคานี้ (ไม่จำกัดจำนวน)',
-      en: 'Buyer offers 450,000 ฿ per unit for any apartment complex.',
+      en: 'Buyer offers 450,000 ฿ per unit for any apartment complex regardless of unit count. · Everyone may sell at this price (unlimited).',
     },
   },
   {
@@ -1640,10 +1652,10 @@ export const MARKET_CARDS: MarketCard[] = [
     ],
     offerType: 'cashflow_boost',
     offerAmount: 4000,
-    title: { th: 'ธุรกิจขนาดย่อมขยายตัว (+4,000 ฿/ด.)', en: 'Small Business Expansion (+4,000 ฿/mo)' },
+    title: { th: 'ธุรกิจขนาดย่อมขยายตัว (+4,000 ฿/ด.)', en: 'Small Business Expands (+4,000 ฿/mo)' },
     description: {
       th: 'ธุรกิจขนาดย่อมที่คุณเป็นเจ้าของ เพิ่มช่องทางการจัดจำหน่ายทำให้ยอดขายเพิ่มขึ้น 150% คุณได้รับรายได้จากธุรกิจเพิ่มขึ้น 4,000 บาท ต่อเดือน · ทุกคนที่เป็นเจ้าของธุรกิจทุกชนิดรับรายได้เพิ่มขึ้นธุรกิจละ 4,000 บาท',
-      en: 'Distribution expansion boosts sales! Every business owner gets +4,000 ฿/mo cashflow per business.',
+      en: 'Your small business adds new distribution channels, boosting sales by 150% and increasing monthly income by 4,000 ฿. · Every owner of any business gains +4,000 ฿/mo cashflow per business.',
     },
   },
   {
@@ -1656,7 +1668,7 @@ export const MARKET_CARDS: MarketCard[] = [
     title: { th: 'ต้องการซื้อกิจการอพาร์ตเมนต์ 12 ห้องขึ้นไป (300,000 ฿/ห้อง)', en: '12+ Unit Apartment Buyer (300,000 ฿/unit)' },
     description: {
       th: 'เจ้าของตึกแถวในต่างจังหวัดขายตึกแถว เพื่อนำเงินมาลงทุนในกิจการอพาร์ตเมนต์ ต้องการซื้อกิจการอพาร์ตเมนต์ ตั้งแต่ 12 ห้องพักขึ้นไป ในราคาห้องละ 300,000 บาท',
-      en: 'Buyer seeks 12+ unit apartment complexes at 300,000 ฿ per unit.',
+      en: 'A provincial row-house owner sold his row houses to invest in apartments and wants to buy any apartment complex with 12 or more units at 300,000 ฿ per unit.',
     },
   },
   {
@@ -1665,10 +1677,10 @@ export const MARKET_CARDS: MarketCard[] = [
     targetTags: ['apartment'],
     offerType: 'per_unit',
     offerAmount: 400000,
-    title: { th: 'ต้องการซื้อกิจการอพาร์ตเมนต์ (400,000 ฿/ห้อง)', en: 'Apartment Buyer (400,000 ฿/unit)' },
+    title: { th: 'ต้องการซื้อกิจการอพาร์ตเมนต์ (400,000 ฿/ห้อง)', en: 'Apartment Complex Buyer (400,000 ฿/unit)' },
     description: {
       th: 'มีผู้ซื้อกิจการอพาร์ตเมนต์ ไม่จำกัดจำนวนห้อง ในราคาห้องละ 400,000 บาท · ทุกคนมีสิทธิ์ขายทรัพย์สินได้ที่ราคานี้ (ไม่จำกัดจำนวน)',
-      en: 'Buyer offers 400,000 ฿ per unit for any apartment complex.',
+      en: 'Buyer offers 400,000 ฿ per unit for any apartment complex regardless of unit count. · Everyone may sell at this price (unlimited).',
     },
   },
   {
@@ -1681,7 +1693,7 @@ export const MARKET_CARDS: MarketCard[] = [
     title: { th: 'อัตราดอกเบี้ยลด ! (กำไร +500,000 ฿)', en: 'Interest Rates Drop! (+500,000 ฿ Profit)' },
     description: {
       th: 'ดอกเบี้ยเงินกู้ซื้อบ้านลดเหลือ 5% ถ้าคุณเป็นเจ้าของบ้านเช่า สามารถขายบ้านเช่าได้กำไร 500,000 บาทจากราคาเดิมที่คุณซื้อมา · (เฉพาะคุณคนเดียว) มีสิทธิ์ขายทรัพย์สินนี้ได้ในคราวนี้',
-      en: 'Mortgage rates drop to 5%! Only you may sell any rental house for 500,000 ฿ above purchase cost.',
+      en: 'Home mortgage interest rates drop to 5%! If you own a rental house, you may sell it for 500,000 ฿ above the original price you paid. · (You only) May sell this asset now.',
     },
   },
   {
@@ -1701,10 +1713,10 @@ export const MARKET_CARDS: MarketCard[] = [
     ],
     offerType: 'cashflow_boost',
     offerAmount: 2500,
-    title: { th: 'ธุรกิจขนาดย่อมขยายตัว (+2,500 ฿/ด.)', en: 'Small Business Award (+2,500 ฿/mo)' },
+    title: { th: 'ธุรกิจขนาดย่อมขยายตัว (+2,500 ฿/ด.)', en: 'Small Business Expands (+2,500 ฿/mo)' },
     description: {
       th: 'ธุรกิจขนาดย่อมที่คุณเป็นเจ้าของได้รับรางวัลผลิตภัณฑ์ดีเด่น ทำให้ยอดขายของคุณเพิ่มขึ้น 2 เท่า คุณได้รับรายได้จากธุรกิจเพิ่มขึ้น 2,500 บาท ต่อเดือน · ทุกคนที่เป็นเจ้าของธุรกิจทุกชนิดรับรายได้เพิ่มขึ้นธุรกิจละ 2,500 บาท',
-      en: 'Product award doubles sales! Every business owner gets +2,500 ฿/mo cashflow per business.',
+      en: 'Your small business wins an Outstanding Product Award, doubling sales and adding 2,500 ฿/mo in business income. · Every owner of any business gains +2,500 ฿/mo cashflow per business.',
     },
   },
   {
@@ -1713,10 +1725,10 @@ export const MARKET_CARDS: MarketCard[] = [
     targetTags: ['guesthouse'],
     offerType: 'fixed_price',
     offerAmount: 2500000,
-    title: { th: 'ต้องการซื้อกิจการเกสต์เฮ้าส์ (2,500,000 ฿)', en: 'Guesthouse Buyer (2,500,000 ฿)' },
+    title: { th: 'ต้องการซื้อกิจการเกสต์เฮ้าส์ (2,500,000 ฿)', en: 'Guesthouse Business Buyer (2,500,000 ฿)' },
     description: {
       th: 'คู่สามี-ภรรยา เตรียมตัวสำหรับการเปลี่ยนแปลงพวกเขาเก็บเงินสดอยู่มากพอสมควร และกำลังมองหากิจการเกสต์เฮ้าส์ที่มีกำไรจากการดำเนินการ เสนอซื้อในราคา 2,500,000 บาท',
-      en: 'Cash-rich couple offers 2,500,000 ฿ to buy your guesthouse business.',
+      en: 'A husband-and-wife couple preparing for a lifestyle change has saved plenty of cash and seeks a profitable guesthouse business, offering 2,500,000 ฿.',
     },
   },
   {
@@ -1728,7 +1740,7 @@ export const MARKET_CARDS: MarketCard[] = [
     title: { th: 'ต้องการซื้อที่ดิน 10 ไร่ (1,500,000 ฿)', en: '10 Rai Land Buyer (1,500,000 ฿)' },
     description: {
       th: 'สำนักผังเมืองต้องการให้บริษัทก่อสร้างจัดสรรที่ดินเพื่อสร้างเป็นสวนสาธารณะ ต้องเป็นที่ดินผืนใหญ่และมีลำธารไหลผ่าน เสนอซื้อในราคา 1,500,000 บาท',
-      en: 'City planner contractor offers 1,500,000 ฿ for your 10-rai land with a stream.',
+      en: 'The City Planning Office commissions a construction firm to develop a public park; requires a large parcel with a stream running through, offering 1,500,000 ฿.',
     },
   },
   {
@@ -1740,7 +1752,7 @@ export const MARKET_CARDS: MarketCard[] = [
     title: { th: 'ต้องการซื้อกิจการขนาดเล็ก (1,000,000 ฿)', en: 'Small Business / Mini-Mall Buyer (1,000,000 ฿)' },
     description: {
       th: 'ตัวแทนจำหน่ายสินค้าอุปโภคบริโภครายใหญ่ขยายกิจการต้องการซื้อห้างขนาดเล็กในราคา 1,000,000 บาท · ทุกคนมีสิทธิ์ขายทรัพย์สินได้ที่ราคานี้ (ไม่จำกัดจำนวน)',
-      en: 'Distributor offers 1,000,000 ฿ for any mini-mall / small business.',
+      en: 'A major consumer-goods distributor expanding operations wants to buy a mini-mall / small business for 1,000,000 ฿. · Everyone may sell at this price (unlimited).',
     },
   },
   {
@@ -1752,7 +1764,7 @@ export const MARKET_CARDS: MarketCard[] = [
     title: { th: 'ต้องการซื้อตึกแถว (700,000 ฿/คูหา)', en: 'Row House Buyer (700,000 ฿/unit)' },
     description: {
       th: 'ขอซื้อตึกแถว 1 คูหา / 2 คูหา / 4 คูหา ในราคาคูหาละ 700,000 บาท · ทุกคนมีสิทธิ์ขายทรัพย์สินได้ที่ราคานี้ (ไม่จำกัดจำนวน)',
-      en: 'Buyer offers 700,000 ฿ per unit for any 1, 2, or 4-unit row house.',
+      en: 'Buyer offers 700,000 ฿ per unit for any 1-unit, 2-unit, or 4-unit row house. · Everyone may sell at this price (unlimited).',
     },
   },
   {
@@ -1764,7 +1776,7 @@ export const MARKET_CARDS: MarketCard[] = [
     title: { th: 'ต้องการซื้อตึกแถว (800,000 ฿/คูหา)', en: 'Row House Buyer (800,000 ฿/unit)' },
     description: {
       th: 'ขอซื้อตึกแถว 1 คูหา / 2 คูหา / 4 คูหา ในราคาคูหาละ 800,000 บาท · ทุกคนมีสิทธิ์ขายทรัพย์สินได้ที่ราคานี้ (ไม่จำกัดจำนวน)',
-      en: 'Buyer offers 800,000 ฿ per unit for any 1, 2, or 4-unit row house.',
+      en: 'Buyer offers 800,000 ฿ per unit for any 1-unit, 2-unit, or 4-unit row house. · Everyone may sell at this price (unlimited).',
     },
   },
   {
@@ -1776,7 +1788,7 @@ export const MARKET_CARDS: MarketCard[] = [
     title: { th: 'ต้องการซื้อตึกแถว (700,000 ฿/คูหา)', en: 'Row House Buyer (700,000 ฿/unit)' },
     description: {
       th: 'ขอซื้อตึกแถว 1 คูหา / 2 คูหา / 4 คูหา ในราคาคูหาละ 700,000 บาท · ทุกคนมีสิทธิ์ขายทรัพย์สินได้ที่ราคานี้ (ไม่จำกัดจำนวน)',
-      en: 'Buyer offers 700,000 ฿ per unit for any 1, 2, or 4-unit row house.',
+      en: 'Buyer offers 700,000 ฿ per unit for any 1-unit, 2-unit, or 4-unit row house. · Everyone may sell at this price (unlimited).',
     },
   },
   {
@@ -1786,10 +1798,10 @@ export const MARKET_CARDS: MarketCard[] = [
     offerType: 'cashflow_adjust',
     offerAmount: -5000,
     onlyDrawer: true,
-    title: { th: 'น้องเขยต้องการซื้อบ้านเช่า (-5,000 ฿/ด.)', en: 'Brother-in-Law House Offer (-5,000 ฿/mo)' },
+    title: { th: 'น้องเขยต้องการซื้อบ้านเช่า (-5,000 ฿/ด.)', en: 'Brother-in-Law Wants to Buy House (-5,000 ฿/mo)' },
     description: {
       th: 'น้องเขยของคุณออกจากงาน ต้องการซื้อบ้านเช่าจากคุณ เขาสัญญาว่าจะซื้อในราคา 1,000,000 บาท ในอีก 4 ปี แต่ตอนนี้เขามีรายได้และเงินเก็บไม่มากพอที่จะจ่ายเงินดาวน์บ้าน แต่ยังพอมีเงินที่จะจ่ายค่าเช่าบ้านได้เล็กน้อย · (เฉพาะคุณคนเดียว) ถ้าคุณขายบ้านให้น้องเขยของคุณ รายได้จากบ้านหลังนี้จะลดลง 5,000 บาทต่อเดือน',
-      en: 'Brother-in-law wants to rent-to-own one of your rental houses; if accepted, cashflow drops by 5,000 ฿/mo.',
+      en: 'Your brother-in-law quit his job and wants to buy a rental house from you, promising 1,000,000 ฿ in 4 years. Right now he lacks income and savings for a down payment, though he can still pay a little rent. · (You only) If you sell the house to him, monthly cashflow from this house drops by 5,000 ฿.',
     },
   },
   {
@@ -1802,7 +1814,7 @@ export const MARKET_CARDS: MarketCard[] = [
     title: { th: 'เกิดวิกฤตการณ์เงินเฟ้อ', en: 'Inflation Crisis (Return Rental Houses)' },
     description: {
       th: 'อัตราเงินเฟ้อขยายตัวสูงถึง 10% ส่งผลให้ดอกเบี้ยเงินกู้สำหรับซื้อบ้านพุ่งขึ้นถึง 20% บ้านเช่าทุกหลังที่คุณเป็นเจ้าของถูกสถาบันการเงินปรับอัตราดอกเบี้ยจดจำนองใหม่ · (เฉพาะคุณคนเดียว) คืนบ้านเช่าทุกหลังให้ธนาคาร รับเงินดาวน์คืน และลบกระแสเงินสดออกจากรายการการเงิน',
-      en: '10% inflation spikes mortgage rates to 20%. All your rental houses are returned to the bank; receive your down payments back.',
+      en: 'Inflation jumps to 10%, pushing mortgage interest rates up to 20%. Financial institutions reprice the mortgages on all rental houses you own. · (You only) Return all rental houses to the bank, receive your down payments back, and remove their cashflow from your statement.',
     },
   },
 ];
@@ -1822,7 +1834,7 @@ export const DOODAD_CARDS: DoodadCard[] = [
     id: 'dd_02',
     deck: 'doodad',
     cost: 2000,
-    title: { th: 'จัดงานฉลองวันเกิด', en: 'Birthday Celebration' },
+    title: { th: 'จัดงานฉลองวันเกิด', en: 'Birthday Celebration Party' },
     description: { th: 'จ่าย 2,000 บาท', en: 'Pay 2,000 ฿' },
   },
   {
@@ -1830,45 +1842,45 @@ export const DOODAD_CARDS: DoodadCard[] = [
     deck: 'doodad',
     cost: 20000,
     onlyIfHasChildren: true,
-    title: { th: 'ลูกอยากได้กระเป๋าแบรนด์เนม', en: 'Child Wants Designer Bag' },
+    title: { th: 'ลูกอยากได้กระเป๋าแบรนด์เนม', en: 'Child Wants a Designer Bag' },
     description: {
       th: 'ราคา 20,000 บาท (ถ้าคุณมีลูก — หากยังไม่มีลูก จ่าย 0 ฿)',
-      en: 'Pay 20,000 ฿ (only if you have children)',
+      en: '20,000 ฿ (if you have children — pay 0 ฿ if none)',
     },
   },
   {
     id: 'dd_04',
     deck: 'doodad',
     cost: 3500,
-    title: { th: 'ซื้อแว่นกันแดดใหม่', en: 'New Sunglasses' },
-    description: { th: 'ราคา 3,500 บาท', en: 'Pay 3,500 ฿' },
+    title: { th: 'ซื้อแว่นกันแดดใหม่', en: 'Buy New Sunglasses' },
+    description: { th: 'ราคา 3,500 บาท', en: '3,500 ฿' },
   },
   {
     id: 'dd_05',
     deck: 'doodad',
     cost: 3500,
-    title: { th: 'เสียภาษีย้อนหลัง', en: 'Back Taxes' },
+    title: { th: 'เสียภาษีย้อนหลัง', en: 'Pay Back Taxes' },
     description: { th: 'จ่าย 3,500 บาท', en: 'Pay 3,500 ฿' },
   },
   {
     id: 'dd_06',
     deck: 'doodad',
     cost: 2000,
-    title: { th: 'ซื้อลูกกอล์ฟ', en: 'New Golf Balls' },
-    description: { th: 'ราคา 2,000 บาท', en: 'Pay 2,000 ฿' },
+    title: { th: 'ซื้อลูกกอล์ฟ', en: 'Buy Golf Balls' },
+    description: { th: 'ราคา 2,000 บาท', en: '2,000 ฿' },
   },
   {
     id: 'dd_07',
     deck: 'doodad',
     cost: 1000,
-    title: { th: 'ไปคาเฟ่ ถ่ายรูป', en: 'Cafe & Photo Trip' },
+    title: { th: 'ไปคาเฟ่ ถ่ายรูป', en: 'Cafe Hopping & Photos' },
     description: { th: 'จ่าย 1,000 บาท', en: 'Pay 1,000 ฿' },
   },
   {
     id: 'dd_08',
     deck: 'doodad',
     cost: 6000,
-    title: { th: 'ติดวอลเปเปอร์ใหม่', en: 'New Wallpaper' },
+    title: { th: 'ติดวอลเปเปอร์ใหม่', en: 'Put Up New Wallpaper' },
     description: { th: 'จ่าย 6,000 บาท', en: 'Pay 6,000 ฿' },
   },
   {
@@ -1877,226 +1889,244 @@ export const DOODAD_CARDS: DoodadCard[] = [
     cost: 500,
     onlyIfHasChildren: true,
     perChildCost: true,
-    title: { th: 'ซื้อของเล่นให้ลูก', en: 'Toys for Children' },
+    title: { th: 'ซื้อของเล่นให้ลูก', en: 'Buy Toys for Your Children' },
     description: {
       th: 'ราคา 500 บาท ต่อลูกหนึ่งคน (ถ้าคุณมีลูก — หากยังไม่มีลูก จ่าย 0 ฿)',
-      en: '500 ฿ per child (only if you have children)',
+      en: '500 ฿ per child (if you have children — pay 0 ฿ if none)',
     },
   },
   {
     id: 'dd_10',
     deck: 'doodad',
     cost: 3000,
-    title: { th: 'เฟอร์นิเจอร์ลดราคา', en: 'Discounted Furniture' },
-    description: { th: 'เล็งเก้าอี้ตัวใหม่มานานแล้ว ราคา 3,000 บาท', en: 'Pay 3,000 ฿ for a new chair' },
+    title: { th: 'เฟอร์นิเจอร์ลดราคา', en: 'Furniture on Sale' },
+    description: {
+      th: 'เล็งเก้าอี้ตัวใหม่มานานแล้ว ราคา 3,000 บาท',
+      en: 'You’ve had your eye on a new chair for a long time — 3,000 ฿',
+    },
   },
   {
     id: 'dd_11',
     deck: 'doodad',
     cost: 5000,
     title: { th: 'ตกแต่งบ้านใหม่', en: 'Home Redecoration' },
-    description: { th: 'จ้างช่างศิลป์ตกแต่งบ้านใหม่ จ่าย 5,000 บาท', en: 'Pay 5,000 ฿' },
+    description: {
+      th: 'จ้างช่างศิลป์ตกแต่งบ้านใหม่ จ่าย 5,000 บาท',
+      en: 'Hire an interior artist to redecorate your home — pay 5,000 ฿',
+    },
   },
   {
     id: 'dd_12',
     deck: 'doodad',
     cost: 800,
-    title: { th: 'กินบุฟเฟต์', en: 'Buffet Dinner' },
+    title: { th: 'กินบุฟเฟต์', en: 'Eat at a Buffet' },
     description: { th: 'จ่าย 800 บาท', en: 'Pay 800 ฿' },
   },
   {
     id: 'dd_13',
     deck: 'doodad',
     cost: 3500,
-    title: { th: 'ช้อปปิ้งอย่างสนุกสนาน', en: 'Shopping Spree (New Watch)' },
-    description: { th: 'ซื้อนาฬิกาข้อมือใหม่ ราคา 3,500 บาท ทั้งๆ ที่มีอยู่แล้ว 3 เรือน', en: 'Pay 3,500 ฿' },
+    title: { th: 'ช้อปปิ้งอย่างสนุกสนาน', en: 'Fun Shopping Spree' },
+    description: {
+      th: 'ซื้อนาฬิกาข้อมือใหม่ ราคา 3,500 บาท ทั้งๆ ที่มีอยู่แล้ว 3 เรือน',
+      en: 'Buy a new wristwatch for 3,500 ฿ even though you already own 3 watches',
+    },
   },
   {
     id: 'dd_14',
     deck: 'doodad',
     cost: 200,
     title: { th: 'ค่าชานมไข่มุกและขนม', en: 'Bubble Tea & Snacks' },
-    description: { th: 'ราคา 200 บาท', en: 'Pay 200 ฿' },
+    description: { th: 'ราคา 200 บาท', en: '200 ฿' },
   },
   {
     id: 'dd_15',
     deck: 'doodad',
     cost: 20000,
     onlyIfHasChildren: true,
-    title: { th: 'ลูกสาวแต่งงาน', en: 'Daughter’s Wedding' },
+    title: { th: 'ลูกสาวแต่งงาน', en: 'Daughter Gets Married' },
     description: {
       th: 'จ่าย 20,000 บาท (ถ้าคุณมีลูก — หากยังไม่มีลูก จ่าย 0 ฿)',
-      en: 'Pay 20,000 ฿ (only if you have children)',
+      en: 'Pay 20,000 ฿ (if you have children — pay 0 ฿ if none)',
     },
   },
   {
     id: 'dd_16',
     deck: 'doodad',
     cost: 1000,
-    title: { th: 'ซื้อเคสโทรศัพท์ใหม่', en: 'New Phone Case' },
-    description: { th: 'ราคา 1,000 บาท', en: 'Pay 1,000 ฿' },
+    title: { th: 'ซื้อเคสโทรศัพท์ใหม่', en: 'Buy a New Phone Case' },
+    description: { th: 'ราคา 1,000 บาท', en: '1,000 ฿' },
   },
   {
     id: 'dd_17',
     deck: 'doodad',
     cost: 2000,
-    title: { th: 'ไปชมคอนเสิร์ต', en: 'Concert Tickets' },
+    title: { th: 'ไปชมคอนเสิร์ต', en: 'Go to a Concert' },
     description: { th: 'จ่าย 2,000 บาท', en: 'Pay 2,000 ฿' },
   },
   {
     id: 'dd_18',
     deck: 'doodad',
     cost: 500,
-    title: { th: 'ไปเที่ยวสวนสัตว์', en: 'Zoo Trip' },
-    description: { th: 'จ่ายค่าบัตร 500 บาท', en: 'Pay 500 ฿' },
+    title: { th: 'ไปเที่ยวสวนสัตว์', en: 'Trip to the Zoo' },
+    description: { th: 'จ่ายค่าบัตร 500 บาท', en: 'Pay 500 ฿ for admission tickets' },
   },
   {
     id: 'dd_19',
     deck: 'doodad',
     cost: 6000,
-    title: { th: 'ซื้อเครื่องประดับ', en: 'Jewelry Purchase' },
-    description: { th: 'ราคา 6,000 บาท', en: 'Pay 6,000 ฿' },
+    title: { th: 'ซื้อเครื่องประดับ', en: 'Buy Jewelry' },
+    description: { th: 'ราคา 6,000 บาท', en: '6,000 ฿' },
   },
   {
     id: 'dd_20',
     deck: 'doodad',
     cost: 1500,
     title: { th: 'ซื้อบัตรดูหนังระดับพรีเมียม', en: 'Premium Movie Tickets' },
-    description: { th: 'ราคา 1,500 บาท', en: 'Pay 1,500 ฿' },
+    description: { th: 'ราคา 1,500 บาท', en: '1,500 ฿' },
   },
   {
     id: 'dd_21',
     deck: 'doodad',
     cost: 1000,
-    title: { th: 'จ่ายค่าบริการสตรีมมิงรายเดือน', en: 'Streaming Subscriptions' },
-    description: { th: 'ราคา 1,000 บาท', en: 'Pay 1,000 ฿' },
+    title: { th: 'จ่ายค่าบริการสตรีมมิงรายเดือน', en: 'Monthly Streaming Subscriptions' },
+    description: { th: 'ราคา 1,000 บาท', en: '1,000 ฿' },
   },
   {
     id: 'dd_22',
     deck: 'doodad',
     cost: 9000,
-    title: { th: 'ซื้อโทรศัพท์มือถือเครื่องใหม่', en: 'New Smartphone' },
-    description: { th: 'ราคา 9,000 บาท ทั้งๆ ที่เครื่องเดิมยังใช้ได้อยู่', en: 'Pay 9,000 ฿' },
+    title: { th: 'ซื้อโทรศัพท์มือถือเครื่องใหม่', en: 'Buy a New Mobile Phone' },
+    description: {
+      th: 'ราคา 9,000 บาท ทั้งๆ ที่เครื่องเดิมยังใช้ได้อยู่',
+      en: '9,000 ฿ even though your old phone still works perfectly fine',
+    },
   },
   {
     id: 'dd_23',
     deck: 'doodad',
     cost: 1500,
-    title: { th: 'ซื้อกล่องสุ่มออนไลน์', en: 'Online Mystery Box' },
-    description: { th: 'ราคา 1,500 บาท', en: 'Pay 1,500 ฿' },
+    title: { th: 'ซื้อกล่องสุ่มออนไลน์', en: 'Buy an Online Mystery Box' },
+    description: { th: 'ราคา 1,500 บาท', en: '1,500 ฿' },
   },
   {
     id: 'dd_24',
     deck: 'doodad',
     cost: 2500,
-    title: { th: 'ซื้อเสื้อใหม่', en: 'New Clothes' },
-    description: { th: 'ราคา 2,500 บาท', en: 'Pay 2,500 ฿' },
+    title: { th: 'ซื้อเสื้อใหม่', en: 'Buy New Clothes' },
+    description: { th: 'ราคา 2,500 บาท', en: '2,500 ฿' },
   },
   {
     id: 'dd_25',
     deck: 'doodad',
     cost: 15000,
     onlyIfHasChildren: true,
-    title: { th: 'ค่าเรียนพิเศษภาคฤดูร้อน', en: 'Summer Camp Tuition' },
+    title: { th: 'ค่าเรียนพิเศษภาคฤดูร้อน', en: 'Summer Tutoring Tuition' },
     description: {
       th: 'จ่าย 15,000 บาท (ถ้าคุณมีลูก — หากยังไม่มีลูก จ่าย 0 ฿)',
-      en: 'Pay 15,000 ฿ (only if you have children)',
+      en: 'Pay 15,000 ฿ (if you have children — pay 0 ฿ if none)',
     },
   },
   {
     id: 'dd_26',
     deck: 'doodad',
     cost: 2000,
-    title: { th: 'เล่นกอล์ฟ', en: 'Golf Round & Caddy' },
-    description: { th: 'ค่าสนามกอล์ฟและแคดดี้รวมทิป 2,000 บาท', en: 'Pay 2,000 ฿' },
+    title: { th: 'เล่นกอล์ฟ', en: 'Play Golf' },
+    description: {
+      th: 'ค่าสนามกอล์ฟและแคดดี้รวมทิป 2,000 บาท',
+      en: 'Golf course green fee, caddy fee, and tip totaling 2,000 ฿',
+    },
   },
   {
     id: 'dd_27',
     deck: 'doodad',
     cost: 800,
-    title: { th: 'ซื้อไม้แบดมินตันใหม่', en: 'New Badminton Racket' },
-    description: { th: 'ราคา 800 บาท', en: 'Pay 800 ฿' },
+    title: { th: 'ซื้อไม้แบดมินตันใหม่', en: 'Buy a New Badminton Racket' },
+    description: { th: 'ราคา 800 บาท', en: '800 ฿' },
   },
   {
     id: 'dd_28',
     deck: 'doodad',
     cost: 1000,
     title: { th: 'จ่ายค่าโทรศัพท์รายเดือน', en: 'Monthly Phone Bill' },
-    description: { th: 'ราคา 1,000 บาท', en: 'Pay 1,000 ฿' },
+    description: { th: 'ราคา 1,000 บาท', en: '1,000 ฿' },
   },
   {
     id: 'dd_29',
     deck: 'doodad',
     cost: 1000,
-    title: { th: 'ซื้อล็อตเตอรี่', en: 'Lottery Tickets' },
-    description: { th: 'ราคา 1,000 บาท', en: 'Pay 1,000 ฿' },
+    title: { th: 'ซื้อล็อตเตอรี่', en: 'Buy Lottery Tickets' },
+    description: { th: 'ราคา 1,000 บาท', en: '1,000 ฿' },
   },
   {
     id: 'dd_30',
     deck: 'doodad',
     cost: 1000,
     onlyIfHasChildren: true,
-    title: { th: 'วันเกิดลูก', en: 'Child’s Birthday Park Trip' },
+    title: { th: 'วันเกิดลูก', en: 'Child’s Birthday' },
     description: {
       th: 'พาไปเที่ยวสวนสนุก จ่าย 1,000 บาท (ถ้าคุณมีลูก — หากยังไม่มีลูก จ่าย 0 ฿)',
-      en: 'Pay 1,000 ฿ (only if you have children)',
+      en: 'Take your child to an amusement park — pay 1,000 ฿ (if you have children — pay 0 ฿ if none)',
     },
   },
   {
     id: 'dd_31',
     deck: 'doodad',
     cost: 20000,
-    title: { th: 'พาครอบครัวไปเที่ยววันหยุด', en: 'Family Holiday Trip' },
+    title: { th: 'พาครอบครัวไปเที่ยววันหยุด', en: 'Take the Family on a Holiday Trip' },
     description: { th: 'จ่าย 20,000 บาท', en: 'Pay 20,000 ฿' },
   },
   {
     id: 'dd_32',
     deck: 'doodad',
     cost: 1500,
-    title: { th: 'ไปชมการแสดงละครเวที', en: 'Theater Show Tickets' },
-    description: { th: 'จ่ายค่าบัตร 1,500 บาท', en: 'Pay 1,500 ฿' },
+    title: { th: 'ไปชมการแสดงละครเวที', en: 'See a Stage Play' },
+    description: { th: 'จ่ายค่าบัตร 1,500 บาท', en: 'Pay 1,500 ฿ for theater tickets' },
   },
   {
     id: 'dd_33',
     deck: 'doodad',
     cost: 4000,
-    title: { th: 'เปลี่ยนยางรถยนต์', en: 'Replace 2 Car Tires' },
-    description: { th: 'จ่ายค่ายางรถยนต์ 2 เส้น 4,000 บาท', en: 'Pay 4,000 ฿' },
+    title: { th: 'เปลี่ยนยางรถยนต์', en: 'Replace Car Tires' },
+    description: {
+      th: 'จ่ายค่ายางรถยนต์ 2 เส้น 4,000 บาท',
+      en: 'Pay 4,000 ฿ for 2 new car tires',
+    },
   },
   {
     id: 'dd_34',
     deck: 'doodad',
     cost: 300,
-    title: { th: 'แวะดื่มกาแฟร้านดัง', en: 'Coffee Shop Stop' },
+    title: { th: 'แวะดื่มกาแฟร้านดัง', en: 'Coffee at a Popular Cafe' },
     description: { th: 'จ่าย 300 บาท', en: 'Pay 300 ฿' },
   },
   {
     id: 'dd_35',
     deck: 'doodad',
     cost: 1000,
-    title: { th: 'ทำฟัน', en: 'Dental Visit' },
+    title: { th: 'ทำฟัน', en: 'Dental Care' },
     description: { th: 'จ่าย 1,000 บาท', en: 'Pay 1,000 ฿' },
   },
   {
     id: 'dd_36',
     deck: 'doodad',
     cost: 7000,
-    title: { th: 'ซ่อมแอร์รถยนต์', en: 'Car A/C Repair' },
+    title: { th: 'ซ่อมแอร์รถยนต์', en: 'Car Air Conditioner Repair' },
     description: { th: 'จ่าย 7,000 บาท', en: 'Pay 7,000 ฿' },
   },
   {
     id: 'dd_37',
     deck: 'doodad',
     cost: 200,
-    title: { th: 'จ่ายค่าบริการรับชมวิดีโอรายเดือน', en: 'Video Streaming Plan' },
-    description: { th: 'ราคา 200 บาท', en: 'Pay 200 ฿' },
+    title: { th: 'จ่ายค่าบริการรับชมวิดีโอรายเดือน', en: 'Monthly Video Streaming Service' },
+    description: { th: 'ราคา 200 บาท', en: '200 ฿' },
   },
   {
     id: 'dd_38',
     deck: 'doodad',
     cost: 1000,
-    title: { th: 'จอดในที่ห้ามจอด', en: 'Parking Ticket' },
-    description: { th: 'จ่ายค่าปรับ 1,000 บาท', en: 'Pay 1,000 ฿' },
+    title: { th: 'จอดในที่ห้ามจอด', en: 'Parked in a No-Parking Zone' },
+    description: { th: 'จ่ายค่าปรับ 1,000 บาท', en: 'Pay 1,000 ฿ parking fine' },
   },
   {
     id: 'dd_39',
@@ -2109,7 +2139,7 @@ export const DOODAD_CARDS: DoodadCard[] = [
     id: 'dd_40',
     deck: 'doodad',
     cost: 2500,
-    title: { th: 'ไปงานสังสรรค์ศิษย์เก่า', en: 'Alumni Reunion' },
+    title: { th: 'ไปงานสังสรรค์ศิษย์เก่า', en: 'Alumni Reunion Party' },
     description: { th: 'จ่าย 2,500 บาท', en: 'Pay 2,500 ฿' },
   },
 ];

@@ -169,6 +169,7 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
             language={language}
             currentAvatarId={inspected.avatarId}
             currentColor={inspected.color}
+            takenColors={players.filter((p) => p.id !== inspected.id).map((p) => p.color)}
             onSelectAvatar={(avatarId) => onCustomizePlayer(inspected.id, avatarId, undefined)}
             onSelectColor={(color) => onCustomizePlayer(inspected.id, undefined, color)}
             onClose={() => setShowCustomizer(false)}
@@ -427,61 +428,90 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
 
         {/* Fast Track Dedicated Assets & Income Account (shown when on Fast Track tab) */}
         {inspected.track === 'fast_track' && ledgerTab === 'fast_track' ? (
-          <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-4 text-xs shadow-2xs">
-            <div>
-              <h3 className="font-bold text-slate-800 border-b border-slate-100 pb-1 mb-2">
-                {language === 'th' ? 'สรุปกระแสเงินสดวงนอก' : 'Fast Track Cashflow Summary'}
-              </h3>
-              <div className="space-y-1.5">
-                <div className="flex justify-between">
-                  <span className="text-slate-600">{t(language, 'ftBaseCashflowDay')}</span>
-                  <span className="font-mono font-semibold text-slate-900 tabular-nums">
-                    {f.fastTrackCashFlowDay.toLocaleString()} ฿
-                  </span>
+          <>
+            <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-4 text-xs shadow-2xs">
+              <div>
+                <h3 className="font-bold text-slate-800 border-b border-slate-100 pb-1 mb-2">
+                  {language === 'th' ? 'สรุปกระแสเงินสดวงนอก' : 'Fast Track Cashflow Summary'}
+                </h3>
+                <div className="space-y-1.5">
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">{t(language, 'ftBaseCashflowDay')}</span>
+                    <span className="font-mono font-semibold text-slate-900 tabular-nums">
+                      {f.fastTrackCashFlowDay.toLocaleString()} ฿
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">{t(language, 'ftAddedCashflow')}</span>
+                    <span className="font-mono font-bold text-emerald-600 tabular-nums">
+                      +{f.fastTrackAddedCashFlow.toLocaleString()} ฿
+                    </span>
+                  </div>
+                  <div className="flex justify-between border-t border-slate-100 pt-1.5 font-bold text-amber-900">
+                    <span>{t(language, 'ftTotalCashflowDay')}</span>
+                    <span className="font-mono tabular-nums">
+                      {(f.fastTrackCashFlowDay + f.fastTrackAddedCashFlow).toLocaleString()} ฿
+                    </span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">{t(language, 'ftAddedCashflow')}</span>
-                  <span className="font-mono font-bold text-emerald-600 tabular-nums">
-                    +{f.fastTrackAddedCashFlow.toLocaleString()} ฿
-                  </span>
-                </div>
-                <div className="flex justify-between border-t border-slate-100 pt-1.5 font-bold text-amber-900">
-                  <span>{t(language, 'ftTotalCashflowDay')}</span>
-                  <span className="font-mono tabular-nums">
-                    {(f.fastTrackCashFlowDay + f.fastTrackAddedCashFlow).toLocaleString()} ฿
-                  </span>
-                </div>
+              </div>
+
+              <div>
+                <h3 className="font-bold text-emerald-800 border-b border-emerald-100 pb-1 mb-2">
+                  {t(language, 'ftAssetsTitle')} ({f.fastTrackAssets.length})
+                </h3>
+                {f.fastTrackAssets.length === 0 ? (
+                  <p className="text-slate-400 italic">{t(language, 'ftNoAssets')}</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {f.fastTrackAssets.map((a) => (
+                      <div
+                        key={a.id}
+                        className="flex items-center justify-between gap-2 bg-emerald-50/70 border border-emerald-200 rounded-lg px-2.5 py-2"
+                      >
+                        <div className="min-w-0">
+                          <div className="font-bold text-slate-900 truncate">{a.name[language]}</div>
+                          <div className="text-[11px] text-slate-500 font-mono">
+                            {t(language, 'cost')}: {a.cost.toLocaleString()} ฿
+                          </div>
+                        </div>
+                        <div className="font-mono font-bold text-emerald-600 shrink-0 tabular-nums">
+                          +{a.cashFlow.toLocaleString()}/m
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
-            <div>
-              <h3 className="font-bold text-emerald-800 border-b border-emerald-100 pb-1 mb-2">
-                {t(language, 'ftAssetsTitle')} ({f.fastTrackAssets.length})
+            {/* Pink Frame: Fast Track Travel & Pink Space Purchases */}
+            <div className="bg-pink-50 border-2 border-pink-400 rounded-xl p-3.5 space-y-2.5 text-xs shadow-2xs">
+              <h3 className="font-bold text-pink-800 border-b border-pink-200 pb-1">
+                {t(language, 'ftPinkPurchasesTitle')} ({(f.fastTrackPinkPurchases || []).length})
               </h3>
-              {f.fastTrackAssets.length === 0 ? (
-                <p className="text-slate-400 italic">{t(language, 'ftNoAssets')}</p>
+              {!f.fastTrackPinkPurchases || f.fastTrackPinkPurchases.length === 0 ? (
+                <p className="text-pink-600/80 italic">{t(language, 'ftNoPinkPurchases')}</p>
               ) : (
                 <div className="space-y-1.5">
-                  {f.fastTrackAssets.map((a) => (
+                  {f.fastTrackPinkPurchases.map((item) => (
                     <div
-                      key={a.id}
-                      className="flex items-center justify-between gap-2 bg-emerald-50/70 border border-emerald-200 rounded-lg px-2.5 py-2"
+                      key={item.id}
+                      className="flex items-center justify-between gap-2 bg-white border border-pink-200 rounded-lg px-2.5 py-2"
                     >
-                      <div className="min-w-0">
-                        <div className="font-bold text-slate-900 truncate">{a.name[language]}</div>
-                        <div className="text-[11px] text-slate-500 font-mono">
-                          {t(language, 'cost')}: {a.cost.toLocaleString()} ฿
-                        </div>
+                      <div className="min-w-0 font-bold text-pink-950 truncate">
+                        {item.isDreamGoal ? '★ ' : ''}
+                        {item.name[language]}
                       </div>
-                      <div className="font-mono font-bold text-emerald-600 shrink-0 tabular-nums">
-                        +{a.cashFlow.toLocaleString()}/m
+                      <div className="font-mono font-bold text-pink-600 shrink-0 tabular-nums">
+                        {item.cost.toLocaleString()} ฿
                       </div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-          </div>
+          </>
         ) : (
           /* Detailed Rat Race Income & Expenses Statement (auto-minimized to tab when on Fast Track) */
           <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-4 text-xs shadow-2xs">

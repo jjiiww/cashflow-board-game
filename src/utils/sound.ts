@@ -61,9 +61,28 @@ class SoundEffects {
     this.playTone(220, 0.18, 'sawtooth', 0.05, 0.1);
   }
 
+  public escapeFanfare(): void {
+    const notes = [523.25, 659.25, 783.99, 1046.5, 1318.51, 1567.98];
+    notes.forEach((freq, idx) => {
+      this.playTone(freq, 0.28, 'triangle', 0.11, idx * 0.085);
+      this.playTone(freq * 0.5, 0.25, 'sine', 0.06, idx * 0.085);
+    });
+  }
+
   public victory(): void {
-    [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
-      this.playTone(freq, 0.25, 'triangle', 0.1, idx * 0.1);
+    const fanfare: [number, number, number][] = [
+      [523.25, 0.16, 0],
+      [659.25, 0.16, 0.09],
+      [783.99, 0.16, 0.18],
+      [1046.5, 0.35, 0.28],
+      [783.99, 0.14, 0.44],
+      [1046.5, 0.55, 0.56],
+      [1318.51, 0.55, 0.56],
+      [1567.98, 0.55, 0.56],
+    ];
+    fanfare.forEach(([freq, dur, delay]) => {
+      this.playTone(freq, dur, 'triangle', 0.11, delay);
+      this.playTone(freq * 0.5, dur, 'sine', 0.05, delay);
     });
   }
 }

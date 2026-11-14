@@ -1,12 +1,14 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { Trophy } from 'lucide-react';
-import { BilingualText, GameRoomState, Language } from '../shared/types';
+import { BilingualText, GameLogEntry, GameRoomState, Language, Player } from '../shared/types';
 import { AdminDashboard } from './components/AdminDashboard';
 import { CashflowBoard } from './components/CashflowBoard';
+import { ConfettiBurst, RatRaceEscapeCelebration } from './components/CelebrationOverlay';
 import { FinancialStatement } from './components/FinancialStatement';
 import { GameHeader } from './components/GameHeader';
 import { LobbyView } from './components/LobbyView';
+import { PlayerAvatar } from './components/PlayerAvatar';
 import { StepActionPanel } from './components/StepActionPanel';
 import { t } from './i18n';
 import { soundFX } from './utils/sound';
@@ -29,38 +31,116 @@ export default function App() {
   const [settledState, setSettledState] = useState<GameRoomState | null>(null);
   const [isBoardAnimating, setIsBoardAnimating] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [victoryModalDismissed, setVictoryModalDismissed] = useState(false);
+  const [escapeCelebration, setEscapeCelebration] = useState<{
+    log: GameLogEntry;
+    player?: Player;
+  } | null>(null);
 
   const socketRef = useRef<Socket | null>(null);
   const prevLogIdRef = useRef<string | null>(null);
   const prevRoomRef = useRef<GameRoomState | null>(null);
   const latestRoomRef = useRef<GameRoomState | null>(null);
+  const languageRef = useRef<Language>(language);
+  const seenEscapeLogIdsRef = useRef<Set<string>>(new Set());
+  const seenWinRoomRef = useRef<string | null>(null);
+  const escapeTimerRef = useRef<number | null>(null);
+
+  languageRef.current = language;
+
+  const triggerEscapeCelebration = useCallback((state: GameRoomState) => {
+    const newEscapeLog = state.logs
+      .slice(0, 6)
+      .find((entry) => entry.type === 'FAST_TRACK_ESCAPE' && !seenEscapeLogIdsRef.current.has(entry.id));
+
+    if (newEscapeLog) {
+      seenEscapeLogIdsRef.current.add(newEscapeLog.id);
+      const escapedPlayer = state.players.find((p) => p.id === newEscapeLog.actorId);
+      setEscapeCelebration({ log: newEscapeLog, player: escapedPlayer });
+      soundFX.escapeFanfare();
+
+      if (escapeTimerRef.current) {
+        window.clearTimeout(escapeTimerRef.current);
+      }
+      escapeTimerRef.current = window.setTimeout(() => {
+        setEscapeCelebration(null);
+      }, 7500);
+    }
+  }, []);
 
   const playStateSound = useCallback((state: GameRoomState) => {
+    if (state.phase === 'GAME_OVER') {
+      const winKey = `${state.roomCode}_${state.winnerId || 'win'}_${state.turnCount}`;
+      if (seenWinRoomRef.current !== winKey) {
+        seenWinRoomRef.current = winKey;
+        soundFX.victory();
+      }
+    }
+
     const topLog = state.logs[0];
     if (topLog && topLog.id !== prevLogIdRef.current) {
       prevLogIdRef.current = topLog.id;
-      if (topLog.type.includes('WIN')) soundFX.victory();
-      else if (topLog.type.includes('DEAL') || topLog.type.includes('MARKET')) soundFX.card();
-      else if (topLog.type.includes('DOODAD') || topLog.type.includes('DOWNSIZED') || topLog.type.includes('PENALTY'))
+      if (topLog.type.includes('WIN')) {
+        const winKey = `${state.roomCode}_${state.winnerId || 'win'}_${state.turnCount}`;
+        if (seenWinRoomRef.current !== winKey) {
+          seenWinRoomRef.current = winKey;
+          soundFX.victory();
+        }
+      } else if (topLog.type === 'FAST_TRACK_ESCAPE') {
+        // Sound already triggered by triggerEscapeCelebration
+      } else if (topLog.type.includes('DEAL') || topLog.type.includes('MARKET')) {
+        soundFX.card();
+      } else if (
+        topLog.type.includes('DOODAD') ||
+        topLog.type.includes('DOWNSIZED') ||
+        topLog.type.includes('PENALTY')
+      ) {
         soundFX.expense();
-      else if (topLog.delta && topLog.delta.cashDelta > 0) soundFX.payday();
+      } else if (topLog.delta && topLog.delta.cashDelta > 0) {
+        soundFX.payday();
+      }
     }
   }, []);
 
   useEffect(() => {
     const socket = io({
       transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
     });
     socketRef.current = socket;
 
+    socket.on('connect', () => {
+      const activeRoom = latestRoomRef.current;
+      if (activeRoom?.roomCode) {
+        socket.emit('room:join', {
+          roomCode: activeRoom.roomCode,
+          playerId,
+          playerName: '',
+        });
+      }
+    });
+
     socket.on('room:joined', ({ state }: { state: GameRoomState }) => {
+      const isSameRoom = latestRoomRef.current?.roomCode === state.roomCode;
       setErrorMsg(null);
       prevRoomRef.current = state;
       latestRoomRef.current = state;
       setRoomState(state);
       setSettledState(state);
       setIsBoardAnimating(false);
-      setLanguage(state.language);
+
+      if (!isSameRoom) {
+        seenEscapeLogIdsRef.current = new Set(
+          state.logs.filter((l) => l.type === 'FAST_TRACK_ESCAPE').map((l) => l.id)
+        );
+        seenWinRoomRef.current = null;
+        setVictoryModalDismissed(false);
+        setEscapeCelebration(null);
+        setLanguage(state.language);
+      }
     });
 
     socket.on('room:state', (state: GameRoomState) => {
@@ -68,6 +148,10 @@ export default function App() {
       prevRoomRef.current = state;
       latestRoomRef.current = state;
       setRoomState(state);
+      if (state.phase !== 'GAME_OVER') {
+        setVictoryModalDismissed(false);
+        seenWinRoomRef.current = null;
+      }
 
       const hasMovement =
         Boolean(prev) &&
@@ -84,35 +168,82 @@ export default function App() {
       } else {
         setIsBoardAnimating(false);
         setSettledState(state);
+        triggerEscapeCelebration(state);
         playStateSound(state);
       }
     });
 
+    socket.on('room:closed', () => {
+      prevRoomRef.current = null;
+      latestRoomRef.current = null;
+      setRoomState(null);
+      setSettledState(null);
+      setIsBoardAnimating(false);
+      setVictoryModalDismissed(false);
+      setEscapeCelebration(null);
+      seenWinRoomRef.current = null;
+      setErrorMsg(null);
+    });
+
     socket.on('room:error', (err: BilingualText | string) => {
-      const msg = typeof err === 'string' ? err : err[language] || err.th;
+      const lang = languageRef.current;
+      const msg = typeof err === 'string' ? err : err[lang] || err.th;
       setErrorMsg(msg);
       setTimeout(() => setErrorMsg(null), 4500);
     });
 
+    // Keepalive heartbeat so proxies & background tabs never time out while waiting 3-5+ mins
+    const keepaliveId = window.setInterval(() => {
+      const code = latestRoomRef.current?.roomCode;
+      if (!code) return;
+      if (socket.disconnected) {
+        socket.connect();
+      } else {
+        socket.emit('room:ping', { roomCode: code, playerId });
+      }
+    }, 25000);
+
+    const handleResumeSync = () => {
+      if (document.visibilityState === 'hidden') return;
+      const code = latestRoomRef.current?.roomCode;
+      if (!code) return;
+      if (socket.disconnected) {
+        socket.connect();
+      } else {
+        socket.emit('room:sync', { roomCode: code, playerId });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleResumeSync);
+    window.addEventListener('focus', handleResumeSync);
+
     return () => {
+      window.clearInterval(keepaliveId);
+      if (escapeTimerRef.current) {
+        window.clearTimeout(escapeTimerRef.current);
+      }
+      document.removeEventListener('visibilitychange', handleResumeSync);
+      window.removeEventListener('focus', handleResumeSync);
       socket.disconnect();
     };
-  }, [playStateSound]);
+  }, [playerId, playStateSound, triggerEscapeCelebration]);
 
   const handleAnimationChange = useCallback(
     (animating: boolean) => {
       setIsBoardAnimating(animating);
       if (!animating && latestRoomRef.current) {
         setSettledState(latestRoomRef.current);
+        triggerEscapeCelebration(latestRoomRef.current);
         playStateSound(latestRoomRef.current);
       }
     },
-    [playStateSound]
+    [playStateSound, triggerEscapeCelebration]
   );
 
   const handleToggleLanguage = (lang: Language) => {
     setLanguage(lang);
     if (roomState && socketRef.current) {
+      if (socketRef.current.disconnected) socketRef.current.connect();
       socketRef.current.emit('room:language', { roomCode: roomState.roomCode, language: lang });
     }
   };
@@ -125,6 +256,9 @@ export default function App() {
 
   const emit = (event: string, payload: Record<string, unknown> = {}) => {
     if (!socketRef.current) return;
+    if (socketRef.current.disconnected) {
+      socketRef.current.connect();
+    }
     setErrorMsg(null);
     socketRef.current.emit(event, {
       roomCode: roomState?.roomCode,
@@ -139,14 +273,31 @@ export default function App() {
     setRoomState(null);
     setSettledState(null);
     setIsBoardAnimating(false);
+    setVictoryModalDismissed(false);
+    setEscapeCelebration(null);
+    seenWinRoomRef.current = null;
     setErrorMsg(null);
     socketRef.current?.disconnect();
     socketRef.current?.connect();
   };
 
+  const handleCloseGame = () => {
+    if (!roomState || !socketRef.current) return;
+    if (socketRef.current.disconnected) socketRef.current.connect();
+    socketRef.current.emit('game:close', {
+      roomCode: roomState.roomCode,
+      playerId,
+    });
+  };
+
   const uiState = settledState || roomState;
   const currentPlayer = uiState?.players[uiState.currentTurnIndex];
-  const isAdminSpectator = Boolean(roomState?.isAdminSpectator && roomState?.hostId === playerId);
+  const winnerPlayer = uiState?.winnerId
+    ? uiState.players.find((p) => p.id === uiState.winnerId)
+    : undefined;
+  const isHost = Boolean(roomState && roomState.hostId === playerId);
+  const isAdminSpectator = Boolean(roomState?.isAdminSpectator && isHost);
+  const isGameOver = Boolean(uiState?.phase === 'GAME_OVER' && !isBoardAnimating);
 
   return (
     <div className="h-screen w-screen flex flex-col felt-surface overflow-hidden">
@@ -160,8 +311,36 @@ export default function App() {
         turnCount={uiState && uiState.phase !== 'LOBBY' ? uiState.turnCount : undefined}
         activePlayerName={uiState && uiState.phase !== 'LOBBY' ? currentPlayer?.name : undefined}
         isAdminObserver={isAdminSpectator}
-        onLeaveRoom={roomState ? handleLeaveRoom : undefined}
+        onLeaveRoom={roomState && !isGameOver ? handleLeaveRoom : undefined}
+        onCloseGame={roomState && isGameOver && isHost ? handleCloseGame : undefined}
       />
+
+      {isGameOver && (
+        <div className="bg-amber-50 border-b-2 border-orange-300 px-5 py-2.5 flex flex-wrap items-center justify-between gap-3 shrink-0 shadow-2xs">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <Trophy className="w-5 h-5 text-orange-500 shrink-0" />
+            <div className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+              {t(language, 'gameOverTitle')}:{' '}
+              <span className="font-semibold text-orange-700">{uiState?.winReason?.[language]}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {isHost ? (
+              <button
+                type="button"
+                onClick={handleCloseGame}
+                className="px-4 py-1.5 rounded-lg bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs transition-colors shadow-xs"
+              >
+                {t(language, 'closeGame')}
+              </button>
+            ) : (
+              <span className="text-xs font-medium text-slate-600">
+                {t(language, 'waitingAdminCloseGame')}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       {!roomState || roomState.phase === 'LOBBY' ? (
         <LobbyView
@@ -296,30 +475,77 @@ export default function App() {
         </main>
       )}
 
-      {/* Game Over Victory Modal */}
-      {uiState?.phase === 'GAME_OVER' && !isBoardAnimating && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-white border-2 border-orange-400 rounded-2xl p-8 text-center space-y-5 shadow-2xl">
-            <div className="w-16 h-16 mx-auto rounded-full bg-orange-100 border border-orange-300 flex items-center justify-center text-orange-500">
-              <Trophy className="w-8 h-8" />
+      {/* Escaped Rat Race Celebration Modal & Sound Effect (visible to everyone) */}
+      {escapeCelebration && !isGameOver && (
+        <RatRaceEscapeCelebration
+          log={escapeCelebration.log}
+          player={escapeCelebration.player}
+          language={language}
+          onDismiss={() => setEscapeCelebration(null)}
+        />
+      )}
+
+      {/* Game Over Victory Modal & Confetti Effect (dismissible so everyone can inspect results; only Admin/Creator can close game) */}
+      {isGameOver && !victoryModalDismissed && (
+        <>
+          <ConfettiBurst variant="victory" />
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="animate-celebrate-pop max-w-md w-full bg-white border-4 border-orange-400 rounded-3xl p-8 text-center space-y-5 shadow-2xl relative overflow-hidden">
+              <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-amber-200/40 blur-xl pointer-events-none" />
+              <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-orange-200/40 blur-xl pointer-events-none" />
+
+              <div className="relative flex items-center justify-center gap-3">
+                <div className="w-16 h-16 rounded-full bg-orange-100 border-2 border-orange-300 flex items-center justify-center text-orange-500 shadow-sm">
+                  <Trophy className="w-8 h-8" />
+                </div>
+                {winnerPlayer && (
+                  <PlayerAvatar
+                    avatarId={winnerPlayer.avatarId}
+                    color={winnerPlayer.color}
+                    isBot={winnerPlayer.isBot}
+                    isActiveTurn
+                    size="lg"
+                  />
+                )}
+              </div>
+
+              <div>
+                <div className="inline-block px-3 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-900 text-xs font-bold mb-2">
+                  {t(language, 'winnerBadge')}
+                  {winnerPlayer ? ` · ${winnerPlayer.name}` : ''}
+                </div>
+                <h2 className="font-display text-2xl font-extrabold text-slate-900">
+                  {t(language, 'gameOverTitle')}
+                </h2>
+                <p className="text-sm text-slate-700 mt-2 leading-relaxed">
+                  {uiState?.winReason?.[language]}
+                </p>
+              </div>
+              <div className="space-y-2.5">
+                <button
+                  type="button"
+                  onClick={() => setVictoryModalDismissed(true)}
+                  className="w-full py-3 px-5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm transition-colors"
+                >
+                  {t(language, 'reviewGameResults')}
+                </button>
+                {isHost ? (
+                  <button
+                    type="button"
+                    onClick={handleCloseGame}
+                    className="w-full py-2.5 px-5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-bold text-sm transition-colors"
+                  >
+                    {t(language, 'closeGame')}
+                  </button>
+                ) : (
+                  <p className="text-xs text-slate-500 font-medium pt-1">
+                    {t(language, 'waitingAdminCloseGame')}
+                  </p>
+                )}
+              </div>
             </div>
-            <div>
-              <h2 className="font-display text-2xl font-bold text-slate-900">
-                {t(language, 'gameOverTitle')}
-              </h2>
-              <p className="text-sm text-slate-700 mt-2 leading-relaxed">
-                {uiState.winReason?.[language]}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleLeaveRoom}
-              className="w-full py-3 px-5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm transition-colors"
-            >
-              {t(language, 'playAgain')}
-            </button>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

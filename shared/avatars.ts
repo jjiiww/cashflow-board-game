@@ -17,10 +17,10 @@ export const AVATAR_OPTIONS: AvatarOption[] = [
 ];
 
 export const PLAYER_COLOR_OPTIONS: { hex: string; label: BilingualText }[] = [
-  { hex: '#10b981', label: { th: 'เขียวมรกต', en: 'Emerald' } },
-  { hex: '#f97316', label: { th: 'ส้มสดใส', en: 'Orange' } },
-  { hex: '#0ea5e9', label: { th: 'ฟ้าสกาย', en: 'Sky Blue' } },
-  { hex: '#8b5cf6', label: { th: 'ม่วงไวโอเลต', en: 'Violet' } },
-  { hex: '#ec4899', label: { th: 'ชมพูสด', en: 'Pink' } },
-  { hex: '#f59e0b', label: { th: 'เหลืองอำพัน', en: 'Amber' } },
+  { hex: '#dc2626', label: { th: 'สีแดง', en: 'Red' } },
+  { hex: '#2563eb', label: { th: 'สีน้ำเงิน', en: 'Blue' } },
+  { hex: '#16a34a', label: { th: 'สีเขียว', en: 'Green' } },
+  { hex: '#f97316', label: { th: 'สีส้ม', en: 'Orange' } },
+  { hex: '#7c3aed', label: { th: 'สีม่วง', en: 'Purple' } },
+  { hex: '#111827', label: { th: 'สีดำ', en: 'Black' } },
 ];
