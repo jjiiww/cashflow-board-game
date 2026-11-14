@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Dices,
   ArrowRight,
@@ -19,6 +19,23 @@ import {
   MarketCard,
 } from '../../shared/types';
 import { t } from '../i18n';
+import { ResizeHandle } from './ResizeHandle';
+
+const DEFAULT_LOG_HEIGHT_PCT = 33.3;
+const MIN_LOG_HEIGHT_PCT = 14;
+const MAX_LOG_HEIGHT_PCT = 78;
+
+function readStoredLogPct(): number {
+  try {
+    const raw = localStorage.getItem('cashflow_player_log_pct');
+    if (!raw) return DEFAULT_LOG_HEIGHT_PCT;
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) return DEFAULT_LOG_HEIGHT_PCT;
+    return Math.min(MAX_LOG_HEIGHT_PCT, Math.max(MIN_LOG_HEIGHT_PCT, parsed));
+  } catch {
+    return DEFAULT_LOG_HEIGHT_PCT;
+  }
+}
 
 interface StepActionPanelProps {
   layoutMode?: 'sidebar' | 'adminBottom';
@@ -75,6 +92,18 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
   const [auctionStartFee, setAuctionStartFee] = useState('1000');
   const [bidAmount, setBidAmount] = useState('1000');
   const [selectedMarketIds, setSelectedMarketIds] = useState<string[]>([]);
+  const [logHeightPercent, setLogHeightPercent] = useState<number>(() => readStoredLogPct());
+
+  const sidebarAsideRef = useRef<HTMLElement | null>(null);
+  const dragStartLogPctRef = useRef<number>(DEFAULT_LOG_HEIGHT_PCT);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('cashflow_player_log_pct', String(logHeightPercent));
+    } catch {
+      // ignore storage quota errors
+    }
+  }, [logHeightPercent]);
 
   const currentPlayer = roomState.players[roomState.currentTurnIndex];
   const localPlayer = roomState.players.find((p) => p.id === localPlayerId);
@@ -1207,10 +1236,11 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
 
   const activityLogZone = (
     <div
+      style={!isAdminBottom ? { height: `${logHeightPercent}%` } : undefined}
       className={
         isAdminBottom
           ? 'flex flex-col min-h-[200px] @[460px]:min-h-0 @[460px]:h-full @[460px]:overflow-hidden bg-slate-50/70 border-t @[460px]:border-t-0 @[460px]:border-l border-slate-200'
-          : 'h-1/3 shrink-0 flex flex-col min-h-0 overflow-hidden bg-slate-50/70'
+          : 'min-h-[88px] shrink-0 flex flex-col overflow-hidden bg-slate-50/70'
       }
     >
       <div className="px-4 py-2 border-b border-slate-200 text-xs font-bold text-slate-500 shrink-0">
@@ -1252,9 +1282,36 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
     );
   }
 
+  const resizeHint =
+    language === 'th'
+      ? 'ลากเพื่อปรับขนาด · ดับเบิลคลิกเพื่อรีเซ็ต'
+      : 'Drag to resize · Double-click to reset';
+
   return (
-    <aside className="h-full flex flex-col bg-white border-l border-slate-200 overflow-hidden">
+    <aside
+      ref={sidebarAsideRef}
+      className="h-full flex flex-col bg-white border-l border-slate-200 overflow-hidden"
+    >
       {narrationZone}
+      <ResizeHandle
+        orientation="horizontal"
+        title={resizeHint}
+        className="flex z-20 shrink-0"
+        onDragStart={() => {
+          dragStartLogPctRef.current = logHeightPercent;
+        }}
+        onDragMove={(deltaPx) => {
+          const totalHeight = sidebarAsideRef.current?.clientHeight || 0;
+          if (totalHeight <= 0) return;
+          const deltaPct = (deltaPx / totalHeight) * 100;
+          const next = Math.min(
+            MAX_LOG_HEIGHT_PCT,
+            Math.max(MIN_LOG_HEIGHT_PCT, dragStartLogPctRef.current - deltaPct)
+          );
+          setLogHeightPercent(Math.round(next * 10) / 10);
+        }}
+        onDoubleClick={() => setLogHeightPercent(DEFAULT_LOG_HEIGHT_PCT)}
+      />
       {activityLogZone}
     </aside>
   );
