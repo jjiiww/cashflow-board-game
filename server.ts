@@ -213,6 +213,29 @@ io.on('connection', (socket: Socket) => {
     }
   );
 
+  socket.on(
+    'player:customize',
+    ({
+      roomCode,
+      requesterId,
+      targetId,
+      avatarId,
+      color,
+    }: {
+      roomCode: string;
+      requesterId: string;
+      targetId: string;
+      avatarId?: string;
+      color?: string;
+    }) => {
+      const room = rooms.get(roomCode);
+      if (!room) return;
+      if (room.customizePlayer(requesterId, targetId, avatarId, color).success) {
+        broadcastRoom(roomCode);
+      }
+    }
+  );
+
   socket.on('room:language', ({ roomCode, language }: { roomCode: string; language: Language }) => {
     const room = rooms.get(roomCode);
     if (!room) return;

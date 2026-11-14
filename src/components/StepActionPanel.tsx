@@ -96,16 +96,23 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
 
   const formatMarketTag = (tag: string): string => {
     const map: Record<string, { th: string; en: string }> = {
-      '3br2ba': { th: 'บ้าน 3 นอน 2 น้ำ', en: '3Br/2Ba House' },
-      '2br1ba': { th: 'บ้าน 2 นอน 1 น้ำ', en: '2Br/1Ba House' },
-      condo: { th: 'คอนโด 2 นอน', en: 'Condo 2Br/1Ba' },
-      duplex: { th: 'บ้านแฝด Duplex', en: 'Duplex' },
-      '4plex': { th: 'อาคาร 4-Plex', en: '4-Plex' },
-      '8plex': { th: 'อาคาร 8-Plex', en: '8-Plex' },
-      apartment: { th: 'อพาร์ตเมนต์', en: 'Apartment' },
-      gold: { th: 'ทองคำแท่ง/เหรียญทอง', en: 'Gold Coins' },
-      land: { th: 'ที่ดินเปล่า', en: 'Raw Land' },
-      business: { th: 'ธุรกิจ / แฟรนไชส์', en: 'Business' },
+      tuktaw: { th: 'ตึกแถว (1/2/4 คูหา)', en: 'Row House (1/2/4-Unit)' },
+      rental_house: { th: 'บ้านเช่า', en: 'Rental House' },
+      condo: { th: 'ห้องพักคอนโดมิเนียม', en: 'Condo' },
+      apartment: { th: 'กิจการอพาร์ตเมนต์', en: 'Apartment' },
+      guesthouse: { th: 'กิจการเกสต์เฮ้าส์', en: 'Guesthouse' },
+      carwash: { th: 'กิจการล้างรถ', en: 'Car Wash' },
+      software: { th: 'บริษัทซอฟต์แวร์', en: 'Software Co.' },
+      semiconductor: { th: 'บริษัทผลิตตัวนำไฟฟ้า', en: 'Semiconductor Co.' },
+      lp: { th: 'ห้างหุ้นส่วนจำกัด', en: 'Limited Partnership' },
+      land_10rai: { th: 'ที่ดิน 10 ไร่', en: '10 Rai Land' },
+      land_100sqw: { th: 'ที่ดิน 100 ตารางวา', en: '100 Sq.Wah Land' },
+      gold: { th: 'เหรียญทอง / ทองคำ', en: 'Gold Coins' },
+      mini_mall: { th: 'ห้างขนาดเล็ก', en: 'Mini-Mall' },
+      small_business: { th: 'กิจการขนาดเล็ก', en: 'Small Business' },
+      vending_no_buyer: { th: 'ตู้ขายเครื่องดื่มอัตโนมัติ', en: 'Vending Business' },
+      carwash_no_buyer: { th: 'กิจการล้างรถอัตโนมัติ', en: 'Automated Car Wash' },
+      arcade_no_buyer: { th: 'กิจการตู้เกมหยอดเหรียญ', en: 'Arcade Business' },
     };
     return map[tag]?.[language] || tag;
   };
@@ -115,6 +122,30 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
 
     if (activeCard.deck === 'small_deal' || activeCard.deck === 'big_deal') {
       const card = activeCard as DealCard;
+      if (card.kind === 'deal_expense') {
+        return (
+          <div className="bg-pink-50 text-slate-900 rounded-xl p-3.5 border-2 border-pink-400 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] font-bold text-pink-600">
+                {card.deck === 'small_deal' ? t(language, 'smallDeal') : t(language, 'bigDeal')} ·{' '}
+                {language === 'th' ? 'ค่าใช้จ่ายทรัพย์สิน' : 'Property Expense'}
+              </span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-pink-100 text-pink-800 border border-pink-300">
+                {language === 'th' ? 'มีผลเฉพาะผู้ที่มีทรัพย์สินตามเงื่อนไข' : 'Applies to matching owners'}
+              </span>
+            </div>
+            <h4 className="font-display font-bold text-base text-slate-900">{card.title[language]}</h4>
+            <p className="text-xs text-slate-700 leading-relaxed">{card.description[language]}</p>
+            <div className="bg-white p-2 rounded-lg border border-pink-200 flex items-center justify-between text-xs">
+              <span className="text-slate-500">{language === 'th' ? 'ยอดที่ต้องจ่าย' : 'Expense Amount'}</span>
+              <span className="font-mono font-bold text-pink-600 text-sm tabular-nums">
+                -{card.cost.toLocaleString()} ฿
+              </span>
+            </div>
+          </div>
+        );
+      }
+
       const isStock = card.kind === 'stock';
       const isSplit = card.kind === 'stock_split';
       const canSellRight =
@@ -125,7 +156,7 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
         (a) => a.category === 'stock' && a.symbol === card.symbol
       );
       const annualRoi =
-        card.downPayment > 0 && card.cashFlow > 0
+        card.downPayment > 0 && card.cashFlow !== 0
           ? Math.round(((card.cashFlow * 12) / card.downPayment) * 100)
           : null;
 
@@ -236,8 +267,13 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
               </div>
               <div>
                 <span className="text-slate-500">{t(language, 'cashflowPerMonth')}</span>
-                <div className="font-mono font-bold text-emerald-600 tabular-nums">
-                  +{card.cashFlow.toLocaleString()} ฿
+                <div
+                  className={`font-mono font-bold tabular-nums ${
+                    card.cashFlow >= 0 ? 'text-emerald-600' : 'text-pink-600'
+                  }`}
+                >
+                  {card.cashFlow >= 0 ? '+' : ''}
+                  {card.cashFlow.toLocaleString()} ฿
                 </div>
               </div>
               {card.units ? (
@@ -264,6 +300,43 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
 
     if (activeCard.deck === 'market') {
       const card = activeCard as MarketCard;
+      const offerSummary = (() => {
+        if (card.offerType === 'per_unit') {
+          return `${card.offerAmount.toLocaleString()} ฿ (${t(language, 'perUnitLabel')})`;
+        }
+        if (card.offerType === 'multiplier') {
+          return language === 'th'
+            ? `${card.offerAmount} เท่าของเงินลงทุน`
+            : `${card.offerAmount}x investment`;
+        }
+        if (card.offerType === 'cost_plus') {
+          return language === 'th'
+            ? `ราคาซื้อเดิม +${card.offerAmount.toLocaleString()} ฿`
+            : `Cost +${card.offerAmount.toLocaleString()} ฿`;
+        }
+        if (card.offerType === 'cashflow_boost') {
+          return language === 'th'
+            ? `+${card.offerAmount.toLocaleString()} ฿/เดือน ต่อธุรกิจ`
+            : `+${card.offerAmount.toLocaleString()} ฿/mo per business`;
+        }
+        if (card.offerType === 'cashflow_adjust') {
+          return language === 'th'
+            ? `${card.offerAmount.toLocaleString()} ฿/เดือน`
+            : `${card.offerAmount.toLocaleString()} ฿/mo`;
+        }
+        if (card.offerType === 'foreclose_refund') {
+          return language === 'th' ? 'คืนธนาคารและรับเงินดาวน์คืน' : 'Return to bank & refund down payment';
+        }
+        return `${card.offerAmount.toLocaleString()} ฿ (${t(language, 'fixedOfferLabel')})`;
+      })();
+
+      const targetText =
+        card.offerType === 'cashflow_boost'
+          ? language === 'th'
+            ? 'ธุรกิจทุกชนิด'
+            : 'All Businesses'
+          : Array.from(new Set(card.targetTags.map(formatMarketTag))).join(', ');
+
       return (
         <div className="bg-sky-50 text-slate-900 rounded-xl p-3.5 border-2 border-sky-400 space-y-2.5">
           <div className="text-[11px] font-bold text-sky-700">{t(language, 'marketTitle')}</div>
@@ -272,18 +345,11 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
           <div className="grid grid-cols-2 gap-2 text-xs bg-white p-2.5 rounded-lg border border-sky-200">
             <div>
               <span className="text-slate-500">{t(language, 'marketOfferLabel')}</span>
-              <div className="font-mono font-bold text-sky-700 tabular-nums">
-                {card.offerAmount.toLocaleString()} ฿{' '}
-                <span className="text-[10px] font-sans text-slate-500">
-                  ({card.offerType === 'per_unit' ? t(language, 'perUnitLabel') : t(language, 'fixedOfferLabel')})
-                </span>
-              </div>
+              <div className="font-mono font-bold text-sky-700 tabular-nums">{offerSummary}</div>
             </div>
             <div>
               <span className="text-slate-500">{t(language, 'marketTargetLabel')}</span>
-              <div className="font-semibold text-slate-800">
-                {card.targetTags.map(formatMarketTag).join(', ')}
-              </div>
+              <div className="font-semibold text-slate-800">{targetText}</div>
             </div>
           </div>
         </div>
@@ -291,11 +357,18 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
     }
 
     const card = activeCard as DoodadCard;
+    const activeChildrenCount = currentPlayer?.finance.childrenCount ?? localPlayer?.finance.childrenCount ?? 0;
+    const effectiveCost = card.onlyIfHasChildren && activeChildrenCount === 0
+      ? 0
+      : card.perChildCost
+      ? card.cost * activeChildrenCount
+      : card.cost;
+
     return (
       <div className="bg-pink-50 text-slate-900 rounded-xl p-3.5 border-2 border-pink-400 space-y-2">
         <div className="flex items-center justify-between gap-2">
           <span className="text-[11px] font-bold text-pink-600">
-            {language === 'th' ? 'จ่ายซะ (Doodad)' : 'Doodad Expense'}
+            {language === 'th' ? 'จ่ายซะ' : 'Doodad Expense'}
           </span>
           {card.onlyIfHasChildren && (
             <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-pink-100 text-pink-800 border border-pink-300">
@@ -306,9 +379,14 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
         <h4 className="font-display font-bold text-base text-slate-900">{card.title[language]}</h4>
         <p className="text-xs text-slate-700 leading-relaxed">{card.description[language]}</p>
         <div className="bg-white p-2 rounded-lg border border-pink-200 flex items-center justify-between text-xs">
-          <span className="text-slate-500">{language === 'th' ? 'ยอดที่ต้องจ่าย' : 'Expense Amount'}</span>
+          <span className="text-slate-500">
+            {language === 'th' ? 'ยอดที่ต้องจ่าย' : 'Expense Amount'}
+            {card.perChildCost && activeChildrenCount > 0
+              ? ` (${card.cost.toLocaleString()} × ${activeChildrenCount})`
+              : ''}
+          </span>
           <span className="font-mono font-bold text-pink-600 text-sm tabular-nums">
-            -{card.cost.toLocaleString()} ฿
+            -{effectiveCost.toLocaleString()} ฿
           </span>
         </div>
       </div>
@@ -772,10 +850,13 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
           <p className="text-xs font-bold text-sky-800">{t(language, 'marketPrompt')}</p>
           <div className="space-y-1.5">
             {matchingAssets.map((a) => {
-              const gross =
-                card.offerType === 'per_unit'
-                  ? card.offerAmount * (a.units || 1)
-                  : card.offerAmount;
+              const isCashflowAdjust = card.offerType === 'cashflow_adjust';
+              const gross = (() => {
+                if (card.offerType === 'per_unit') return card.offerAmount * (a.units || 1);
+                if (card.offerType === 'multiplier') return a.downPayment * card.offerAmount + a.mortgage;
+                if (card.offerType === 'cost_plus') return a.cost + card.offerAmount;
+                return card.offerAmount;
+              })();
               const net = gross - a.mortgage;
               const checked = selectedMarketIds.includes(a.id);
               return (
@@ -792,9 +873,16 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
                     />
                     <span className="font-semibold text-slate-900">{a.name[language]}</span>
                   </div>
-                  <span className="font-mono font-bold text-emerald-600 tabular-nums">
-                    +{net.toLocaleString()} ฿
-                  </span>
+                  {isCashflowAdjust ? (
+                    <span className="font-mono font-bold text-pink-600 tabular-nums">
+                      {card.offerAmount.toLocaleString()} ฿/ด.
+                    </span>
+                  ) : (
+                    <span className="font-mono font-bold text-emerald-600 tabular-nums">
+                      {net >= 0 ? '+' : ''}
+                      {net.toLocaleString()} ฿
+                    </span>
+                  )}
                 </label>
               );
             })}
@@ -809,7 +897,11 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
               }}
               className="flex-1 py-2.5 px-3 rounded-lg bg-sky-500 hover:bg-sky-600 disabled:opacity-40 text-white font-bold text-xs"
             >
-              {t(language, 'sellSelected')}
+              {card.offerType === 'cashflow_adjust'
+                ? language === 'th'
+                  ? 'ตกลงขายให้น้องเขย'
+                  : 'Accept Offer'
+                : t(language, 'sellSelected')}
             </button>
             <button
               type="button"
@@ -1052,13 +1144,13 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
                 roomState.lastStepDelta.cashDelta > 0 ? 'text-emerald-600 font-bold' : 'text-pink-600 font-bold'
               }
             >
-              Cash {roomState.lastStepDelta.cashDelta > 0 ? '+' : ''}
+              {language === 'th' ? 'เงินสด' : 'Cash'} {roomState.lastStepDelta.cashDelta > 0 ? '+' : ''}
               {roomState.lastStepDelta.cashDelta.toLocaleString()} ฿
             </span>
           )}
           {roomState.lastStepDelta.passiveIncomeDelta !== 0 && (
             <span className="text-violet-600 font-bold">
-              Passive {roomState.lastStepDelta.passiveIncomeDelta > 0 ? '+' : ''}
+              {language === 'th' ? 'รายได้จากทรัพย์สิน' : 'Passive'} {roomState.lastStepDelta.passiveIncomeDelta > 0 ? '+' : ''}
               {roomState.lastStepDelta.passiveIncomeDelta.toLocaleString()} ฿/m
             </span>
           )}

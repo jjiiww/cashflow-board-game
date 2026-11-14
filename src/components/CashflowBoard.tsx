@@ -8,6 +8,7 @@ import {
   RatRaceSpaceType,
 } from '../../shared/types';
 import { soundFX } from '../utils/sound';
+import { PlayerAvatar } from './PlayerAvatar';
 
 interface CashflowBoardProps {
   roomState: GameRoomState;
@@ -627,7 +628,7 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
               fontSize="14"
               fontWeight="800"
             >
-              {language === 'th' ? 'เป้าหมายชนะ RAT RACE' : 'RAT RACE GOAL'}
+              {language === 'th' ? 'เป้าหมายชนะสนามแข่งหนู' : 'RAT RACE GOAL'}
             </text>
             <text
               x="228"
@@ -637,7 +638,7 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
               fontSize="13"
               fontWeight="700"
             >
-              {language === 'th' ? 'Passive > รายจ่ายรวม' : 'Passive > Total Expenses'}
+              {language === 'th' ? 'รายได้จากทรัพย์สิน > รายจ่ายรวม' : 'Passive > Total Expenses'}
             </text>
 
             <text
@@ -648,7 +649,7 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
               fontSize="14"
               fontWeight="800"
             >
-              {language === 'th' ? 'เป้าหมายชนะ FAST TRACK' : 'FAST TRACK WIN'}
+              {language === 'th' ? 'เป้าหมายชนะเส้นทางเศรษฐี' : 'FAST TRACK WIN'}
             </text>
             <text
               x="228"
@@ -967,9 +968,12 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
                 idx === roomState.currentTurnIndex ? 'text-slate-900 font-bold' : 'text-slate-500'
               }`}
             >
-              <span
-                className="w-3.5 h-3.5 rounded-full inline-block border border-slate-900/20 shadow-xs"
-                style={{ backgroundColor: p.color }}
+              <PlayerAvatar
+                avatarId={p.avatarId}
+                color={p.color}
+                isBot={p.isBot}
+                isActiveTurn={idx === roomState.currentTurnIndex}
+                size="xs"
               />
               <span className="truncate max-w-[100px]">{p.name}</span>
             </div>

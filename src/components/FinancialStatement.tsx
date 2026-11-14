@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Landmark, TrendingUp, ArrowUpRight, ArrowDownRight, Layers } from 'lucide-react';
+import { Landmark, TrendingUp, ArrowUpRight, ArrowDownRight, Layers, Palette } from 'lucide-react';
 import { DREAM_OPTIONS, FAST_TRACK_WIN_CASHFLOW_TARGET } from '../../shared/board';
 import { Language, Player } from '../../shared/types';
 import { t } from '../i18n';
+import { AvatarCustomizerPanel, PlayerAvatar } from './PlayerAvatar';
 
 interface FinancialStatementProps {
   players: Player[];
@@ -19,6 +20,7 @@ interface FinancialStatementProps {
       | 'creditCardBalance'
       | 'otherDebtBalance'
   ) => void;
+  onCustomizePlayer?: (targetId: string, avatarId?: string, color?: string) => void;
 }
 
 function formatDelta(val: number): string {
@@ -34,9 +36,11 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
   onTakeLoan,
   onRepayLoan,
   onPayOffLiability,
+  onCustomizePlayer,
 }) => {
   const [ledgerTab, setLedgerTab] = useState<'fast_track' | 'rat_race'>('rat_race');
   const [showLoanModal, setShowLoanModal] = useState(false);
+  const [showCustomizer, setShowCustomizer] = useState(false);
   const [loanInput, setLoanInput] = useState('10000');
   const [repayInput, setRepayInput] = useState('10000');
 
@@ -77,8 +81,8 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
 
   return (
     <aside className="h-full flex flex-col bg-white border-r border-slate-200 overflow-hidden">
-      {/* Own Player Statement Header (No other players visible) */}
-      <div className="p-3 border-b border-slate-200 bg-slate-50/80 shrink-0 space-y-2">
+      {/* Player List (Visual Avatars & Color Markers only — Statement stays private to own player) */}
+      <div className="p-3 border-b border-slate-200 bg-slate-50/80 shrink-0 space-y-2.5">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-xs font-bold text-slate-600">
             {t(language, 'financialStatement')}
@@ -90,11 +94,96 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
           </span>
         </div>
 
-        <div className="flex items-center justify-between gap-2 bg-white border border-slate-200 rounded-lg px-2.5 py-2">
+        {/* Visual Identification Roster for All Players */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
+            <span>{t(language, 'playersRosterLabel')} ({players.length})</span>
+            {onCustomizePlayer && isOwnPlayer && (
+              <button
+                type="button"
+                onClick={() => setShowCustomizer((prev) => !prev)}
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 px-1.5 py-0.5 rounded hover:bg-emerald-50 transition-colors"
+              >
+                <Palette className="w-3 h-3" />
+                <span>{t(language, 'customizeAvatarTitle')}</span>
+              </button>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-1.5">
+            {players.map((p) => {
+              const isSelf = p.id === localPlayerId;
+              const isTurn = p.id === activeTurnPlayerId;
+              return (
+                <div
+                  key={p.id}
+                  onClick={() => {
+                    if (isSelf && onCustomizePlayer) {
+                      setShowCustomizer((prev) => !prev);
+                    }
+                  }}
+                  title={p.name}
+                  className={`flex items-center gap-1.5 pl-1 pr-2 py-1 rounded-lg border text-xs transition-colors ${
+                    isSelf && onCustomizePlayer ? 'cursor-pointer hover:bg-emerald-50/60' : ''
+                  } ${
+                    isTurn
+                      ? 'bg-orange-50/90 border-orange-300 shadow-2xs'
+                      : isSelf
+                      ? 'bg-white border-emerald-300'
+                      : 'bg-white/90 border-slate-200'
+                  }`}
+                >
+                  <PlayerAvatar
+                    avatarId={p.avatarId}
+                    color={p.color}
+                    isBot={p.isBot}
+                    isActiveTurn={isTurn}
+                    size="xs"
+                  />
+                  <span
+                    className={`truncate max-w-[78px] text-[11px] ${
+                      isTurn || isSelf ? 'font-bold text-slate-900' : 'font-medium text-slate-700'
+                    }`}
+                  >
+                    {p.name}
+                  </span>
+                  {isSelf && (
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: p.color }}
+                      aria-hidden="true"
+                    />
+                  )}
+                  {isTurn && (
+                    <span className="text-[10px] text-orange-600 font-bold shrink-0">★</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Inline Avatar & Color Marker Customizer for Own Player */}
+        {showCustomizer && onCustomizePlayer && isOwnPlayer && (
+          <AvatarCustomizerPanel
+            language={language}
+            currentAvatarId={inspected.avatarId}
+            currentColor={inspected.color}
+            onSelectAvatar={(avatarId) => onCustomizePlayer(inspected.id, avatarId, undefined)}
+            onSelectColor={(color) => onCustomizePlayer(inspected.id, undefined, color)}
+            onClose={() => setShowCustomizer(false)}
+          />
+        )}
+
+        {/* Own Player Lock Badge */}
+        <div className="flex items-center justify-between gap-2 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5">
           <div className="flex items-center gap-2 min-w-0">
-            <span
-              className="w-3 h-3 rounded-full shrink-0 border border-black/15"
-              style={{ backgroundColor: inspected.color }}
+            <PlayerAvatar
+              avatarId={inspected.avatarId}
+              color={inspected.color}
+              isBot={inspected.isBot}
+              isActiveTurn={isMyTurn}
+              size="sm"
             />
             <span className="text-xs font-bold text-slate-900 truncate">{inspected.name}</span>
             <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
@@ -114,21 +203,30 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
         {/* Identity & Cash Summary */}
         <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-2xs space-y-3">
           <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2.5">
-            <div>
-              <div className="font-display font-bold text-base text-slate-900 flex items-center gap-2">
-                <span>{inspected.name}</span>
-                {inspected.isBot && (
-                  <span className="text-xs font-medium text-sky-600">· Robot</span>
-                )}
-              </div>
-              <div className="text-xs text-slate-500 mt-0.5">
-                {inspected.career.name[language]}
-                {inspected.finance.childrenCount > 0 && (
-                  <span>
-                    {' · '}
-                    {t(language, 'childrenCount')}: {inspected.finance.childrenCount}
-                  </span>
-                )}
+            <div className="flex items-center gap-2.5 min-w-0">
+              <PlayerAvatar
+                avatarId={inspected.avatarId}
+                color={inspected.color}
+                isBot={inspected.isBot}
+                isActiveTurn={isMyTurn}
+                size="lg"
+              />
+              <div className="min-w-0">
+                <div className="font-display font-bold text-base text-slate-900 flex items-center gap-2">
+                  <span className="truncate">{inspected.name}</span>
+                  {inspected.isBot && (
+                    <span className="text-xs font-medium text-sky-600 shrink-0">· Robot</span>
+                  )}
+                </div>
+                <div className="text-xs text-slate-500 mt-0.5 truncate">
+                  {inspected.career.name[language]}
+                  {inspected.finance.childrenCount > 0 && (
+                    <span>
+                      {' · '}
+                      {t(language, 'childrenCount')}: {inspected.finance.childrenCount}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -197,7 +295,9 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
             <div className="space-y-2.5 text-xs">
               <div className="grid grid-cols-2 gap-2">
                 <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-2">
-                  <div className="text-amber-900 font-medium">Cashflow Day</div>
+                  <div className="text-amber-900 font-medium">
+                    {language === 'th' ? 'วันรับกระแสเงินสด' : 'Cashflow Day'}
+                  </div>
                   <div className="font-mono font-bold text-amber-950 text-sm mt-0.5 tabular-nums">
                     {(f.fastTrackCashFlowDay + f.fastTrackAddedCashFlow).toLocaleString()} ฿
                   </div>
@@ -284,7 +384,7 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
                     delta.cashDelta > 0 ? 'text-emerald-600' : 'text-pink-600'
                   }`}
                 >
-                  <span>Cash</span>
+                  <span>{language === 'th' ? 'เงินสด' : 'Cash'}</span>
                   <span className="flex items-center gap-0.5 font-bold">
                     {delta.cashDelta > 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                     {formatDelta(delta.cashDelta)}
@@ -297,7 +397,7 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
                     delta.passiveIncomeDelta > 0 ? 'text-violet-600' : 'text-pink-600'
                   }`}
                 >
-                  <span>Passive</span>
+                  <span>{language === 'th' ? 'รายได้จากทรัพย์สิน' : 'Passive'}</span>
                   <span className="font-bold">{formatDelta(delta.passiveIncomeDelta)}</span>
                 </div>
               )}
@@ -317,7 +417,7 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
                     delta.monthlyCashFlowDelta > 0 ? 'text-orange-600' : 'text-pink-600'
                   }`}
                 >
-                  <span>Payday</span>
+                  <span>{language === 'th' ? 'เงินคงเหลือต่อเดือน' : 'Payday'}</span>
                   <span className="font-bold">{formatDelta(delta.monthlyCashFlowDelta)}</span>
                 </div>
               )}
@@ -330,7 +430,7 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
           <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-4 text-xs shadow-2xs">
             <div>
               <h3 className="font-bold text-slate-800 border-b border-slate-100 pb-1 mb-2">
-                {language === 'th' ? 'สรุปกระแสเงินสด Fast Track' : 'Fast Track Cashflow Summary'}
+                {language === 'th' ? 'สรุปกระแสเงินสดวงนอก' : 'Fast Track Cashflow Summary'}
               </h3>
               <div className="space-y-1.5">
                 <div className="flex justify-between">
@@ -489,7 +589,11 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
                         {a.downPayment.toLocaleString()}
                       </div>
                     </div>
-                    <div className="font-mono font-bold text-emerald-600 shrink-0 tabular-nums">
+                    <div
+                      className={`font-mono font-bold shrink-0 tabular-nums ${
+                        a.cashFlow < 0 ? 'text-pink-600' : 'text-emerald-600'
+                      }`}
+                    >
                       {a.cashFlow >= 0 ? '+' : ''}
                       {a.cashFlow.toLocaleString()}/m
                     </div>

@@ -4,6 +4,7 @@ import { DREAM_OPTIONS, FAST_TRACK_WIN_CASHFLOW_TARGET } from '../../shared/boar
 import { GameRoomState, Language, Player } from '../../shared/types';
 import { t } from '../i18n';
 import { CashflowBoard } from './CashflowBoard';
+import { PlayerAvatar } from './PlayerAvatar';
 import { StepActionPanel } from './StepActionPanel';
 
 interface AdminDashboardProps {
@@ -80,30 +81,35 @@ const PlayerAdminFinanceCard: React.FC<{
     >
       {/* Header: Identity, Turn Highlight, Track & Cash */}
       <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2">
-        <div className="min-w-0">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span
-              className="w-3 h-3 rounded-full shrink-0 border border-black/20"
-              style={{ backgroundColor: player.color }}
-            />
-            <span className="font-display font-bold text-sm text-slate-900 truncate">
-              {player.name}
-            </span>
-            {player.isBot && (
-              <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-sky-700 bg-sky-50 border border-sky-200 px-1.5 py-0.5 rounded">
-                <Bot className="w-2.5 h-2.5" />
-                Robot
+        <div className="flex items-start gap-2 min-w-0">
+          <PlayerAvatar
+            avatarId={player.avatarId}
+            color={player.color}
+            isBot={player.isBot}
+            isActiveTurn={isActiveTurn}
+            size="sm"
+          />
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="font-display font-bold text-sm text-slate-900 truncate">
+                {player.name}
               </span>
-            )}
-            {isActiveTurn && (
-              <span className="text-[10px] font-bold text-orange-800 bg-orange-100 border border-orange-300 px-1.5 py-0.5 rounded">
-                {t(language, 'activeTurnBadge')}
-              </span>
-            )}
-          </div>
-          <div className="text-[11px] text-slate-500 mt-0.5 truncate">
-            {player.career.name[language]}
-            {f.childrenCount > 0 && ` · ${t(language, 'childrenCount')}: ${f.childrenCount}`}
+              {player.isBot && (
+                <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-sky-700 bg-sky-50 border border-sky-200 px-1.5 py-0.5 rounded">
+                  <Bot className="w-2.5 h-2.5" />
+                  Robot
+                </span>
+              )}
+              {isActiveTurn && (
+                <span className="text-[10px] font-bold text-orange-800 bg-orange-100 border border-orange-300 px-1.5 py-0.5 rounded">
+                  {t(language, 'activeTurnBadge')}
+                </span>
+              )}
+            </div>
+            <div className="text-[11px] text-slate-500 mt-0.5 truncate">
+              {player.career.name[language]}
+              {f.childrenCount > 0 && ` · ${t(language, 'childrenCount')}: ${f.childrenCount}`}
+            </div>
           </div>
         </div>
 
@@ -115,7 +121,7 @@ const PlayerAdminFinanceCard: React.FC<{
                 : 'bg-slate-100 text-slate-700'
             }`}
           >
-            {player.track === 'fast_track' ? 'Fast Track' : 'Rat Race'}
+            {player.track === 'fast_track' ? t(language, 'fastTrackTrack') : t(language, 'ratRaceTrack')}
           </span>
           <div className="font-mono font-bold text-sm text-emerald-600 tabular-nums mt-0.5">
             {f.cash.toLocaleString()} ฿
@@ -165,7 +171,9 @@ const PlayerAdminFinanceCard: React.FC<{
               </div>
             </div>
             <div className="bg-orange-50/80 border border-orange-200 rounded-lg px-2 py-1.5">
-              <div className="text-orange-800 truncate">Payday</div>
+              <div className="text-orange-800 truncate">
+                {language === 'th' ? 'เงินคงเหลือต่อเดือน' : 'Payday'}
+              </div>
               <div
                 className={`font-mono font-bold tabular-nums ${
                   f.monthlyCashFlow >= 0 ? 'text-emerald-600' : 'text-pink-600'
@@ -181,7 +189,7 @@ const PlayerAdminFinanceCard: React.FC<{
             <div className="flex items-center justify-between text-[11px] mb-1">
               <span className="text-slate-600 font-semibold flex items-center gap-1 truncate">
                 <TrendingUp className="w-3 h-3 text-violet-600 shrink-0" />
-                <span>Rat Race Escape</span>
+                <span>{language === 'th' ? 'หลุดจากสนามแข่งหนู' : 'Rat Race Escape'}</span>
               </span>
               <span className="font-mono font-bold text-violet-700 tabular-nums">{escapeRatio}%</span>
             </div>
@@ -197,7 +205,9 @@ const PlayerAdminFinanceCard: React.FC<{
         <>
           <div className="grid grid-cols-2 gap-1.5 text-[11px]">
             <div className="bg-yellow-50 border border-yellow-300 rounded-lg px-2 py-1.5">
-              <div className="text-amber-900 font-medium">Cashflow Day</div>
+              <div className="text-amber-900 font-medium">
+                {language === 'th' ? 'วันรับกระแสเงินสด' : 'Cashflow Day'}
+              </div>
               <div className="font-mono font-bold text-amber-950 tabular-nums">
                 {(f.fastTrackCashFlowDay + f.fastTrackAddedCashFlow).toLocaleString()} ฿
               </div>
@@ -213,7 +223,9 @@ const PlayerAdminFinanceCard: React.FC<{
           </div>
           <div>
             <div className="flex items-center justify-between text-[11px] mb-1">
-              <span className="text-emerald-800 font-semibold">Fast Track Goal (+500k)</span>
+              <span className="text-emerald-800 font-semibold">
+                {language === 'th' ? 'เป้าหมายเส้นทางเศรษฐี (+500k)' : 'Fast Track Goal (+500k)'}
+              </span>
               <span className="font-mono font-bold text-emerald-700 tabular-nums">{ftProgress}%</span>
             </div>
             <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
@@ -255,12 +267,12 @@ const PlayerAdminFinanceCard: React.FC<{
                 ) : (
                   <ArrowDownRight className="w-3 h-3" />
                 )}
-                Cash {formatDelta(delta.cashDelta)}
+                {language === 'th' ? 'เงินสด' : 'Cash'} {formatDelta(delta.cashDelta)}
               </span>
             )}
             {delta.passiveIncomeDelta !== 0 && (
               <span className="font-bold text-violet-700">
-                Passive {formatDelta(delta.passiveIncomeDelta)}
+                {language === 'th' ? 'รายได้จากทรัพย์สิน' : 'Passive'} {formatDelta(delta.passiveIncomeDelta)}
               </span>
             )}
             {delta.totalExpensesDelta !== 0 && (
@@ -269,7 +281,7 @@ const PlayerAdminFinanceCard: React.FC<{
                   delta.totalExpensesDelta < 0 ? 'text-emerald-600' : 'text-pink-600'
                 }`}
               >
-                Exp {formatDelta(delta.totalExpensesDelta)}
+                {language === 'th' ? 'รายจ่าย' : 'Exp'} {formatDelta(delta.totalExpensesDelta)}
               </span>
             )}
           </div>

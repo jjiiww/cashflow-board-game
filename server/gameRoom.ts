@@ -1,3 +1,4 @@
+import { AVATAR_OPTIONS, PLAYER_COLOR_OPTIONS } from '../shared/avatars';
 import { CAREERS } from '../shared/careers';
 import {
   DREAM_OPTIONS,
@@ -112,9 +113,10 @@ export class GameRoom {
     actor: { id: string; name: string; isBot: boolean },
     type: string,
     message: BilingualText,
-    delta?: FinancialDelta | null
+    delta?: FinancialDelta | null,
+    stepText?: BilingualText
   ): void {
-    this.state.currentStepText = message;
+    this.state.currentStepText = stepText ?? message;
     if (delta !== undefined) {
       this.state.lastStepDelta = delta;
     }
@@ -157,10 +159,12 @@ export class GameRoom {
 
     const career = this.pickUnusedCareer();
     const color = PLAYER_COLORS[this.state.players.length % PLAYER_COLORS.length];
+    const avatarId = AVATAR_OPTIONS[this.state.players.length % AVATAR_OPTIONS.length].id;
     const player: Player = {
       id,
       name: name.trim() || `Player ${this.state.players.length + 1}`,
       color,
+      avatarId,
       isBot: false,
       isHost,
       connected: true,
@@ -191,11 +195,13 @@ export class GameRoom {
     const botIndex = this.state.players.filter((p) => p.isBot).length + 1;
     const career = this.pickUnusedCareer();
     const color = PLAYER_COLORS[this.state.players.length % PLAYER_COLORS.length];
+    const avatarId = AVATAR_OPTIONS[this.state.players.length % AVATAR_OPTIONS.length].id;
     const randomDream = DREAM_OPTIONS[Math.floor(Math.random() * DREAM_OPTIONS.length)];
     const bot: Player = {
       id: `bot_${Date.now()}_${botIndex}`,
       name: `Robot ${botIndex}`,
       color,
+      avatarId,
       isBot: true,
       isHost: false,
       connected: true,
@@ -240,6 +246,27 @@ export class GameRoom {
     const dream = DREAM_OPTIONS.find((d) => d.id === dreamId);
     if (!player || !dream) return { success: false };
     player.dreamId = dream.id;
+    return { success: true };
+  }
+
+  public customizePlayer(
+    requesterId: string,
+    targetId: string,
+    avatarId?: string,
+    color?: string
+  ): { success: boolean } {
+    if (requesterId !== targetId && requesterId !== this.state.hostId) {
+      return { success: false };
+    }
+    const player = this.state.players.find((p) => p.id === targetId);
+    if (!player) return { success: false };
+
+    if (avatarId && AVATAR_OPTIONS.some((a) => a.id === avatarId)) {
+      player.avatarId = avatarId;
+    }
+    if (color && PLAYER_COLOR_OPTIONS.some((c) => c.hex === color)) {
+      player.color = color;
+    }
     return { success: true };
   }
 
@@ -319,30 +346,93 @@ export class GameRoom {
         en: `${card.title.en} (${card.symbol} ${ratioText}) — ${card.description.en}`,
       };
     }
+    if (card.kind === 'deal_expense') {
+      return {
+        th: `${card.title.th} — ${card.description.th} | ค่าใช้จ่าย: ${card.cost.toLocaleString()} ฿`,
+        en: `${card.title.en} — ${card.description.en} | Expense: ${card.cost.toLocaleString()} ฿`,
+      };
+    }
+    const cfSign = card.cashFlow >= 0 ? '+' : '';
     const unitsTh = card.units ? ` | จำนวน ${card.units} ยูนิต` : '';
     const unitsEn = card.units ? ` | ${card.units} Units` : '';
     return {
-      th: `${card.title.th} — ${card.description.th} | ราคา: ${card.cost.toLocaleString()} ฿ | ดาวน์: ${card.downPayment.toLocaleString()} ฿ | จำนอง: ${card.mortgage.toLocaleString()} ฿ | กระแสเงินสด: +${card.cashFlow.toLocaleString()} ฿/ด.${unitsTh}`,
-      en: `${card.title.en} — ${card.description.en} | Cost: ${card.cost.toLocaleString()} ฿ | Down: ${card.downPayment.toLocaleString()} ฿ | Mortgage: ${card.mortgage.toLocaleString()} ฿ | Cashflow: +${card.cashFlow.toLocaleString()} ฿/mo${unitsEn}`,
+      th: `${card.title.th} — ${card.description.th} | ราคา: ${card.cost.toLocaleString()} ฿ | ดาวน์: ${card.downPayment.toLocaleString()} ฿ | จำนอง: ${card.mortgage.toLocaleString()} ฿ | กระแสเงินสด: ${cfSign}${card.cashFlow.toLocaleString()} ฿/ด.${unitsTh}`,
+      en: `${card.title.en} — ${card.description.en} | Cost: ${card.cost.toLocaleString()} ฿ | Down: ${card.downPayment.toLocaleString()} ฿ | Mortgage: ${card.mortgage.toLocaleString()} ฿ | Cashflow: ${cfSign}${card.cashFlow.toLocaleString()} ฿/mo${unitsEn}`,
     };
   }
 
   private formatMarketDetails(card: MarketCard): BilingualText {
-    const modeTh = card.offerType === 'per_unit' ? 'ต่อยูนิต' : 'ราคาเหมาทั้งหลัง/รายการ';
-    const modeEn = card.offerType === 'per_unit' ? 'per unit' : 'fixed offer';
+    let offerTh = `${card.offerAmount.toLocaleString()} ฿ (ราคาเหมา)`;
+    let offerEn = `${card.offerAmount.toLocaleString()} ฿ (fixed)`;
+    if (card.offerType === 'per_unit') {
+      offerTh = `${card.offerAmount.toLocaleString()} ฿ (ต่อยูนิต)`;
+      offerEn = `${card.offerAmount.toLocaleString()} ฿ (per unit)`;
+    } else if (card.offerType === 'multiplier') {
+      offerTh = `${card.offerAmount} เท่าของเงินลงทุน`;
+      offerEn = `${card.offerAmount}x investment`;
+    } else if (card.offerType === 'cost_plus') {
+      offerTh = `ราคาทุน +${card.offerAmount.toLocaleString()} ฿`;
+      offerEn = `Purchase cost +${card.offerAmount.toLocaleString()} ฿`;
+    } else if (card.offerType === 'cashflow_boost') {
+      offerTh = `+${card.offerAmount.toLocaleString()} ฿/เดือน`;
+      offerEn = `+${card.offerAmount.toLocaleString()} ฿/mo`;
+    } else if (card.offerType === 'cashflow_adjust') {
+      offerTh = `${card.offerAmount.toLocaleString()} ฿/เดือน`;
+      offerEn = `${card.offerAmount.toLocaleString()} ฿/mo`;
+    } else if (card.offerType === 'foreclose_refund') {
+      offerTh = 'คืนบ้านให้ธนาคารและรับเงินดาวน์คืน';
+      offerEn = 'Return to bank and refund down payment';
+    }
     return {
-      th: `${card.title.th} — ${card.description.th} | ข้อเสนอ: ${card.offerAmount.toLocaleString()} ฿ (${modeTh}) | กลุ่มทรัพย์สิน: ${card.targetTags.join(', ')}`,
-      en: `${card.title.en} — ${card.description.en} | Offer: ${card.offerAmount.toLocaleString()} ฿ (${modeEn}) | Assets: ${card.targetTags.join(', ')}`,
+      th: `${card.title.th} — ${card.description.th} | ข้อเสนอ: ${offerTh}`,
+      en: `${card.title.en} — ${card.description.en} | Offer: ${offerEn}`,
     };
   }
 
   private formatDoodadDetails(card: DoodadCard): BilingualText {
-    const childTh = card.onlyIfHasChildren ? ' (มีผลเฉพาะผู้มีลูก)' : '';
-    const childEn = card.onlyIfHasChildren ? ' (Only if you have children)' : '';
+    const childTh = card.perChildCost
+      ? ' (ต่อลูก 1 คน)'
+      : card.onlyIfHasChildren
+      ? ' (มีผลเฉพาะผู้มีลูก)'
+      : '';
+    const childEn = card.perChildCost
+      ? ' (per child)'
+      : card.onlyIfHasChildren
+      ? ' (Only if you have children)'
+      : '';
     return {
       th: `${card.title.th} — ${card.description.th} | ค่าใช้จ่าย: ${card.cost.toLocaleString()} ฿${childTh}`,
       en: `${card.title.en} — ${card.description.en} | Expense: ${card.cost.toLocaleString()} ฿${childEn}`,
     };
+  }
+
+  private getDoodadEffectiveCost(card: DoodadCard, player: Player): number {
+    if (card.onlyIfHasChildren && player.finance.childrenCount === 0) return 0;
+    if (card.perChildCost) return card.cost * player.finance.childrenCount;
+    return card.cost;
+  }
+
+  private doesDealExpenseApply(card: DealCard, player: Player): boolean {
+    if (card.expenseCondition === 'any_rental') {
+      return player.finance.assets.some((a) => a.category === 'real_estate');
+    }
+    if (card.expenseCondition === '4plex_only') {
+      return player.finance.assets.some((a) => a.tag === 'tuktaw' && a.units === 4);
+    }
+    return true;
+  }
+
+  private computeMarketAssetSalePrice(card: MarketCard, asset: Asset): number {
+    switch (card.offerType) {
+      case 'per_unit':
+        return card.offerAmount * (asset.units || 1);
+      case 'multiplier':
+        return asset.downPayment * card.offerAmount + asset.mortgage;
+      case 'cost_plus':
+        return asset.cost + card.offerAmount;
+      default:
+        return card.offerAmount;
+    }
   }
 
   private checkEscapedRatRace(player: Player): boolean {
@@ -354,14 +444,14 @@ export class GameRoom {
       player.finance.fastTrackCashFlowDay = ftIncome;
       player.finance.cash += ftIncome;
       const delta = FinancialEngine.buildDelta(before, player.finance, {
-        th: `หลุดพ้นจาก Rat Race! เข้าสู่ Fast Track รับ Cashflow Day ${ftIncome.toLocaleString()} ฿`,
+        th: `หลุดพ้นจากสนามแข่งหนู! เข้าสู่เส้นทางเศรษฐี รับเงินวันรับกระแสเงินสด ${ftIncome.toLocaleString()} ฿`,
         en: `Escaped the Rat Race! Entered Fast Track with ${ftIncome.toLocaleString()} ฿ Cashflow Day!`,
       });
       this.addLog(
         player,
         'FAST_TRACK_ESCAPE',
         {
-          th: `🎉 ${player.name} หลุดจากสนามแข่งหนูแล้ว! Passive Income (${player.finance.passiveIncome.toLocaleString()} ฿) มากกว่ารายจ่ายรวม (${player.finance.totalExpenses.toLocaleString()} ฿)`,
+          th: `🎉 ${player.name} หลุดจากสนามแข่งหนูแล้ว! รายได้จากทรัพย์สิน (${player.finance.passiveIncome.toLocaleString()} ฿) มากกว่ารายจ่ายรวม (${player.finance.totalExpenses.toLocaleString()} ฿)`,
           en: `🎉 ${player.name} escaped the Rat Race! Passive Income (${player.finance.passiveIncome.toLocaleString()} ฿) exceeds Total Expenses (${player.finance.totalExpenses.toLocaleString()} ฿)!`,
         },
         delta
@@ -446,14 +536,14 @@ export class GameRoom {
         const amount = player.finance.monthlyCashFlow * paydaysPassed;
         player.finance.cash += amount;
         paydayDelta = FinancialEngine.buildDelta(before, player.finance, {
-          th: `รับเงินวัน Payday (${paydaysPassed} ครั้ง) ${amount >= 0 ? '+' : ''}${amount.toLocaleString()} ฿`,
+          th: `รับเงินเดือน (${paydaysPassed} ครั้ง) ${amount >= 0 ? '+' : ''}${amount.toLocaleString()} ฿`,
           en: `Payday x${paydaysPassed}: ${amount >= 0 ? '+' : ''}${amount.toLocaleString()} ฿`,
         });
       }
 
       const paydayMsgTh =
         paydaysPassed > 0
-          ? ` และผ่านช่อง Payday รับเงิน ${(player.finance.monthlyCashFlow * paydaysPassed).toLocaleString()} ฿`
+          ? ` และผ่านช่องรับเงินเดือน รับเงิน ${(player.finance.monthlyCashFlow * paydaysPassed).toLocaleString()} ฿`
           : '';
       const paydayMsgEn =
         paydaysPassed > 0
@@ -494,7 +584,7 @@ export class GameRoom {
         const before = FinancialEngine.snapshot(player.finance);
         player.finance.cash += dayIncome * cashflowDaysPassed;
         cfDelta = FinancialEngine.buildDelta(before, player.finance, {
-          th: `รับ Cashflow Day (${cashflowDaysPassed} ครั้ง) +${(dayIncome * cashflowDaysPassed).toLocaleString()} ฿`,
+          th: `วันรับกระแสเงินสด (${cashflowDaysPassed} ครั้ง) +${(dayIncome * cashflowDaysPassed).toLocaleString()} ฿`,
           en: `Cashflow Day x${cashflowDaysPassed}: +${(dayIncome * cashflowDaysPassed).toLocaleString()} ฿`,
         });
       }
@@ -503,7 +593,7 @@ export class GameRoom {
         player,
         'ROLL_MOVE_FT',
         {
-          th: `${player.name} (Fast Track) ทอยได้ ${rollText} ตกช่อง "${space.label.th}"`,
+          th: `${player.name} (เส้นทางเศรษฐี) ทอยได้ ${rollText} ตกช่อง "${space.label.th}"`,
           en: `${player.name} (Fast Track) rolled ${rollText} and landed on "${space.label.en}".`,
         },
         cfDelta
@@ -542,7 +632,11 @@ export class GameRoom {
               th: `${player.name} จั่วการ์ดจ่ายซะ: ${details.th} — ยังไม่มีลูก จึงไม่ต้องจ่าย (0 ฿)!`,
               en: `${player.name} drew Doodad: ${details.en} — 0 ฿ because you have no children!`,
             },
-            null
+            null,
+            {
+              th: `${player.name} จั่วการ์ดจ่ายซะ — ยังไม่มีลูก จึงไม่ต้องจ่าย (0 ฿)!`,
+              en: `${player.name} drew Doodad — 0 ฿ because you have no children!`,
+            }
           );
           this.state.phase = 'TURN_COMPLETE';
         } else {
@@ -554,7 +648,11 @@ export class GameRoom {
               th: `${player.name} จั่วการ์ดจ่ายซะ: ${details.th}`,
               en: `${player.name} drew Doodad: ${details.en}`,
             },
-            null
+            null,
+            {
+              th: `${player.name} จั่วการ์ดจ่ายซะ`,
+              en: `${player.name} drew a Doodad card`,
+            }
           );
         }
         break;
@@ -756,9 +854,49 @@ export class GameRoom {
           th: `${details.th} — ${affectedNames.length > 0 ? `ผู้ถือหุ้นที่ได้รับผล: ${affectedNames.join(', ')}` : 'ยังไม่มีผู้เล่นถือหุ้นตัวนี้'}`,
           en: `${details.en} — ${affectedNames.length > 0 ? `Affected holders: ${affectedNames.join(', ')}` : 'No players currently hold this stock.'}`,
         },
-        null
+        null,
+        {
+          th: `${player.name} เปิดการ์ด${card.deck === 'small_deal' ? 'โอกาสเล็ก' : 'โอกาสใหญ่'} — ${affectedNames.length > 0 ? `ผู้ถือหุ้นที่ได้รับผล: ${affectedNames.join(', ')}` : 'ยังไม่มีผู้เล่นถือหุ้นตัวนี้'}`,
+          en: `${player.name} drew ${card.deck === 'small_deal' ? 'Small Deal' : 'Big Deal'} — ${affectedNames.length > 0 ? `Affected holders: ${affectedNames.join(', ')}` : 'No players currently hold this stock.'}`,
+        }
       );
       this.state.phase = 'TURN_COMPLETE';
+      return;
+    }
+
+    if (card.kind === 'deal_expense') {
+      if (!this.doesDealExpenseApply(card, player)) {
+        this.addLog(
+          player,
+          'DEAL_EXPENSE_SKIP',
+          {
+            th: `${player.name} เปิดการ์ด "${card.title.th}" — ไม่มีทรัพย์สินที่เข้าเงื่อนไข จึงไม่ต้องจ่าย (0 ฿)`,
+            en: `${player.name} drew "${card.title.en}" — no matching property owned (0 ฿).`,
+          },
+          null,
+          {
+            th: `${player.name} เปิดการ์ด${card.deck === 'small_deal' ? 'โอกาสเล็ก' : 'โอกาสใหญ่'} — ไม่มีทรัพย์สินที่เข้าเงื่อนไข จึงไม่ต้องจ่าย (0 ฿)`,
+            en: `${player.name} drew ${card.deck === 'small_deal' ? 'Small Deal' : 'Big Deal'} — no matching property owned (0 ฿).`,
+          }
+        );
+        this.state.phase = 'TURN_COMPLETE';
+        return;
+      }
+
+      this.state.phase = 'DOODAD_PAY';
+      this.addLog(
+        player,
+        'DEAL_EXPENSE_DUE',
+        {
+          th: `${player.name} เปิดการ์ด "${card.title.th}" — ต้องจ่ายค่าซ่อมแซม ${card.cost.toLocaleString()} ฿`,
+          en: `${player.name} drew "${card.title.en}" — must pay ${card.cost.toLocaleString()} ฿.`,
+        },
+        null,
+        {
+          th: `${player.name} เปิดการ์ด${card.deck === 'small_deal' ? 'โอกาสเล็ก' : 'โอกาสใหญ่'} — กรุณาชำระค่าใช้จ่ายตามการ์ดด้านล่าง`,
+          en: `${player.name} drew ${card.deck === 'small_deal' ? 'Small Deal' : 'Big Deal'} — please pay the required expense below.`,
+        }
+      );
       return;
     }
 
@@ -770,7 +908,11 @@ export class GameRoom {
         th: `${player.name} เปิดการ์ด${card.deck === 'small_deal' ? 'โอกาสเล็ก' : 'โอกาสใหญ่'}: ${details.th}`,
         en: `${player.name} drew ${card.deck === 'small_deal' ? 'Small Deal' : 'Big Deal'}: ${details.en}`,
       },
-      null
+      null,
+      {
+        th: `${player.name} เปิดการ์ด${card.deck === 'small_deal' ? 'โอกาสเล็ก' : 'โอกาสใหญ่'}`,
+        en: `${player.name} drew ${card.deck === 'small_deal' ? 'Small Deal' : 'Big Deal'}`,
+      }
     );
   }
 
@@ -879,18 +1021,19 @@ export class GameRoom {
       units: card.units,
     };
 
+    const cfSign = card.cashFlow >= 0 ? '+' : '';
     FinancialEngine.addAsset(player, asset);
     const delta = FinancialEngine.buildDelta(before, player.finance, {
-      th: `ซื้อทรัพย์สิน: ${card.title.th} (เงินดาวน์ ${card.downPayment.toLocaleString()} ฿, กระแสเงินสด +${card.cashFlow.toLocaleString()} ฿/ด.)`,
-      en: `Bought ${card.title.en} (Down ${card.downPayment.toLocaleString()} ฿, Cashflow +${card.cashFlow.toLocaleString()} ฿/mo)`,
+      th: `ซื้อทรัพย์สิน: ${card.title.th} (เงินดาวน์ ${card.downPayment.toLocaleString()} ฿, กระแสเงินสด ${cfSign}${card.cashFlow.toLocaleString()} ฿/ด.)`,
+      en: `Bought ${card.title.en} (Down ${card.downPayment.toLocaleString()} ฿, Cashflow ${cfSign}${card.cashFlow.toLocaleString()} ฿/mo)`,
     });
 
     this.addLog(
       player,
       'BUY_ASSET',
       {
-        th: `${player.name} ซื้อ "${card.title.th}" จ่ายเงินดาวน์ ${card.downPayment.toLocaleString()} ฿ รับ Passive Income +${card.cashFlow.toLocaleString()} ฿/เดือน`,
-        en: `${player.name} bought "${card.title.en}" for ${card.downPayment.toLocaleString()} ฿ down (+${card.cashFlow.toLocaleString()} ฿/mo passive income).`,
+        th: `${player.name} ซื้อ "${card.title.th}" จ่ายเงินดาวน์ ${card.downPayment.toLocaleString()} ฿ รับรายได้จากทรัพย์สิน ${cfSign}${card.cashFlow.toLocaleString()} ฿/เดือน`,
+        en: `${player.name} bought "${card.title.en}" for ${card.downPayment.toLocaleString()} ฿ down (${cfSign}${card.cashFlow.toLocaleString()} ฿/mo passive income).`,
       },
       delta
     );
@@ -1112,7 +1255,7 @@ export class GameRoom {
     }
 
     const card = this.state.activeCard as DealCard;
-    if (!card || card.kind === 'stock' || card.kind === 'stock_split' || card.canSellRight === false) {
+    if (!card || card.kind === 'stock' || card.kind === 'stock_split' || card.kind === 'deal_expense' || card.canSellRight === false) {
       return {
         success: false,
         error: {
@@ -1383,23 +1526,137 @@ export class GameRoom {
   // ==================== MARKET CARDS ====================
 
   private initiateMarketResponse(drawer: Player, card: MarketCard): void {
-    const pending: typeof this.state.pendingMarketResponses = [];
-    let botSoldMessagesTh: string[] = [];
-    let botSoldMessagesEn: string[] = [];
     const details = this.formatMarketDetails(card);
+
+    // 1. Automatic business cashflow boost for all players on the track
+    if (card.offerType === 'cashflow_boost') {
+      const affectedTh: string[] = [];
+      const affectedEn: string[] = [];
+      let drawerDelta: FinancialDelta | null = null;
+
+      for (const p of this.state.players) {
+        if (p.track !== drawer.track) continue;
+        const matching = p.finance.assets.filter((a) => card.targetTags.includes(a.tag));
+        if (matching.length === 0) continue;
+
+        const before = FinancialEngine.snapshot(p.finance);
+        for (const asset of matching) {
+          asset.cashFlow += card.offerAmount;
+        }
+        FinancialEngine.recalculate(p.finance, p.career);
+        const totalGain = matching.length * card.offerAmount;
+        const delta = FinancialEngine.buildDelta(before, p.finance, {
+          th: `${card.title.th} (+${totalGain.toLocaleString()} ฿/ด.)`,
+          en: `${card.title.en} (+${totalGain.toLocaleString()} ฿/mo)`,
+        });
+        if (p.id === drawer.id) drawerDelta = delta;
+        affectedTh.push(`${p.name} (+${totalGain.toLocaleString()} ฿/ด.)`);
+        affectedEn.push(`${p.name} (+${totalGain.toLocaleString()} ฿/mo)`);
+        this.checkEscapedRatRace(p);
+      }
+
+      const summaryTh = affectedTh.length > 0 ? affectedTh.join(', ') : 'ยังไม่มีผู้เล่นที่เป็นเจ้าของธุรกิจ';
+      const summaryEn = affectedEn.length > 0 ? affectedEn.join(', ') : 'No players own a business';
+
+      this.addLog(
+        drawer,
+        'MARKET_BOOST',
+        {
+          th: `📢 การ์ดซื้อขาย: ${details.th} (${summaryTh})`,
+          en: `📢 Market Card: ${details.en} (${summaryEn})`,
+        },
+        drawerDelta,
+        {
+          th: `📢 ${drawer.name} เปิดการ์ดซื้อขาย — ${summaryTh}`,
+          en: `📢 ${drawer.name} drew Market Card — ${summaryEn}`,
+        }
+      );
+
+      if (drawer.track === 'fast_track' && !drawer.dreamId && !drawer.isBot) {
+        this.state.phase = 'CHOOSE_DREAM';
+      } else if (drawer.isBot) {
+        this.state.phase = 'BOT_THINKING';
+        this.state.botStepStage = 3;
+      } else {
+        this.state.phase = 'TURN_COMPLETE';
+      }
+      return;
+    }
+
+    // 2. Forced return of matching assets to bank + down payment refund (e.g. 10% inflation)
+    if (card.offerType === 'foreclose_refund') {
+      const matching = drawer.finance.assets.filter((a) => card.targetTags.includes(a.tag));
+      if (matching.length > 0) {
+        const before = FinancialEngine.snapshot(drawer.finance);
+        const refundTotal = matching.reduce((sum, a) => sum + (a.downPayment || 0), 0);
+        const matchingIds = new Set(matching.map((a) => a.id));
+        drawer.finance.cash += refundTotal;
+        drawer.finance.assets = drawer.finance.assets.filter((a) => !matchingIds.has(a.id));
+        FinancialEngine.recalculate(drawer.finance, drawer.career);
+        const delta = FinancialEngine.buildDelta(before, drawer.finance, {
+          th: `คืนบ้านเช่า ${matching.length} หลังให้ธนาคาร รับเงินดาวน์คืน +${refundTotal.toLocaleString()} ฿`,
+          en: `Returned ${matching.length} rental house(s) to bank (+${refundTotal.toLocaleString()} ฿ down payment refunded)`,
+        });
+        this.addLog(
+          drawer,
+          'MARKET_FORECLOSE_REFUND',
+          {
+            th: `📢 ${drawer.name} จั่วการ์ด "${card.title.th}": คืนบ้านเช่า ${matching.length} หลัง รับเงินดาวน์คืน +${refundTotal.toLocaleString()} ฿`,
+            en: `📢 ${drawer.name} drew "${card.title.en}": returned ${matching.length} house(s) and refunded +${refundTotal.toLocaleString()} ฿.`,
+          },
+          delta,
+          {
+            th: `📢 ${drawer.name} เปิดการ์ดซื้อขาย — คืนบ้านเช่า ${matching.length} หลัง รับเงินดาวน์คืน +${refundTotal.toLocaleString()} ฿`,
+            en: `📢 ${drawer.name} drew Market Card — returned ${matching.length} house(s), refunded +${refundTotal.toLocaleString()} ฿`,
+          }
+        );
+      } else {
+        this.addLog(
+          drawer,
+          'MARKET_FORECLOSE_NONE',
+          {
+            th: `📢 ${drawer.name} จั่วการ์ด "${card.title.th}" (ไม่มีบ้านเช่าในครอบครอง)`,
+            en: `📢 ${drawer.name} drew "${card.title.en}" (owns no rental houses).`,
+          },
+          null,
+          {
+            th: `📢 ${drawer.name} เปิดการ์ดซื้อขาย — ไม่มีบ้านเช่าในครอบครอง`,
+            en: `📢 ${drawer.name} drew Market Card — no rental houses owned.`,
+          }
+        );
+      }
+
+      if (drawer.isBot) {
+        this.state.phase = 'BOT_THINKING';
+        this.state.botStepStage = 3;
+      } else {
+        this.state.phase = 'TURN_COMPLETE';
+      }
+      return;
+    }
+
+    // 3. Standard sales & drawer-only offers (including cashflow_adjust)
+    const pending: typeof this.state.pendingMarketResponses = [];
+    const botSoldMessagesTh: string[] = [];
+    const botSoldMessagesEn: string[] = [];
 
     for (const p of this.state.players) {
       if (p.track !== drawer.track) continue;
-      const matchingAssets = p.finance.assets.filter((a) => card.targetTags.includes(a.tag));
+      if (card.onlyDrawer && p.id !== drawer.id) continue;
+
+      const matchingAssets = p.finance.assets.filter(
+        (a) =>
+          card.targetTags.includes(a.tag) &&
+          (!card.minUnits || (a.units || 0) >= card.minUnits)
+      );
       if (matchingAssets.length === 0) continue;
 
       if (p.isBot) {
-        // Bot sells if net proceeds > downPayment * 1.2 (or positive net gain)
+        if (card.offerType === 'cashflow_adjust') {
+          continue; // Robot declines negative cashflow deal
+        }
         for (const asset of matchingAssets) {
-          const salePrice =
-            card.offerType === 'per_unit'
-              ? card.offerAmount * (asset.units || 1)
-              : card.offerAmount;
+          const salePrice = this.computeMarketAssetSalePrice(card, asset);
           const netCash = salePrice - asset.mortgage;
           if (netCash > asset.downPayment * 1.1) {
             const before = FinancialEngine.snapshot(p.finance);
@@ -1434,7 +1691,11 @@ export class GameRoom {
           th: `📢 การ์ดซื้อขาย: ${details.th} — ผู้เล่นที่มีทรัพย์สินตรงเงื่อนไขเลือก "ขาย" หรือ "ไม่ขาย" ได้ทันที!`,
           en: `📢 Market Card: ${details.en} — Players owning matching assets may choose to Sell or Keep!`,
         },
-        null
+        null,
+        {
+          th: `📢 ${drawer.name} เปิดการ์ดซื้อขาย — ผู้เล่นที่มีทรัพย์สินตรงเงื่อนไขเลือกดำเนินการได้ทันที!`,
+          en: `📢 ${drawer.name} drew Market Card — Players owning matching assets may respond now!`,
+        }
       );
     } else {
       const botNoteTh = botSoldMessagesTh.length > 0 ? ` (${botSoldMessagesTh.join(', ')})` : ' (ไม่มีผู้เล่นที่มีทรัพย์สินนี้)';
@@ -1446,7 +1707,11 @@ export class GameRoom {
           th: `📢 การ์ดซื้อขาย: ${details.th}${botNoteTh}`,
           en: `📢 Market Card: ${details.en}${botNoteEn}`,
         },
-        null
+        null,
+        {
+          th: `📢 ${drawer.name} เปิดการ์ดซื้อขาย${botNoteTh}`,
+          en: `������ ${drawer.name} drew Market Card${botNoteEn}`,
+        }
       );
       if (drawer.isBot) {
         this.state.phase = 'BOT_THINKING';
@@ -1471,41 +1736,65 @@ export class GameRoom {
     const validSellIds = sellAssetIds.filter((id) => pending.assetIds.includes(id));
     if (validSellIds.length > 0) {
       const before = FinancialEngine.snapshot(player.finance);
-      let totalNet = 0;
-      const soldNamesTh: string[] = [];
-      const soldNamesEn: string[] = [];
 
-      for (const assetId of validSellIds) {
-        const asset = player.finance.assets.find((a) => a.id === assetId);
-        if (!asset) continue;
-        const salePrice =
-          card.offerType === 'per_unit'
-            ? card.offerAmount * (asset.units || 1)
-            : card.offerAmount;
-        const netCash = salePrice - asset.mortgage;
-        totalNet += netCash;
-        soldNamesTh.push(asset.name.th);
-        soldNamesEn.push(asset.name.en);
+      if (card.offerType === 'cashflow_adjust') {
+        const adjustedNamesTh: string[] = [];
+        const adjustedNamesEn: string[] = [];
+        for (const assetId of validSellIds) {
+          const asset = player.finance.assets.find((a) => a.id === assetId);
+          if (!asset) continue;
+          asset.cashFlow += card.offerAmount;
+          adjustedNamesTh.push(asset.name.th);
+          adjustedNamesEn.push(asset.name.en);
+        }
+        FinancialEngine.recalculate(player.finance, player.career);
+        const delta = FinancialEngine.buildDelta(before, player.finance, {
+          th: `ปรับกระแสเงินสด (${adjustedNamesTh.join(', ')}) ${card.offerAmount.toLocaleString()} ฿/ด.`,
+          en: `Adjusted cashflow (${adjustedNamesEn.join(', ')}) ${card.offerAmount.toLocaleString()} ฿/mo`,
+        });
+        this.addLog(
+          player,
+          'MARKET_ADJUSTED',
+          {
+            th: `${player.name} ตกลงขายบ้านให้น้องเขย (${adjustedNamesTh.join(', ')}) รายได้เปลี่ยน ${card.offerAmount.toLocaleString()} ฿/เดือน`,
+            en: `${player.name} accepted brother-in-law deal (${adjustedNamesEn.join(', ')}): ${card.offerAmount.toLocaleString()} ฿/mo cashflow.`,
+          },
+          delta
+        );
+      } else {
+        let totalNet = 0;
+        const soldNamesTh: string[] = [];
+        const soldNamesEn: string[] = [];
+
+        for (const assetId of validSellIds) {
+          const asset = player.finance.assets.find((a) => a.id === assetId);
+          if (!asset) continue;
+          const salePrice = this.computeMarketAssetSalePrice(card, asset);
+          const netCash = salePrice - asset.mortgage;
+          totalNet += netCash;
+          soldNamesTh.push(asset.name.th);
+          soldNamesEn.push(asset.name.en);
+        }
+
+        player.finance.cash += totalNet;
+        player.finance.assets = player.finance.assets.filter((a) => !validSellIds.includes(a.id));
+        FinancialEngine.recalculate(player.finance, player.career);
+        const delta = FinancialEngine.buildDelta(before, player.finance, {
+          th: `ขายทรัพย์สินในตลาด (${soldNamesTh.join(', ')}) รับเงินสุทธิ ${totalNet >= 0 ? '+' : ''}${totalNet.toLocaleString()} ฿`,
+          en: `Sold on Market (${soldNamesEn.join(', ')}) for ${totalNet >= 0 ? '+' : ''}${totalNet.toLocaleString()} ฿`,
+        });
+
+        this.addLog(
+          player,
+          'MARKET_SOLD',
+          {
+            th: `💰 ${player.name} ขาย ${soldNamesTh.join(', ')} รับเงินสุทธิ ${totalNet >= 0 ? '+' : ''}${totalNet.toLocaleString()} ฿`,
+            en: `💰 ${player.name} sold ${soldNamesEn.join(', ')} for ${totalNet >= 0 ? '+' : ''}${totalNet.toLocaleString()} ฿ net cash.`,
+          },
+          delta
+        );
+        this.checkEscapedRatRace(player);
       }
-
-      player.finance.cash += totalNet;
-      player.finance.assets = player.finance.assets.filter((a) => !validSellIds.includes(a.id));
-      FinancialEngine.recalculate(player.finance, player.career);
-      const delta = FinancialEngine.buildDelta(before, player.finance, {
-        th: `ขายทรัพย์สินในตลาด (${soldNamesTh.join(', ')}) รับเงินสุทธิ ${totalNet >= 0 ? '+' : ''}${totalNet.toLocaleString()} ฿`,
-        en: `Sold on Market (${soldNamesEn.join(', ')}) for ${totalNet >= 0 ? '+' : ''}${totalNet.toLocaleString()} ฿`,
-      });
-
-      this.addLog(
-        player,
-        'MARKET_SOLD',
-        {
-          th: `💰 ${player.name} ขาย ${soldNamesTh.join(', ')} รับเงินสุทธิ +${totalNet.toLocaleString()} ฿`,
-          en: `💰 ${player.name} sold ${soldNamesEn.join(', ')} for +${totalNet.toLocaleString()} ฿ net cash.`,
-        },
-        delta
-      );
-      this.checkEscapedRatRace(player);
     } else {
       this.addLog(
         player,
@@ -1540,32 +1829,43 @@ export class GameRoom {
   public payDoodad(playerId: string): { success: boolean; error?: BilingualText } {
     const player = this.currentPlayer;
     if (player.id !== playerId || this.state.phase !== 'DOODAD_PAY') return { success: false };
-    const card = this.state.activeCard as DoodadCard;
-    if (!card || card.deck !== 'doodad') return { success: false };
+    const card = this.state.activeCard;
+    if (!card) return { success: false };
 
-    if (player.finance.cash < card.cost) {
+    let cost = 0;
+    let isDealExpense = false;
+    if (card.deck === 'doodad') {
+      cost = this.getDoodadEffectiveCost(card as DoodadCard, player);
+    } else if ((card as DealCard).kind === 'deal_expense') {
+      cost = (card as DealCard).cost;
+      isDealExpense = true;
+    } else {
+      return { success: false };
+    }
+
+    if (player.finance.cash < cost) {
       return {
         success: false,
         error: {
-          th: `เงินสดไม่พอจ่าย ${card.cost.toLocaleString()} ฿ กรุณากู้เงินธนาคารก่อน`,
-          en: `Not enough cash to pay ${card.cost.toLocaleString()} ฿. Take a bank loan first.`,
+          th: `เงินสดไม่พอจ่าย ${cost.toLocaleString()} ฿ กรุณากู้เงินธนาคารก่อน`,
+          en: `Not enough cash to pay ${cost.toLocaleString()} ฿. Take a bank loan first.`,
         },
       };
     }
 
     const before = FinancialEngine.snapshot(player.finance);
-    player.finance.cash -= card.cost;
+    player.finance.cash -= cost;
     const delta = FinancialEngine.buildDelta(before, player.finance, {
-      th: `จ่ายซะ: ${card.title.th} (-${card.cost.toLocaleString()} ฿)`,
-      en: `Doodad: ${card.title.en} (-${card.cost.toLocaleString()} ฿)`,
+      th: `${isDealExpense ? 'ค่าใช้จ่ายทรัพย์สิน' : 'จ่ายซะ'}: ${card.title.th} (-${cost.toLocaleString()} ฿)`,
+      en: `${isDealExpense ? 'Property Expense' : 'Doodad'}: ${card.title.en} (-${cost.toLocaleString()} ฿)`,
     });
 
     this.addLog(
       player,
       'DOODAD_PAID',
       {
-        th: `💸 ${player.name} จ่ายค่า "${card.title.th}" เป็นเงิน ${card.cost.toLocaleString()} ฿`,
-        en: `💸 ${player.name} paid ${card.cost.toLocaleString()} ฿ for "${card.title.en}".`,
+        th: `💸 ${player.name} จ่ายค่า "${card.title.th}" เป็นเงิน ${cost.toLocaleString()} ฿`,
+        en: `💸 ${player.name} paid ${cost.toLocaleString()} ฿ for "${card.title.en}".`,
       },
       delta
     );
@@ -1623,7 +1923,7 @@ export class GameRoom {
       player,
       'DREAM_CHOSEN',
       {
-        th: `🌟 ${player.name} เลือกความฝันบน Fast Track: "${dream.name.th}" (ราคา ${dream.cost.toLocaleString()} ฿)`,
+        th: `🌟 ${player.name} เลือกความฝันบนเส้นทางเศรษฐี: "${dream.name.th}" (ราคา ${dream.cost.toLocaleString()} ฿)`,
         en: `🌟 ${player.name} chose their Dream: "${dream.name.en}" (${dream.cost.toLocaleString()} ฿).`,
       },
       null
@@ -1698,7 +1998,7 @@ export class GameRoom {
       player.finance.cash -= cost;
       player.hasThreeDiceForever = true;
       const delta = FinancialEngine.buildDelta(before, player.finance, {
-        th: `บริจาคการกุศล Fast Track (-${cost.toLocaleString()} ฿)`,
+        th: `บริจาคการกุศลวงนอก (-${cost.toLocaleString()} ฿)`,
         en: `Fast Track Charity Donation (-${cost.toLocaleString()} ฿)`,
       });
       this.addLog(
@@ -1726,14 +2026,14 @@ export class GameRoom {
         cashFlow: cf,
       });
       const delta = FinancialEngine.buildDelta(before, player.finance, {
-        th: `ซื้อธุรกิจ Fast Track "${space.label.th}" (+${cf.toLocaleString()} ฿/ด.)`,
+        th: `ซื้อธุรกิจวงนอก "${space.label.th}" (+${cf.toLocaleString()} ฿/ด.)`,
         en: `Bought Fast Track Business "${space.label.en}" (+${cf.toLocaleString()} ฿/mo)`,
       });
 
       if (player.finance.fastTrackAddedCashFlow >= FAST_TRACK_WIN_CASHFLOW_TARGET) {
         this.state.winnerId = player.id;
         this.state.winReason = {
-          th: `${player.name} สร้างกระแสเงินสด Fast Track เพิ่มครบ ${FAST_TRACK_WIN_CASHFLOW_TARGET.toLocaleString()} ฿/เดือน และชนะเกม!`,
+          th: `${player.name} สร้างกระแสเงินสดวงนอกเพิ่มครบ ${FAST_TRACK_WIN_CASHFLOW_TARGET.toLocaleString()} ฿/เดือน และชนะเกม!`,
           en: `${player.name} added ${FAST_TRACK_WIN_CASHFLOW_TARGET.toLocaleString()} ฿/mo Fast Track cashflow and won the game!`,
         };
         this.state.phase = 'GAME_OVER';
@@ -1743,7 +2043,7 @@ export class GameRoom {
           player,
           'FT_BUY_BIZ',
           {
-            th: `${player.name} ลงทุน "${space.label.th}" เพิ่ม Fast Track Cashflow +${cf.toLocaleString()} ฿/ด. (สะสม ${player.finance.fastTrackAddedCashFlow.toLocaleString()}/${FAST_TRACK_WIN_CASHFLOW_TARGET.toLocaleString()} ฿)`,
+            th: `${player.name} ลงทุน "${space.label.th}" เพิ่มกระแสเงินสดวงนอก +${cf.toLocaleString()} ฿/ด. (สะสม ${player.finance.fastTrackAddedCashFlow.toLocaleString()}/${FAST_TRACK_WIN_CASHFLOW_TARGET.toLocaleString()} ฿)`,
             en: `${player.name} bought "${space.label.en}" (+${cf.toLocaleString()} ฿/mo, total +${player.finance.fastTrackAddedCashFlow.toLocaleString()}/${FAST_TRACK_WIN_CASHFLOW_TARGET.toLocaleString()} ฿).`,
           },
           delta
@@ -1785,7 +2085,7 @@ export class GameRoom {
       if (player.finance.fastTrackAddedCashFlow >= FAST_TRACK_WIN_CASHFLOW_TARGET) {
         this.state.winnerId = player.id;
         this.state.winReason = {
-          th: `${player.name} ทอยได้ ${roll} ทำกำไร Fast Track ครบ ${FAST_TRACK_WIN_CASHFLOW_TARGET.toLocaleString()} ฿/เดือน ชนะเกม!`,
+          th: `${player.name} ทอยได้ ${roll} ทำกำไรวงนอกครบ ${FAST_TRACK_WIN_CASHFLOW_TARGET.toLocaleString()} ฿/เดือน ชนะเกม!`,
           en: `${player.name} rolled ${roll} to reach ${FAST_TRACK_WIN_CASHFLOW_TARGET.toLocaleString()} ฿/mo Fast Track cashflow and won!`,
         };
         this.state.phase = 'GAME_OVER';
@@ -1984,7 +2284,11 @@ export class GameRoom {
               th: `${bot.name} (Robot) เลือกเปิดการ์ด${deckType === 'big_deal' ? 'โอกาสใหญ่' : 'โอกาสเล็ก'}: ${details.th}`,
               en: `${bot.name} (Robot) chose ${deckType === 'big_deal' ? 'Big Deal' : 'Small Deal'}: ${details.en}`,
             },
-            null
+            null,
+            {
+              th: `${bot.name} (Robot) เลือกเปิดการ์ด${deckType === 'big_deal' ? 'โอกาสใหญ่' : 'โอกาสเล็ก'}`,
+              en: `${bot.name} (Robot) chose ${deckType === 'big_deal' ? 'Big Deal' : 'Small Deal'}`,
+            }
           );
           this.state.botStepStage = 2;
         } else if (space.type === 'doodad') {
@@ -1998,7 +2302,11 @@ export class GameRoom {
               th: `${bot.name} (Robot) จั่วการ์ดจ่ายซะ: ${details.th}`,
               en: `${bot.name} (Robot) drew Doodad: ${details.en}`,
             },
-            null
+            null,
+            {
+              th: `${bot.name} (Robot) จั่วการ์ดจ่ายซะ`,
+              en: `${bot.name} (Robot) drew a Doodad card`,
+            }
           );
           this.state.botStepStage = 2;
         } else if (space.type === 'market') {
@@ -2032,7 +2340,7 @@ export class GameRoom {
       }
 
       if (card.deck === 'doodad') {
-        const cost = card.onlyIfHasChildren && bot.finance.childrenCount === 0 ? 0 : card.cost;
+        const cost = this.getDoodadEffectiveCost(card as DoodadCard, bot);
         const before = FinancialEngine.snapshot(bot.finance);
         if (cost > 0) {
           if (bot.finance.cash < cost && bot.finance.maxLoanLimit > 0) {
@@ -2149,7 +2457,7 @@ export class GameRoom {
         bot,
         'BOT_PAYDAY_ONLY',
         {
-          th: `${bot.name} (Robot) จบการตรวจสอบช่อง Payday — กด "ถัดไป" เพื่อส่งต่อเทิร์น`,
+          th: `${bot.name} (Robot) จบการตรวจสอบช่องรับเงินเดือน — กด "ถัดไป" เพื่อส่งต่อเทิร์น`,
           en: `${bot.name} (Robot) completed Payday space — click Next Step.`,
         },
         null
@@ -2181,7 +2489,7 @@ export class GameRoom {
       bot.finance.cash -= cost;
       bot.hasThreeDiceForever = true;
       const delta = FinancialEngine.buildDelta(before, bot.finance, {
-        th: `${bot.name} บริจาคการกุศล Fast Track (-${cost.toLocaleString()} ฿)`,
+        th: `${bot.name} บริจาคการกุศลวงนอก (-${cost.toLocaleString()} ฿)`,
         en: `${bot.name} donated Fast Track Charity (-${cost.toLocaleString()} ฿)`,
       });
       this.addLog(
@@ -2208,13 +2516,13 @@ export class GameRoom {
         cashFlow: cf,
       });
       const delta = FinancialEngine.buildDelta(before, bot.finance, {
-        th: `${bot.name} ซื้อธุรกิจ Fast Track (+${cf.toLocaleString()} ฿/ด.)`,
+        th: `${bot.name} ซื้อธุรกิจวงนอก (+${cf.toLocaleString()} ฿/ด.)`,
         en: `${bot.name} bought Fast Track Business (+${cf.toLocaleString()} ฿/mo)`,
       });
       if (bot.finance.fastTrackAddedCashFlow >= FAST_TRACK_WIN_CASHFLOW_TARGET) {
         this.state.winnerId = bot.id;
         this.state.winReason = {
-          th: `${bot.name} (Robot) ทำกำไร Fast Track ครบ ${FAST_TRACK_WIN_CASHFLOW_TARGET.toLocaleString()} ฿/เดือน ชนะเกม!`,
+          th: `${bot.name} (Robot) ทำกำไรวงนอกครบ ${FAST_TRACK_WIN_CASHFLOW_TARGET.toLocaleString()} ฿/เดือน ชนะเกม!`,
           en: `${bot.name} (Robot) reached ${FAST_TRACK_WIN_CASHFLOW_TARGET.toLocaleString()} ฿/mo added cashflow and won!`,
         };
         this.state.phase = 'GAME_OVER';
@@ -2257,7 +2565,7 @@ export class GameRoom {
       if (bot.finance.fastTrackAddedCashFlow >= FAST_TRACK_WIN_CASHFLOW_TARGET) {
         this.state.winnerId = bot.id;
         this.state.winReason = {
-          th: `${bot.name} (Robot) ทอยได้ ${roll} ทำกำไร Fast Track ครบ ${FAST_TRACK_WIN_CASHFLOW_TARGET.toLocaleString()} ฿/เดือน ชนะเกม!`,
+          th: `${bot.name} (Robot) ทอยได้ ${roll} ทำกำไรวงนอกครบ ${FAST_TRACK_WIN_CASHFLOW_TARGET.toLocaleString()} ฿/เดือน ชนะเกม!`,
           en: `${bot.name} (Robot) rolled ${roll} to reach ${FAST_TRACK_WIN_CASHFLOW_TARGET.toLocaleString()} ฿/mo cashflow and won!`,
         };
         this.state.phase = 'GAME_OVER';
@@ -2360,6 +2668,46 @@ export class GameRoom {
       return;
     }
 
+    if (card.kind === 'deal_expense') {
+      const applies = this.doesDealExpenseApply(card, bot);
+      if (applies) {
+        const cost = card.cost;
+        const before = FinancialEngine.snapshot(bot.finance);
+        if (bot.finance.cash < cost && bot.finance.maxLoanLimit > 0) {
+          const needed = Math.ceil((cost - bot.finance.cash) / 1000) * 1000;
+          const loanAmt = Math.min(needed, bot.finance.maxLoanLimit);
+          if (loanAmt > 0) FinancialEngine.takeLoan(bot, loanAmt);
+        }
+        bot.finance.cash -= cost;
+        const delta = FinancialEngine.buildDelta(before, bot.finance, {
+          th: `${bot.name} จ่ายค่า "${card.title.th}" (-${cost.toLocaleString()} ฿)`,
+          en: `${bot.name} paid "${card.title.en}" (-${cost.toLocaleString()} ฿)`,
+        });
+        this.addLog(
+          bot,
+          'BOT_DEAL_EXPENSE',
+          {
+            th: `${bot.name} (Robot) จ่ายเงิน ${cost.toLocaleString()} ฿ สำหรับ "${card.title.th}"`,
+            en: `${bot.name} (Robot) paid ${cost.toLocaleString()} ฿ for "${card.title.en}".`,
+          },
+          delta
+        );
+      } else {
+        this.addLog(
+          bot,
+          'BOT_DEAL_EXPENSE_SKIP',
+          {
+            th: `${bot.name} (Robot) ไม่มีทรัพย์สินที่เข้าเงื่อนไข "${card.title.th}" จึงไม่ต้องจ่าย (0 ฿)`,
+            en: `${bot.name} (Robot) owns no matching property for "${card.title.en}" (0 ฿).`,
+          },
+          null
+        );
+      }
+      this.state.phase = 'BOT_THINKING';
+      this.state.botStepStage = 3;
+      return;
+    }
+
     if (card.kind === 'stock') {
       const price = card.pricePerShare || card.cost;
       const holding = bot.finance.assets.find((a) => a.category === 'stock' && a.symbol === card.symbol);
@@ -2444,7 +2792,14 @@ export class GameRoom {
     const canAfford = bot.finance.cash >= card.downPayment;
     const annualROI = card.downPayment > 0 ? ((card.cashFlow * 12) / card.downPayment) * 100 : 100;
 
-    if (canAfford && (card.cashFlow > 0 || card.kind === 'gold' || card.kind === 'land')) {
+    if (
+      canAfford &&
+      (card.cashFlow > 0 ||
+        card.kind === 'gold' ||
+        card.kind === 'land' ||
+        card.tag === 'semiconductor' ||
+        card.tag === 'software')
+    ) {
       const before = FinancialEngine.snapshot(bot.finance);
       bot.finance.cash -= card.downPayment;
       const category =
@@ -2476,8 +2831,8 @@ export class GameRoom {
         bot,
         'BOT_BUY_ASSET',
         {
-          th: `${bot.name} (Robot) ตัดสินใจซื้อ "${card.title.th}" (ROI ${Math.round(annualROI)}%/ปี) รับ Passive Income +${card.cashFlow.toLocaleString()} ฿/เดือน`,
-          en: `${bot.name} (Robot) bought "${card.title.en}" (${Math.round(annualROI)}% annual ROI, +${card.cashFlow.toLocaleString()} ฿/mo).`,
+          th: `${bot.name} (Robot) ตัดสินใจซื้อ "${card.title.th}" (ผลตอบแทน ${Math.round(annualROI)}%/ปี) รับรายได้จากทรัพย์สิน ${card.cashFlow >= 0 ? '+' : ''}${card.cashFlow.toLocaleString()} ฿/เดือน`,
+          en: `${bot.name} (Robot) bought "${card.title.en}" (${Math.round(annualROI)}% annual ROI, ${card.cashFlow >= 0 ? '+' : ''}${card.cashFlow.toLocaleString()} ฿/mo).`,
         },
         delta
       );

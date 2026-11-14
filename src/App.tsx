@@ -204,6 +204,9 @@ export default function App() {
               dreamId,
             })
           }
+          onCustomizePlayer={(targetId, avatarId, color) =>
+            emit('player:customize', { requesterId: playerId, targetId, avatarId, color })
+          }
           onStartGame={() => emit('game:start')}
         />
       ) : isAdminSpectator ? (
@@ -246,6 +249,9 @@ export default function App() {
               onTakeLoan={(amount) => emit('game:take_loan', { amount })}
               onRepayLoan={(amount) => emit('game:repay_loan', { amount })}
               onPayOffLiability={(key) => emit('game:payoff_liability', { key })}
+              onCustomizePlayer={(targetId, avatarId, color) =>
+                emit('player:customize', { requesterId: playerId, targetId, avatarId, color })
+              }
             />
           </div>
 

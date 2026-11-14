@@ -115,13 +115,22 @@ export interface PlayerFinance {
   lastDelta: FinancialDelta | null;
 }
 
-export type DealCardKind = 'stock' | 'real_estate' | 'business' | 'gold' | 'land' | 'cd' | 'stock_split';
+export type DealCardKind =
+  | 'stock'
+  | 'real_estate'
+  | 'business'
+  | 'gold'
+  | 'land'
+  | 'cd'
+  | 'stock_split'
+  | 'deal_expense';
 
 export interface DealCard {
   id: string;
   deck: 'small_deal' | 'big_deal';
   kind: DealCardKind;
   canSellRight?: boolean;
+  expenseCondition?: 'any_rental' | '4plex_only';
   title: BilingualText;
   description: BilingualText;
   tag: string;
@@ -139,14 +148,25 @@ export interface DealCard {
   units?: number;
 }
 
+export type MarketOfferType =
+  | 'fixed_price'
+  | 'per_unit'
+  | 'multiplier'
+  | 'cost_plus'
+  | 'cashflow_boost'
+  | 'cashflow_adjust'
+  | 'foreclose_refund';
+
 export interface MarketCard {
   id: string;
   deck: 'market';
   title: BilingualText;
   description: BilingualText;
   targetTags: string[];
-  offerType: 'fixed_price' | 'per_unit';
-  offerAmount: number; // fixed price OR price per unit
+  offerType: MarketOfferType;
+  offerAmount: number; // fixed price, price per unit, multiplier (2 or 3), bonus/adjust amount
+  onlyDrawer?: boolean;
+  minUnits?: number;
 }
 
 export interface DoodadCard {
@@ -156,6 +176,7 @@ export interface DoodadCard {
   description: BilingualText;
   cost: number;
   onlyIfHasChildren?: boolean;
+  perChildCost?: boolean;
 }
 
 export type ActiveCard = DealCard | MarketCard | DoodadCard;
@@ -226,6 +247,7 @@ export interface Player {
   id: string;
   name: string;
   color: string;
+  avatarId: string;
   isBot: boolean;
   isHost: boolean;
   connected: boolean;

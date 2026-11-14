@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Bot, Copy, Check, Lock, Play, Plus, Sparkles, Trash2, Users, UserPlus } from 'lucide-react';
+import { Bot, Copy, Check, Lock, Palette, Play, Plus, Sparkles, Trash2, Users, UserPlus } from 'lucide-react';
 import { DREAM_OPTIONS } from '../../shared/board';
 import { CAREERS } from '../../shared/careers';
 import { GameRoomState, Language } from '../../shared/types';
 import { t } from '../i18n';
+import { AvatarCustomizerPanel, PlayerAvatar } from './PlayerAvatar';
 
 interface LobbyViewProps {
   language: Language;
@@ -21,6 +22,7 @@ interface LobbyViewProps {
   onRemovePlayer: (targetId: string) => void;
   onAssignCareer: (targetId: string, careerId: string) => void;
   onAssignDream: (targetId: string, dreamId: string) => void;
+  onCustomizePlayer?: (targetId: string, avatarId?: string, color?: string) => void;
   onStartGame: () => void;
 }
 
@@ -35,6 +37,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   onRemovePlayer,
   onAssignCareer,
   onAssignDream,
+  onCustomizePlayer,
   onStartGame,
 }) => {
   const [playerName, setPlayerName] = useState(language === 'th' ? 'ผู้เล่น 1' : 'Player 1');
@@ -42,6 +45,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   const [localError, setLocalError] = useState<string | null>(null);
   const [joinCode, setJoinCode] = useState('');
   const [copied, setCopied] = useState(false);
+  const [editingAppearanceId, setEditingAppearanceId] = useState<string | null>(null);
 
   const handleCopy = () => {
     if (!roomState) return;
@@ -59,7 +63,11 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
     onCreateRoom(playerName, 0, false, adminPassword);
   };
 
-  const displayedError = localError || errorMsg;
+  const isServerAdminPassError = Boolean(
+    errorMsg && (errorMsg.includes('Admin') || errorMsg.includes('รหัสผ่าน'))
+  );
+  const adminError = localError || (isServerAdminPassError ? errorMsg : null);
+  const joinError = !isServerAdminPassError ? errorMsg : null;
 
   if (!roomState) {
     return (
@@ -82,8 +90,8 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
             </div>
 
             {/* 3. เข้าร่วมห้องด้วยรหัส & 4. text box กรอกรหัส และปุ่มเข้าห้องเกม */}
-            <div className="pt-4 border-t border-slate-100">
-              <label className="block text-sm font-semibold text-slate-800 mb-2">
+            <div className="pt-4 border-t border-slate-100 space-y-2.5">
+              <label className="block text-sm font-semibold text-slate-800">
                 {t(language, 'joinRoom')}
               </label>
               <div className="flex gap-2">
@@ -114,13 +122,12 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                   <span>{t(language, 'joinButton')}</span>
                 </button>
               </div>
+              {joinError && (
+                <div className="px-4 py-2.5 rounded-xl bg-pink-50 border border-pink-200 text-pink-700 text-sm">
+                  {joinError}
+                </div>
+              )}
             </div>
-
-            {displayedError && (
-              <div className="px-4 py-2.5 rounded-xl bg-pink-50 border border-pink-200 text-pink-700 text-sm">
-                {displayedError}
-              </div>
-            )}
 
             {/* 5. ปุ่มเล่นคนเดียวกับ Robot */}
             <div className="pt-4 border-t border-slate-100">
@@ -166,6 +173,12 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:border-orange-500 focus:bg-white"
                 />
               </div>
+
+              {adminError && (
+                <div className="px-4 py-2.5 rounded-xl bg-pink-50 border border-pink-200 text-pink-700 text-sm">
+                  {adminError}
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -244,6 +257,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {roomState.players.map((p) => {
               const canEdit = isHost || p.id === playerId;
+              const isCustomizing = editingAppearanceId === p.id;
               const selectedDream =
                 DREAM_OPTIONS.find((d) => d.id === p.dreamId) || DREAM_OPTIONS[0];
               return (
@@ -253,9 +267,11 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-3 min-w-0">
-                      <span
-                        className="w-4 h-4 rounded-full shrink-0 border border-slate-900/20 shadow-xs"
-                        style={{ backgroundColor: p.color }}
+                      <PlayerAvatar
+                        avatarId={p.avatarId}
+                        color={p.color}
+                        isBot={p.isBot}
+                        size="md"
                       />
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 text-sm font-bold text-slate-900 truncate">
@@ -282,17 +298,47 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                       </div>
                     </div>
 
-                    {isHost && !p.isHost && (
-                      <button
-                        type="button"
-                        onClick={() => onRemovePlayer(p.id)}
-                        aria-label="Remove player"
-                        className="p-1.5 rounded-md text-slate-400 hover:text-pink-600 hover:bg-pink-50 transition-colors shrink-0"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
+                    <div className="flex items-center gap-1 shrink-0">
+                      {canEdit && onCustomizePlayer && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setEditingAppearanceId((curr) => (curr === p.id ? null : p.id))
+                          }
+                          aria-label={t(language, 'customizeAvatarTitle')}
+                          title={t(language, 'customizeAvatarTitle')}
+                          className={`p-1.5 rounded-md transition-colors ${
+                            isCustomizing
+                              ? 'text-emerald-700 bg-emerald-100'
+                              : 'text-slate-400 hover:text-emerald-700 hover:bg-emerald-50'
+                          }`}
+                        >
+                          <Palette className="w-4 h-4" />
+                        </button>
+                      )}
+                      {isHost && !p.isHost && (
+                        <button
+                          type="button"
+                          onClick={() => onRemovePlayer(p.id)}
+                          aria-label="Remove player"
+                          className="p-1.5 rounded-md text-slate-400 hover:text-pink-600 hover:bg-pink-50 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
+
+                  {isCustomizing && canEdit && onCustomizePlayer && (
+                    <AvatarCustomizerPanel
+                      language={language}
+                      currentAvatarId={p.avatarId}
+                      currentColor={p.color}
+                      onSelectAvatar={(avatarId) => onCustomizePlayer(p.id, avatarId, undefined)}
+                      onSelectColor={(color) => onCustomizePlayer(p.id, undefined, color)}
+                      onClose={() => setEditingAppearanceId(null)}
+                    />
+                  )}
 
                   {canEdit && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-slate-200/80">
