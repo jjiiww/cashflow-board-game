@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ArrowDownRight, ArrowUpRight, Bot, Landmark, Sparkles, TrendingUp, Users } from 'lucide-react';
 import { DREAM_OPTIONS, FAST_TRACK_WIN_CASHFLOW_TARGET } from '../../shared/board';
 import { GameRoomState, Language, Player } from '../../shared/types';
@@ -6,7 +6,28 @@ import { t } from '../i18n';
 import { getAssetDetailLines, getAssetTypeLabel } from '../utils/assetDisplay';
 import { CashflowBoard } from './CashflowBoard';
 import { PlayerAvatar } from './PlayerAvatar';
+import { ResizeHandle } from './ResizeHandle';
 import { StepActionPanel } from './StepActionPanel';
+
+const DEFAULT_ADMIN_LEFT_PCT = 50;
+const MIN_ADMIN_LEFT_PCT = 26;
+const MAX_ADMIN_LEFT_PCT = 72;
+
+const DEFAULT_ADMIN_BOTTOM_PCT = 44;
+const MIN_ADMIN_BOTTOM_PCT = 20;
+const MAX_ADMIN_BOTTOM_PCT = 75;
+
+function readStoredPct(key: string, fallback: number, min: number, max: number): number {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) return fallback;
+    return Math.min(max, Math.max(min, parsed));
+  } catch {
+    return fallback;
+  }
+}
 
 interface AdminDashboardProps {
   roomState: GameRoomState;
@@ -443,10 +464,94 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const players = uiState.players;
   const activeTurnPlayerId = players[uiState.currentTurnIndex]?.id || '';
 
+  const [isDesktop, setIsDesktop] = useState<boolean>(() =>
+    typeof window !== 'undefined' ? window.matchMedia('(min-width: 1024px)').matches : true
+  );
+  const [leftPercent, setLeftPercent] = useState<number>(() =>
+    readStoredPct(
+      'cashflow_admin_left_pct',
+      DEFAULT_ADMIN_LEFT_PCT,
+      MIN_ADMIN_LEFT_PCT,
+      MAX_ADMIN_LEFT_PCT
+    )
+  );
+  const [bottomPercent, setBottomPercent] = useState<number>(() =>
+    readStoredPct(
+      'cashflow_admin_bottom_pct',
+      DEFAULT_ADMIN_BOTTOM_PCT,
+      MIN_ADMIN_BOTTOM_PCT,
+      MAX_ADMIN_BOTTOM_PCT
+    )
+  );
+  const [leftPaneWidthPx, setLeftPaneWidthPx] = useState<number>(0);
+
+  const mainRef = useRef<HTMLElement | null>(null);
+  const leftSectionRef = useRef<HTMLElement | null>(null);
+  const rightColRef = useRef<HTMLDivElement | null>(null);
+  const dragStartLeftPctRef = useRef<number>(DEFAULT_ADMIN_LEFT_PCT);
+  const dragStartBottomPctRef = useRef<number>(DEFAULT_ADMIN_BOTTOM_PCT);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const onChange = () => setIsDesktop(mq.matches);
+    onChange();
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('cashflow_admin_left_pct', String(leftPercent));
+    } catch {
+      // ignore storage quota errors
+    }
+  }, [leftPercent]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('cashflow_admin_bottom_pct', String(bottomPercent));
+    } catch {
+      // ignore storage quota errors
+    }
+  }, [bottomPercent]);
+
+  useEffect(() => {
+    const el = leftSectionRef.current;
+    if (!el) return;
+    setLeftPaneWidthPx(el.clientWidth);
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setLeftPaneWidthPx(entry.contentRect.width);
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const cardGridColsClass = !isDesktop
+    ? `grid-cols-1 sm:grid-cols-2 ${players.length >= 5 ? '2xl:grid-cols-3' : ''}`
+    : leftPaneWidthPx > 0 && leftPaneWidthPx < 480
+    ? 'grid-cols-1'
+    : leftPaneWidthPx >= 860 && players.length >= 5
+    ? 'grid-cols-3'
+    : 'grid-cols-2';
+
+  const resizeHint =
+    language === 'th'
+      ? 'ลากเพื่อปรับขนาด · ดับเบิลคลิกเพื่อรีเซ็ต'
+      : 'Drag to resize · Double-click to reset';
+
   return (
-    <main className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 overflow-y-auto lg:overflow-hidden">
-      {/* Frame 1: Left half (top-to-bottom) — All Players Financial Statements in Columns */}
-      <section className="flex flex-col min-h-[460px] lg:min-h-0 lg:h-full bg-slate-50/90 border-b lg:border-b-0 lg:border-r border-slate-200 overflow-hidden">
+    <main
+      ref={mainRef}
+      className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden"
+    >
+      {/* Frame 1: Left pane — All Players Financial Statements in Columns (horizontally resizable) */}
+      <section
+        ref={leftSectionRef}
+        style={isDesktop ? { width: `${leftPercent}%` } : undefined}
+        className="flex flex-col min-h-[460px] lg:min-h-0 lg:h-full lg:shrink-0 bg-slate-50/90 border-b lg:border-b-0 lg:border-r border-slate-200 overflow-hidden"
+      >
         <div className="px-4 py-2.5 bg-white border-b border-slate-200 flex items-center justify-between gap-2 shrink-0">
           <div className="flex items-center gap-2 min-w-0">
             <Users className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -460,11 +565,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
 
         <div className="flex-1 overflow-y-auto p-3">
-          <div
-            className={`grid grid-cols-1 sm:grid-cols-2 ${
-              players.length >= 5 ? '2xl:grid-cols-3' : ''
-            } gap-2.5 items-start`}
-          >
+          <div className={`grid ${cardGridColsClass} gap-2.5 items-start`}>
             {players.map((p) => (
               <PlayerAdminFinanceCard
                 key={p.id}
@@ -477,10 +578,36 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       </section>
 
-      {/* Right half: Stacked Top (Game Board) + Bottom (Step Narration & Activity Log) */}
-      <div className="flex flex-col min-h-0 lg:h-full overflow-hidden">
+      <ResizeHandle
+        orientation="vertical"
+        title={resizeHint}
+        className="hidden lg:flex z-20 shrink-0"
+        onDragStart={() => {
+          dragStartLeftPctRef.current = leftPercent;
+        }}
+        onDragMove={(deltaPx) => {
+          const totalWidth = mainRef.current?.clientWidth || 0;
+          if (totalWidth <= 0) return;
+          const deltaPct = (deltaPx / totalWidth) * 100;
+          const next = Math.min(
+            MAX_ADMIN_LEFT_PCT,
+            Math.max(MIN_ADMIN_LEFT_PCT, dragStartLeftPctRef.current + deltaPct)
+          );
+          setLeftPercent(Math.round(next * 10) / 10);
+        }}
+        onDoubleClick={() => setLeftPercent(DEFAULT_ADMIN_LEFT_PCT)}
+      />
+
+      {/* Right pane: Stacked Top (Game Board) + Bottom (Step Narration & Activity Log) */}
+      <div
+        ref={rightColRef}
+        className="flex-1 min-w-0 flex flex-col min-h-0 lg:h-full overflow-hidden"
+      >
         {/* Frame 2: Top-Right — Game Board */}
-        <section className="flex-[56] min-h-[380px] lg:min-h-0 flex items-center justify-center p-2 overflow-hidden border-b border-slate-200">
+        <section
+          style={isDesktop ? { height: `${100 - bottomPercent}%` } : undefined}
+          className="min-h-[380px] lg:min-h-0 lg:shrink-0 flex items-center justify-center p-2 overflow-hidden border-b border-slate-200"
+        >
           <CashflowBoard
             roomState={roomState}
             language={language}
@@ -490,8 +617,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           />
         </section>
 
-        {/* Frame 3: Bottom-Right — Game Progression Messages & Log */}
-        <section className="flex-[44] min-h-[300px] lg:min-h-0 overflow-hidden">
+        <ResizeHandle
+          orientation="horizontal"
+          title={resizeHint}
+          className="hidden lg:flex z-20 shrink-0"
+          onDragStart={() => {
+            dragStartBottomPctRef.current = bottomPercent;
+          }}
+          onDragMove={(deltaPx) => {
+            const totalHeight = rightColRef.current?.clientHeight || 0;
+            if (totalHeight <= 0) return;
+            const deltaPct = (deltaPx / totalHeight) * 100;
+            const next = Math.min(
+              MAX_ADMIN_BOTTOM_PCT,
+              Math.max(MIN_ADMIN_BOTTOM_PCT, dragStartBottomPctRef.current - deltaPct)
+            );
+            setBottomPercent(Math.round(next * 10) / 10);
+          }}
+          onDoubleClick={() => setBottomPercent(DEFAULT_ADMIN_BOTTOM_PCT)}
+        />
+
+        {/* Frame 3: Bottom-Right — Game Progression Messages & Log (vertically resizable) */}
+        <section
+          style={isDesktop ? { height: `${bottomPercent}%` } : undefined}
+          className="min-h-[300px] lg:min-h-0 lg:shrink-0 overflow-hidden"
+        >
           <StepActionPanel
             layoutMode="adminBottom"
             roomState={uiState}

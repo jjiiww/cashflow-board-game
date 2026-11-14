@@ -8,7 +8,6 @@ import {
   RatRaceSpaceType,
 } from '../../shared/types';
 import { soundFX } from '../utils/sound';
-import { PlayerAvatar } from './PlayerAvatar';
 
 interface CashflowBoardProps {
   roomState: GameRoomState;
@@ -95,9 +94,9 @@ function getFastTrackColors(type: FastTrackSpace['type'], isPlayerDream: boolean
   if (type === 'charity') {
     return { fill: '#f97316', stroke: '#ea580c', text: '#ffffff', sub: '#ffedd5' };
   }
-  // Tax Audit / Lawsuit / Divorce -> Red
+  // Tax Audit / Lawsuit / Divorce -> Purple (same as Rat Race Baby / Downsized)
   if (type === 'tax_audit' || type === 'lawsuit' || type === 'divorce') {
-    return { fill: '#dc2626', stroke: '#b91c1c', text: '#ffffff', sub: '#fee2e2' };
+    return { fill: '#8b5cf6', stroke: '#7c3aed', text: '#ffffff', sub: '#ede9fe' };
   }
   // Travel / Lifestyle / Dreams -> Pink (chosen Dream uses bold dark border for high contrast)
   if (isPlayerDream) {
@@ -1074,31 +1073,12 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
         </svg>
       </div>
 
-      {/* Bottom Legend & Inspected Space Bar */}
-      <div className="w-full max-w-[1640px] mt-1.5 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 px-2">
-        <div className="flex flex-wrap items-center gap-3">
-          {roomState.players.map((p, idx) => (
-            <div
-              key={p.id}
-              className={`flex items-center gap-1.5 ${
-                idx === roomState.currentTurnIndex ? 'text-slate-900 font-bold' : 'text-slate-500'
-              }`}
-            >
-              <PlayerAvatar
-                avatarId={p.avatarId}
-                color={p.color}
-                isBot={p.isBot}
-                isActiveTurn={idx === roomState.currentTurnIndex}
-                size="xs"
-              />
-              <span className="truncate max-w-[100px]">{p.name}</span>
-            </div>
-          ))}
-        </div>
-        {inspectedSpace && (
+      {/* Inspected Space Bar (only shown when hovering/inspecting a space) */}
+      {inspectedSpace && (
+        <div className="w-full max-w-[1640px] mt-1 flex items-center justify-end text-xs px-2">
           <div className="text-emerald-700 font-semibold truncate max-w-[420px]">{inspectedSpace}</div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

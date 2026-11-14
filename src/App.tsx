@@ -9,9 +9,29 @@ import { FinancialStatement } from './components/FinancialStatement';
 import { GameHeader } from './components/GameHeader';
 import { LobbyView } from './components/LobbyView';
 import { PlayerAvatar } from './components/PlayerAvatar';
+import { ResizeHandle } from './components/ResizeHandle';
 import { StepActionPanel } from './components/StepActionPanel';
 import { t } from './i18n';
 import { soundFX } from './utils/sound';
+
+const DEFAULT_LEFT_WIDTH = 300;
+const DEFAULT_RIGHT_WIDTH = 320;
+const MIN_LEFT_WIDTH = 220;
+const MIN_RIGHT_WIDTH = 240;
+const MAX_SIDE_WIDTH = 580;
+const MIN_BOARD_WIDTH = 340;
+
+function readStoredNumber(key: string, fallback: number, min: number, max: number): number {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) return fallback;
+    return Math.min(max, Math.max(min, parsed));
+  } catch {
+    return fallback;
+  }
+}
 
 function getOrCreatePlayerId(): string {
   const key = 'cashflow_player_id';
@@ -36,8 +56,21 @@ export default function App() {
     log: GameLogEntry;
     player?: Player;
   } | null>(null);
+  const [isDesktop, setIsDesktop] = useState<boolean>(() =>
+    typeof window !== 'undefined' ? window.matchMedia('(min-width: 1024px)').matches : true
+  );
+  const [leftWidth, setLeftWidth] = useState<number>(() =>
+    readStoredNumber('cashflow_player_left_w', DEFAULT_LEFT_WIDTH, MIN_LEFT_WIDTH, MAX_SIDE_WIDTH)
+  );
+  const [rightWidth, setRightWidth] = useState<number>(() =>
+    readStoredNumber('cashflow_player_right_w', DEFAULT_RIGHT_WIDTH, MIN_RIGHT_WIDTH, MAX_SIDE_WIDTH)
+  );
+  const [mainWidth, setMainWidth] = useState<number>(0);
 
   const socketRef = useRef<Socket | null>(null);
+  const mainRef = useRef<HTMLElement | null>(null);
+  const dragStartLeftRef = useRef<number>(DEFAULT_LEFT_WIDTH);
+  const dragStartRightRef = useRef<number>(DEFAULT_RIGHT_WIDTH);
   const prevLogIdRef = useRef<string | null>(null);
   const prevRoomRef = useRef<GameRoomState | null>(null);
   const latestRoomRef = useRef<GameRoomState | null>(null);
@@ -298,6 +331,60 @@ export default function App() {
   const isHost = Boolean(roomState && roomState.hostId === playerId);
   const isAdminSpectator = Boolean(roomState?.isAdminSpectator && isHost);
   const isGameOver = Boolean(uiState?.phase === 'GAME_OVER' && !isBoardAnimating);
+  const isPlayerBoardView = Boolean(roomState && roomState.phase !== 'LOBBY' && !isAdminSpectator);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const onChange = () => setIsDesktop(mq.matches);
+    onChange();
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('cashflow_player_left_w', String(leftWidth));
+    } catch {
+      // ignore storage quota errors
+    }
+  }, [leftWidth]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('cashflow_player_right_w', String(rightWidth));
+    } catch {
+      // ignore storage quota errors
+    }
+  }, [rightWidth]);
+
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!isPlayerBoardView || !el) return;
+    setMainWidth(el.clientWidth);
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setMainWidth(entry.contentRect.width);
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [isPlayerBoardView]);
+
+  const maxSideTotal = mainWidth > 0 ? Math.max(460, mainWidth - MIN_BOARD_WIDTH) : 1200;
+  const effectiveLeftWidth = Math.min(
+    Math.max(MIN_LEFT_WIDTH, leftWidth),
+    MAX_SIDE_WIDTH,
+    Math.max(MIN_LEFT_WIDTH, maxSideTotal - MIN_RIGHT_WIDTH)
+  );
+  const effectiveRightWidth = Math.min(
+    Math.max(MIN_RIGHT_WIDTH, rightWidth),
+    MAX_SIDE_WIDTH,
+    Math.max(MIN_RIGHT_WIDTH, maxSideTotal - effectiveLeftWidth)
+  );
+  const resizeHint =
+    language === 'th'
+      ? 'ลากเพื่อปรับขนาด · ดับเบิลคลิกเพื่อรีเซ็ต'
+      : 'Drag to resize · Double-click to reset';
 
   return (
     <div className="h-screen w-screen flex flex-col felt-surface overflow-hidden">
@@ -419,9 +506,15 @@ export default function App() {
           onEndTurn={() => emit('game:end_turn')}
         />
       ) : (
-        <main className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[285px_minmax(0,1fr)_305px] xl:grid-cols-[300px_minmax(0,1fr)_320px] overflow-y-auto lg:overflow-hidden">
+        <main
+          ref={mainRef}
+          className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden"
+        >
           {/* Left: Financial Statement Dashboard */}
-          <div className="min-h-[420px] lg:min-h-0 lg:h-full overflow-hidden">
+          <div
+            style={isDesktop ? { width: effectiveLeftWidth } : undefined}
+            className="min-h-[420px] lg:min-h-0 lg:h-full lg:shrink-0 overflow-hidden"
+          >
             <FinancialStatement
               players={(uiState || roomState).players}
               localPlayerId={playerId}
@@ -433,8 +526,28 @@ export default function App() {
             />
           </div>
 
+          <ResizeHandle
+            orientation="vertical"
+            title={resizeHint}
+            className="hidden lg:flex z-20 shrink-0"
+            onDragStart={() => {
+              dragStartLeftRef.current = effectiveLeftWidth;
+            }}
+            onDragMove={(deltaPx) => {
+              const maxAllowed = Math.min(
+                MAX_SIDE_WIDTH,
+                Math.max(MIN_LEFT_WIDTH, maxSideTotal - effectiveRightWidth)
+              );
+              const next = Math.round(
+                Math.min(maxAllowed, Math.max(MIN_LEFT_WIDTH, dragStartLeftRef.current + deltaPx))
+              );
+              setLeftWidth(next);
+            }}
+            onDoubleClick={() => setLeftWidth(DEFAULT_LEFT_WIDTH)}
+          />
+
           {/* Center: Cashflow Board (receives live roomState to animate dice & walking steps) */}
-          <div className="flex items-center justify-center p-1 lg:p-1.5 min-h-[460px] lg:min-h-0 lg:h-full overflow-hidden">
+          <div className="flex-1 min-w-0 flex items-center justify-center p-1 lg:p-1.5 min-h-[460px] lg:min-h-0 lg:h-full overflow-hidden">
             <CashflowBoard
               roomState={roomState}
               language={language}
@@ -444,8 +557,31 @@ export default function App() {
             />
           </div>
 
+          <ResizeHandle
+            orientation="vertical"
+            title={resizeHint}
+            className="hidden lg:flex z-20 shrink-0"
+            onDragStart={() => {
+              dragStartRightRef.current = effectiveRightWidth;
+            }}
+            onDragMove={(deltaPx) => {
+              const maxAllowed = Math.min(
+                MAX_SIDE_WIDTH,
+                Math.max(MIN_RIGHT_WIDTH, maxSideTotal - effectiveLeftWidth)
+              );
+              const next = Math.round(
+                Math.min(maxAllowed, Math.max(MIN_RIGHT_WIDTH, dragStartRightRef.current - deltaPx))
+              );
+              setRightWidth(next);
+            }}
+            onDoubleClick={() => setRightWidth(DEFAULT_RIGHT_WIDTH)}
+          />
+
           {/* Right: Step-by-Step Guide, Cards, Auctions, & Activity Log */}
-          <div className="min-h-[420px] lg:min-h-0 lg:h-full overflow-hidden">
+          <div
+            style={isDesktop ? { width: effectiveRightWidth } : undefined}
+            className="min-h-[420px] lg:min-h-0 lg:h-full lg:shrink-0 overflow-hidden"
+          >
             <StepActionPanel
               roomState={uiState || roomState}
               localPlayerId={playerId}

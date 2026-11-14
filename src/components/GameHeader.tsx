@@ -33,9 +33,9 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
   const showRoomCode = Boolean(roomCode && !hideRoomCode);
 
   return (
-    <header className="h-14 border-b border-slate-200 bg-white/95 backdrop-blur px-5 flex items-center justify-between gap-8 shrink-0 shadow-xs">
+    <header className="h-11 border-b border-slate-200 bg-white/95 backdrop-blur px-5 flex items-center justify-between gap-8 shrink-0 shadow-xs">
       {/* Zone 1: Brand wordmark only */}
-      <div className="font-display text-lg font-extrabold tracking-tight text-violet-600 whitespace-nowrap shrink-0">
+      <div className="font-display text-base sm:text-lg font-extrabold tracking-tight text-violet-600 whitespace-nowrap shrink-0">
         {t(language, 'appTitle')}
       </div>
 
@@ -85,12 +85,12 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
       </div>
 
       {/* Zone 3: Language segmented control, sound toggle, and optional leave action */}
-      <div className="flex items-center gap-3 shrink-0">
+      <div className="flex items-center gap-2.5 shrink-0">
         <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
           <button
             type="button"
             onClick={() => onToggleLanguage('th')}
-            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 ${
+            className={`px-2.5 py-0.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 ${
               language === 'th'
                 ? 'bg-emerald-500 text-white font-semibold shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -101,7 +101,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
           <button
             type="button"
             onClick={() => onToggleLanguage('en')}
-            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 ${
+            className={`px-2.5 py-0.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap shrink-0 ${
               language === 'en'
                 ? 'bg-emerald-500 text-white font-semibold shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -115,7 +115,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
           type="button"
           onClick={onToggleMute}
           aria-label={muted ? 'Unmute sound' : 'Mute sound'}
-          className="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+          className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
         >
           {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
         </button>
@@ -124,7 +124,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
           <button
             type="button"
             onClick={onCloseGame}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-pink-600 hover:bg-pink-700 text-white transition-colors whitespace-nowrap shrink-0 shadow-xs"
+            className="flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-lg bg-pink-600 hover:bg-pink-700 text-white transition-colors whitespace-nowrap shrink-0 shadow-xs"
           >
             <Power className="w-3.5 h-3.5" />
             <span>{t(language, 'closeGame')}</span>
@@ -135,7 +135,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
           <button
             type="button"
             onClick={onLeaveRoom}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-pink-200 text-pink-600 hover:bg-pink-50 transition-colors whitespace-nowrap shrink-0"
+            className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg border border-pink-200 text-pink-600 hover:bg-pink-50 transition-colors whitespace-nowrap shrink-0"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>{t(language, 'leaveRoom')}</span>

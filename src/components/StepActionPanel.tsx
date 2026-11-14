@@ -1113,7 +1113,7 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
     <div
       className={
         isAdminBottom
-          ? 'p-3 space-y-2.5 overflow-y-auto h-full'
+          ? 'p-3 space-y-2.5 @[460px]:overflow-y-auto @[460px]:h-full'
           : 'flex-1 min-h-0 p-3.5 border-b border-slate-200 space-y-3 overflow-y-auto'
       }
     >
@@ -1209,7 +1209,7 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
     <div
       className={
         isAdminBottom
-          ? 'flex flex-col min-h-0 h-full overflow-hidden bg-slate-50/70 border-t md:border-t-0 md:border-l border-slate-200'
+          ? 'flex flex-col min-h-[200px] @[460px]:min-h-0 @[460px]:h-full @[460px]:overflow-hidden bg-slate-50/70 border-t @[460px]:border-t-0 @[460px]:border-l border-slate-200'
           : 'h-1/3 shrink-0 flex flex-col min-h-0 overflow-hidden bg-slate-50/70'
       }
     >
@@ -1243,9 +1243,11 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
 
   if (isAdminBottom) {
     return (
-      <aside className="h-full grid grid-cols-1 md:grid-cols-[1.25fr_0.95fr] bg-white overflow-hidden">
-        {narrationZone}
-        {activityLogZone}
+      <aside className="@container h-full bg-white overflow-hidden">
+        <div className="h-full grid grid-cols-1 @[460px]:grid-cols-[1.25fr_0.95fr] overflow-y-auto @[460px]:overflow-hidden">
+          {narrationZone}
+          {activityLogZone}
+        </div>
       </aside>
     );
   }
