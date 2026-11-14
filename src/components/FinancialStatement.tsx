@@ -1,9 +1,41 @@
 import React, { useEffect, useState } from 'react';
-import { Landmark, TrendingUp, ArrowUpRight, ArrowDownRight, Layers, Palette } from 'lucide-react';
+import { Landmark, TrendingUp, ArrowUpRight, ArrowDownRight, Layers } from 'lucide-react';
 import { DREAM_OPTIONS, FAST_TRACK_WIN_CASHFLOW_TARGET } from '../../shared/board';
 import { Language, Player } from '../../shared/types';
 import { t } from '../i18n';
-import { AvatarCustomizerPanel, PlayerAvatar } from './PlayerAvatar';
+import { getAssetDetailLines, getAssetTypeLabel } from '../utils/assetDisplay';
+
+function getSoftPlayerBadgeClass(colorHex: string, isTurn: boolean): string {
+  const hex = colorHex.toLowerCase();
+  if (hex === '#dc2626' || hex === '#ef4444') {
+    return isTurn
+      ? 'bg-red-100 border-red-500 text-red-950 ring-2 ring-red-200 shadow-2xs'
+      : 'bg-red-50 border-red-200 text-red-900';
+  }
+  if (hex === '#1e40af' || hex === '#2563eb' || hex === '#3b82f6') {
+    return isTurn
+      ? 'bg-blue-100 border-blue-600 text-blue-950 ring-2 ring-blue-200 shadow-2xs'
+      : 'bg-blue-50 border-blue-200 text-blue-950';
+  }
+  if (hex === '#16a34a' || hex === '#10b981') {
+    return isTurn
+      ? 'bg-emerald-100 border-emerald-500 text-emerald-950 ring-2 ring-emerald-200 shadow-2xs'
+      : 'bg-emerald-50 border-emerald-200 text-emerald-900';
+  }
+  if (hex === '#fa8f48' || hex === '#f97316') {
+    return isTurn
+      ? 'bg-orange-100 border-orange-500 text-orange-950 ring-2 ring-orange-200 shadow-2xs'
+      : 'bg-orange-50 border-orange-200 text-orange-900';
+  }
+  if (hex === '#9a6af2' || hex === '#8b5cf6') {
+    return isTurn
+      ? 'bg-violet-100 border-violet-500 text-violet-950 ring-2 ring-violet-200 shadow-2xs'
+      : 'bg-violet-50 border-violet-200 text-violet-900';
+  }
+  return isTurn
+    ? 'bg-slate-300/80 border-slate-700 text-slate-950 ring-2 ring-slate-300 shadow-2xs'
+    : 'bg-slate-200/75 border-slate-300 text-slate-800';
+}
 
 interface FinancialStatementProps {
   players: Player[];
@@ -20,7 +52,6 @@ interface FinancialStatementProps {
       | 'creditCardBalance'
       | 'otherDebtBalance'
   ) => void;
-  onCustomizePlayer?: (targetId: string, avatarId?: string, color?: string) => void;
 }
 
 function formatDelta(val: number): string {
@@ -36,11 +67,9 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
   onTakeLoan,
   onRepayLoan,
   onPayOffLiability,
-  onCustomizePlayer,
 }) => {
   const [ledgerTab, setLedgerTab] = useState<'fast_track' | 'rat_race'>('rat_race');
   const [showLoanModal, setShowLoanModal] = useState(false);
-  const [showCustomizer, setShowCustomizer] = useState(false);
   const [loanInput, setLoanInput] = useState('10000');
   const [repayInput, setRepayInput] = useState('10000');
 
@@ -72,42 +101,28 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
     label: string;
     balance: number;
   }[] = [
-    { key: 'homeMortgageBalance', label: t(language, 'homeMortgageExp'), balance: f.liabilities.homeMortgageBalance },
-    { key: 'schoolLoanBalance', label: t(language, 'schoolLoanExp'), balance: f.liabilities.schoolLoanBalance },
-    { key: 'carLoanBalance', label: t(language, 'carLoanExp'), balance: f.liabilities.carLoanBalance },
-    { key: 'creditCardBalance', label: t(language, 'creditCardExp'), balance: f.liabilities.creditCardBalance },
-    { key: 'otherDebtBalance', label: t(language, 'otherDebtExp'), balance: f.liabilities.otherDebtBalance },
+    { key: 'homeMortgageBalance', label: t(language, 'liabilityHomeShort'), balance: f.liabilities.homeMortgageBalance },
+    { key: 'schoolLoanBalance', label: t(language, 'liabilitySchoolShort'), balance: f.liabilities.schoolLoanBalance },
+    { key: 'carLoanBalance', label: t(language, 'liabilityCarShort'), balance: f.liabilities.carLoanBalance },
+    { key: 'creditCardBalance', label: t(language, 'liabilityCreditCardShort'), balance: f.liabilities.creditCardBalance },
+    { key: 'otherDebtBalance', label: t(language, 'liabilityOtherShort'), balance: f.liabilities.otherDebtBalance },
   ];
 
   return (
     <aside className="h-full flex flex-col bg-white border-r border-slate-200 overflow-hidden">
       {/* Player List (Visual Avatars & Color Markers only — Statement stays private to own player) */}
-      <div className="p-3 border-b border-slate-200 bg-slate-50/80 shrink-0 space-y-2.5">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-xs font-bold text-slate-600">
-            {t(language, 'financialStatement')}
-          </h2>
-          <span className="text-xs font-mono font-bold text-orange-600">
-            {inspected.track === 'fast_track'
-              ? t(language, 'fastTrackTrack')
-              : t(language, 'ratRaceTrack')}
-          </span>
-        </div>
-
+      <div className="p-3 border-b border-slate-200 bg-slate-50/80 shrink-0 space-y-2">
         {/* Visual Identification Roster for All Players */}
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
-            <span>{t(language, 'playersRosterLabel')} ({players.length})</span>
-            {onCustomizePlayer && isOwnPlayer && (
-              <button
-                type="button"
-                onClick={() => setShowCustomizer((prev) => !prev)}
-                className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 px-1.5 py-0.5 rounded hover:bg-emerald-50 transition-colors"
-              >
-                <Palette className="w-3 h-3" />
-                <span>{t(language, 'customizeAvatarTitle')}</span>
-              </button>
-            )}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] font-semibold text-slate-500">
+              {t(language, 'playersRosterLabel')} ({players.length})
+            </span>
+            <span className="text-xs font-mono font-bold text-orange-600 shrink-0">
+              {inspected.track === 'fast_track'
+                ? t(language, 'fastTrackTrack')
+                : t(language, 'ratRaceTrack')}
+            </span>
           </div>
 
           <div className="flex flex-wrap gap-1.5">
@@ -117,43 +132,19 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
               return (
                 <div
                   key={p.id}
-                  onClick={() => {
-                    if (isSelf && onCustomizePlayer) {
-                      setShowCustomizer((prev) => !prev);
-                    }
-                  }}
                   title={p.name}
-                  className={`flex items-center gap-1.5 pl-1 pr-2 py-1 rounded-lg border text-xs transition-colors ${
-                    isSelf && onCustomizePlayer ? 'cursor-pointer hover:bg-emerald-50/60' : ''
-                  } ${
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs transition-colors ${getSoftPlayerBadgeClass(
+                    p.color,
                     isTurn
-                      ? 'bg-orange-50/90 border-orange-300 shadow-2xs'
-                      : isSelf
-                      ? 'bg-white border-emerald-300'
-                      : 'bg-white/90 border-slate-200'
-                  }`}
+                  )}`}
                 >
-                  <PlayerAvatar
-                    avatarId={p.avatarId}
-                    color={p.color}
-                    isBot={p.isBot}
-                    isActiveTurn={isTurn}
-                    size="xs"
-                  />
                   <span
-                    className={`truncate max-w-[78px] text-[11px] ${
-                      isTurn || isSelf ? 'font-bold text-slate-900' : 'font-medium text-slate-700'
+                    className={`truncate max-w-[90px] text-[11px] ${
+                      isTurn || isSelf ? 'font-bold' : 'font-semibold'
                     }`}
                   >
                     {p.name}
                   </span>
-                  {isSelf && (
-                    <span
-                      className="w-2 h-2 rounded-full shrink-0"
-                      style={{ backgroundColor: p.color }}
-                      aria-hidden="true"
-                    />
-                  )}
                   {isTurn && (
                     <span className="text-[10px] text-orange-600 font-bold shrink-0">★</span>
                   )}
@@ -162,41 +153,6 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
             })}
           </div>
         </div>
-
-        {/* Inline Avatar & Color Marker Customizer for Own Player */}
-        {showCustomizer && onCustomizePlayer && isOwnPlayer && (
-          <AvatarCustomizerPanel
-            language={language}
-            currentAvatarId={inspected.avatarId}
-            currentColor={inspected.color}
-            takenColors={players.filter((p) => p.id !== inspected.id).map((p) => p.color)}
-            onSelectAvatar={(avatarId) => onCustomizePlayer(inspected.id, avatarId, undefined)}
-            onSelectColor={(color) => onCustomizePlayer(inspected.id, undefined, color)}
-            onClose={() => setShowCustomizer(false)}
-          />
-        )}
-
-        {/* Own Player Lock Badge */}
-        <div className="flex items-center justify-between gap-2 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5">
-          <div className="flex items-center gap-2 min-w-0">
-            <PlayerAvatar
-              avatarId={inspected.avatarId}
-              color={inspected.color}
-              isBot={inspected.isBot}
-              isActiveTurn={isMyTurn}
-              size="sm"
-            />
-            <span className="text-xs font-bold text-slate-900 truncate">{inspected.name}</span>
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
-              {t(language, 'yourStatementBadge')}
-            </span>
-          </div>
-          {isMyTurn && (
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-800 border border-orange-300 shrink-0">
-              {t(language, 'activeTurnBadge')}
-            </span>
-          )}
-        </div>
       </div>
 
       {/* Scrollable Financial Ledger */}
@@ -204,36 +160,27 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
         {/* Identity & Cash Summary */}
         <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-2xs space-y-3">
           <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2.5">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <PlayerAvatar
-                avatarId={inspected.avatarId}
-                color={inspected.color}
-                isBot={inspected.isBot}
-                isActiveTurn={isMyTurn}
-                size="lg"
-              />
-              <div className="min-w-0">
-                <div className="font-display font-bold text-base text-slate-900 flex items-center gap-2">
-                  <span className="truncate">{inspected.name}</span>
-                  {inspected.isBot && (
-                    <span className="text-xs font-medium text-sky-600 shrink-0">· Robot</span>
-                  )}
-                </div>
-                <div className="text-xs text-slate-500 mt-0.5 truncate">
-                  {inspected.career.name[language]}
-                  {inspected.finance.childrenCount > 0 && (
-                    <span>
-                      {' · '}
-                      {t(language, 'childrenCount')}: {inspected.finance.childrenCount}
-                    </span>
-                  )}
-                </div>
+            <div className="min-w-0">
+              <div className="font-display font-bold text-base text-slate-900 flex items-center gap-1.5">
+                <span className="truncate">{inspected.name}</span>
+                {inspected.isBot && (
+                  <span className="text-xs font-medium text-sky-600 shrink-0">· Robot</span>
+                )}
+              </div>
+              <div className="text-xs text-slate-500 mt-0.5 truncate">
+                {inspected.career.name[language]}
+                {inspected.finance.childrenCount > 0 && (
+                  <span>
+                    {' · '}
+                    {t(language, 'childrenCount')}: {inspected.finance.childrenCount}
+                  </span>
+                )}
               </div>
             </div>
 
-            <div className="text-right">
-              <div className="text-[11px] text-slate-500">{t(language, 'cashOnHand')}</div>
-              <div className="font-mono text-lg font-bold text-emerald-600 tabular-nums">
+            <div className="text-right shrink-0">
+              <div className="text-[11px] text-slate-500 whitespace-nowrap">{t(language, 'cashOnHand')}</div>
+              <div className="font-mono text-base sm:text-lg font-bold text-emerald-600 tabular-nums whitespace-nowrap">
                 {f.cash.toLocaleString()} ฿
               </div>
             </div>
@@ -244,27 +191,29 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
             <>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="bg-slate-50 border border-slate-200/80 rounded-lg p-2">
-                  <div className="text-slate-500">{t(language, 'totalIncome')}</div>
-                  <div className="font-mono font-bold text-slate-900 text-sm mt-0.5 tabular-nums">
+                  <div className="text-[11px] text-slate-500 whitespace-nowrap">{t(language, 'totalIncome')}</div>
+                  <div className="font-mono font-bold text-slate-900 text-sm mt-0.5 tabular-nums whitespace-nowrap">
                     {f.totalIncome.toLocaleString()} ฿
                   </div>
                 </div>
                 <div className="bg-pink-50/70 border border-pink-200/80 rounded-lg p-2">
-                  <div className="text-pink-700">{t(language, 'totalExpenses')}</div>
-                  <div className="font-mono font-bold text-pink-600 text-sm mt-0.5 tabular-nums">
+                  <div className="text-[11px] text-pink-700 whitespace-nowrap">{t(language, 'totalExpenses')}</div>
+                  <div className="font-mono font-bold text-pink-600 text-sm mt-0.5 tabular-nums whitespace-nowrap">
                     {f.totalExpenses.toLocaleString()} ฿
                   </div>
                 </div>
                 <div className="bg-violet-50/70 border border-violet-200/80 rounded-lg p-2">
-                  <div className="text-violet-700">{t(language, 'passiveIncome')}</div>
-                  <div className="font-mono font-bold text-violet-700 text-sm mt-0.5 tabular-nums">
+                  <div className="text-[11px] text-violet-700 whitespace-nowrap">{t(language, 'passiveIncome')}</div>
+                  <div className="font-mono font-bold text-violet-700 text-sm mt-0.5 tabular-nums whitespace-nowrap">
                     {f.passiveIncome.toLocaleString()} ฿
                   </div>
                 </div>
                 <div className="bg-orange-50 border border-orange-200 rounded-lg p-2">
-                  <div className="text-orange-800 font-medium">{t(language, 'monthlyCashFlow')}</div>
+                  <div className="text-[11px] text-orange-800 font-medium whitespace-nowrap">
+                    {t(language, 'monthlyCashFlow')}
+                  </div>
                   <div
-                    className={`font-mono font-bold text-sm mt-0.5 tabular-nums ${
+                    className={`font-mono font-bold text-sm mt-0.5 tabular-nums whitespace-nowrap ${
                       f.monthlyCashFlow >= 0 ? 'text-emerald-600' : 'text-pink-600'
                     }`}
                   >
@@ -275,11 +224,16 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
 
               {/* Rat Race Escape Meter */}
               <div className="pt-1">
-                <div className="flex items-center justify-between text-xs mb-1.5">
-                  <span className="font-semibold text-slate-700 flex items-center gap-1">
-                    <TrendingUp className="w-3.5 h-3.5 text-violet-600" />
-                    <span className="truncate">{t(language, 'escapeProgress')}</span>
-                  </span>
+                <div className="flex items-start justify-between gap-2 text-xs mb-1.5">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-slate-700 flex items-center gap-1">
+                      <TrendingUp className="w-3.5 h-3.5 text-violet-600 shrink-0" />
+                      <span>{t(language, 'escapeProgressTitle')}</span>
+                    </div>
+                    <div className="text-[11px] text-slate-500 mt-0.5">
+                      {t(language, 'escapeProgressSub')}
+                    </div>
+                  </div>
                   <span className="font-mono font-bold text-violet-700 tabular-nums shrink-0">
                     {escapeRatio}%
                   </span>
@@ -378,15 +332,15 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
               {t(language, 'financialChanges')}
             </div>
             <div className="text-xs text-slate-700">{delta.reason[language]}</div>
-            <div className="grid grid-cols-2 gap-1.5 text-xs font-mono tabular-nums pt-1">
+            <div className="flex flex-wrap gap-1.5 text-xs font-mono tabular-nums pt-1">
               {delta.cashDelta !== 0 && (
                 <div
-                  className={`flex items-center justify-between px-2 py-1 rounded bg-white border border-slate-200 ${
+                  className={`flex-1 min-w-fit flex items-center justify-between gap-2 px-2.5 py-1 rounded bg-white border border-slate-200 whitespace-nowrap ${
                     delta.cashDelta > 0 ? 'text-emerald-600' : 'text-pink-600'
                   }`}
                 >
-                  <span>{language === 'th' ? 'เงินสด' : 'Cash'}</span>
-                  <span className="flex items-center gap-0.5 font-bold">
+                  <span className="shrink-0">{language === 'th' ? 'เงินสด' : 'Cash'}</span>
+                  <span className="flex items-center gap-0.5 font-bold shrink-0">
                     {delta.cashDelta > 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                     {formatDelta(delta.cashDelta)}
                   </span>
@@ -394,32 +348,32 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
               )}
               {delta.passiveIncomeDelta !== 0 && (
                 <div
-                  className={`flex items-center justify-between px-2 py-1 rounded bg-white border border-slate-200 ${
+                  className={`flex-1 min-w-fit flex items-center justify-between gap-2 px-2.5 py-1 rounded bg-white border border-slate-200 whitespace-nowrap ${
                     delta.passiveIncomeDelta > 0 ? 'text-violet-600' : 'text-pink-600'
                   }`}
                 >
-                  <span>{language === 'th' ? 'รายได้จากทรัพย์สิน' : 'Passive'}</span>
-                  <span className="font-bold">{formatDelta(delta.passiveIncomeDelta)}</span>
+                  <span className="shrink-0">{language === 'th' ? 'รายได้จากทรัพย์สิน' : 'Passive'}</span>
+                  <span className="font-bold shrink-0">{formatDelta(delta.passiveIncomeDelta)}</span>
                 </div>
               )}
               {delta.totalExpensesDelta !== 0 && (
                 <div
-                  className={`flex items-center justify-between px-2 py-1 rounded bg-white border border-slate-200 ${
+                  className={`flex-1 min-w-fit flex items-center justify-between gap-2 px-2.5 py-1 rounded bg-white border border-slate-200 whitespace-nowrap ${
                     delta.totalExpensesDelta < 0 ? 'text-emerald-600' : 'text-pink-600'
                   }`}
                 >
-                  <span>{language === 'th' ? 'รายจ่าย' : 'Expenses'}</span>
-                  <span className="font-bold">{formatDelta(delta.totalExpensesDelta)}</span>
+                  <span className="shrink-0">{language === 'th' ? 'รายจ่าย' : 'Expenses'}</span>
+                  <span className="font-bold shrink-0">{formatDelta(delta.totalExpensesDelta)}</span>
                 </div>
               )}
               {delta.monthlyCashFlowDelta !== 0 && (
                 <div
-                  className={`flex items-center justify-between px-2 py-1 rounded bg-white border border-slate-200 ${
+                  className={`flex-1 min-w-fit flex items-center justify-between gap-2 px-2.5 py-1 rounded bg-white border border-slate-200 whitespace-nowrap ${
                     delta.monthlyCashFlowDelta > 0 ? 'text-orange-600' : 'text-pink-600'
                   }`}
                 >
-                  <span>{language === 'th' ? 'เงินคงเหลือต่อเดือน' : 'Payday'}</span>
-                  <span className="font-bold">{formatDelta(delta.monthlyCashFlowDelta)}</span>
+                  <span className="shrink-0">{language === 'th' ? 'เงินคงเหลือต่อเดือน' : 'Payday'}</span>
+                  <span className="font-bold shrink-0">{formatDelta(delta.monthlyCashFlowDelta)}</span>
                 </div>
               )}
             </div>
@@ -475,9 +429,12 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
                             {t(language, 'cost')}: {a.cost.toLocaleString()} ฿
                           </div>
                         </div>
-                        <div className="font-mono font-bold text-emerald-600 shrink-0 tabular-nums">
-                          +{a.cashFlow.toLocaleString()}/m
-                        </div>
+                        {a.cashFlow !== 0 && (
+                          <div className="font-mono font-bold text-emerald-600 shrink-0 tabular-nums">
+                            {a.cashFlow > 0 ? '+' : ''}
+                            {a.cashFlow.toLocaleString()}/m
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -607,26 +564,28 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
                 {f.assets.map((a) => (
                   <div
                     key={a.id}
-                    className="flex items-center justify-between gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5"
+                    className="flex items-start justify-between gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5"
                   >
                     <div className="min-w-0">
                       <div className="font-semibold text-slate-900 truncate">
-                        {a.name[language]}
-                        {a.shares ? ` (${a.shares.toLocaleString()})` : ''}
+                        {getAssetTypeLabel(a, language)}
                       </div>
-                      <div className="text-[11px] text-slate-500 font-mono">
-                        {t(language, 'cost')}: {a.cost.toLocaleString()} · {t(language, 'downPayment')}:{' '}
-                        {a.downPayment.toLocaleString()}
+                      <div className="text-[11px] text-slate-500 font-mono leading-snug space-y-0.5 mt-0.5">
+                        {getAssetDetailLines(a, language).map((line, idx) => (
+                          <div key={idx}>{line}</div>
+                        ))}
                       </div>
                     </div>
-                    <div
-                      className={`font-mono font-bold shrink-0 tabular-nums ${
-                        a.cashFlow < 0 ? 'text-pink-600' : 'text-emerald-600'
-                      }`}
-                    >
-                      {a.cashFlow >= 0 ? '+' : ''}
-                      {a.cashFlow.toLocaleString()}/m
-                    </div>
+                    {a.cashFlow !== 0 && (
+                      <div
+                        className={`font-mono font-bold shrink-0 tabular-nums ${
+                          a.cashFlow < 0 ? 'text-pink-600' : 'text-emerald-600'
+                        }`}
+                      >
+                        {a.cashFlow > 0 ? '+' : ''}
+                        {a.cashFlow.toLocaleString()}/m
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -656,18 +615,18 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
                     key={row.key}
                     className="flex items-center justify-between gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5"
                   >
-                    <div>
-                      <div className="text-slate-700 font-medium">{row.label}</div>
-                      <div className="font-mono font-semibold text-slate-900 tabular-nums">
+                    <div className="flex items-center gap-1.5 min-w-0 whitespace-nowrap">
+                      <span className="text-slate-700 font-medium">{row.label}</span>
+                      <span className="font-mono font-semibold text-slate-900 tabular-nums">
                         {row.balance.toLocaleString()} ฿
-                      </div>
+                      </span>
                     </div>
                     {isOwnPlayer && (
                       <button
                         type="button"
                         disabled={f.cash < row.balance}
                         onClick={() => onPayOffLiability(row.key)}
-                        className="px-2.5 py-1 rounded-md bg-slate-900 hover:bg-slate-700 disabled:opacity-35 disabled:cursor-not-allowed text-white text-[11px] font-semibold transition-colors whitespace-nowrap"
+                        className="px-2 py-0.5 rounded-md bg-slate-900 hover:bg-slate-700 disabled:opacity-35 disabled:cursor-not-allowed text-white text-[11px] font-semibold transition-colors whitespace-nowrap shrink-0"
                       >
                         {t(language, 'payOffDebt')}
                       </button>
@@ -684,9 +643,9 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
       {/* Bank Loan Footer Bar (Rat Race only) */}
       {isOwnPlayer && inspected.track === 'rat_race' && (
         <div className="p-3 border-t border-slate-200 bg-white shrink-0 space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-slate-500">{t(language, 'maxLoanAvailable')}</span>
-            <span className="font-mono font-bold text-orange-600 tabular-nums">
+          <div className="flex items-center justify-between gap-1.5 text-[10px] sm:text-[10.5px] whitespace-nowrap">
+            <span className="text-slate-500 tracking-tight">{t(language, 'maxLoanAvailable')}</span>
+            <span className="font-mono font-bold text-orange-600 tabular-nums shrink-0 text-[11px]">
               {f.maxLoanLimit.toLocaleString()} ฿
             </span>
           </div>
@@ -730,18 +689,6 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
                 >
                   {t(language, 'takeLoan')}
                 </button>
-              </div>
-              <div className="flex gap-1">
-                {[1000, 10000, 50000].map((preset) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => setLoanInput(String(Math.min(preset, f.maxLoanLimit || preset)))}
-                    className="flex-1 py-1 text-[11px] font-mono font-semibold rounded-md bg-white hover:bg-orange-50 text-orange-600 border border-slate-200"
-                  >
-                    {preset.toLocaleString()}
-                  </button>
-                ))}
               </div>
 
               {totalBankPrincipal > 0 && (

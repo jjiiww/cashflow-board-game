@@ -135,6 +135,12 @@ export const RatRaceEscapeCelebration: React.FC<RatRaceEscapeCelebrationProps> =
             </h2>
             <p className="text-sm font-bold text-emerald-700">
               {player?.name || log.actorName}
+              {player?.career && (
+                <span className="font-semibold text-slate-600">
+                  {' · '}
+                  {language === 'th' ? `อาชีพ: ${player.career.name.th}` : player.career.name.en}
+                </span>
+              )}
             </p>
           </div>
 

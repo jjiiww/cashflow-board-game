@@ -3,6 +3,7 @@ import { ArrowDownRight, ArrowUpRight, Bot, Landmark, Sparkles, TrendingUp, User
 import { DREAM_OPTIONS, FAST_TRACK_WIN_CASHFLOW_TARGET } from '../../shared/board';
 import { GameRoomState, Language, Player } from '../../shared/types';
 import { t } from '../i18n';
+import { getAssetDetailLines, getAssetTypeLabel } from '../utils/assetDisplay';
 import { CashflowBoard } from './CashflowBoard';
 import { PlayerAvatar } from './PlayerAvatar';
 import { StepActionPanel } from './StepActionPanel';
@@ -312,9 +313,12 @@ const PlayerAdminFinanceCard: React.FC<{
                   className="flex items-center justify-between gap-1.5 bg-emerald-50/60 border border-emerald-200/80 rounded px-2 py-1 text-[11px]"
                 >
                   <span className="truncate font-medium text-slate-800">{a.name[language]}</span>
-                  <span className="font-mono font-bold text-emerald-600 shrink-0 tabular-nums">
-                    +{a.cashFlow.toLocaleString()}/m
-                  </span>
+                  {a.cashFlow !== 0 && (
+                    <span className="font-mono font-bold text-emerald-600 shrink-0 tabular-nums">
+                      {a.cashFlow > 0 ? '+' : ''}
+                      {a.cashFlow.toLocaleString()}/m
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
@@ -326,16 +330,28 @@ const PlayerAdminFinanceCard: React.FC<{
             {f.assets.map((a) => (
               <div
                 key={a.id}
-                className="flex items-center justify-between gap-1.5 bg-slate-50 border border-slate-200/80 rounded px-2 py-1 text-[11px]"
+                className="flex items-start justify-between gap-1.5 bg-slate-50 border border-slate-200/80 rounded px-2 py-1 text-[11px]"
               >
-                <span className="truncate font-medium text-slate-800">
-                  {a.name[language]}
-                  {a.shares ? ` (${a.shares.toLocaleString()})` : a.units ? ` (${a.units}u)` : ''}
-                </span>
-                <span className="font-mono font-bold text-emerald-600 shrink-0 tabular-nums">
-                  {a.cashFlow >= 0 ? '+' : ''}
-                  {a.cashFlow.toLocaleString()}/m
-                </span>
+                <div className="min-w-0">
+                  <div className="truncate font-semibold text-slate-800">
+                    {getAssetTypeLabel(a, language)}
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-mono leading-snug">
+                    {getAssetDetailLines(a, language).map((line, idx) => (
+                      <div key={idx}>{line}</div>
+                    ))}
+                  </div>
+                </div>
+                {a.cashFlow !== 0 && (
+                  <span
+                    className={`font-mono font-bold shrink-0 tabular-nums ${
+                      a.cashFlow < 0 ? 'text-pink-600' : 'text-emerald-600'
+                    }`}
+                  >
+                    {a.cashFlow > 0 ? '+' : ''}
+                    {a.cashFlow.toLocaleString()}/m
+                  </span>
+                )}
               </div>
             ))}
           </div>

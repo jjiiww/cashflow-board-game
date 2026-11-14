@@ -35,9 +35,9 @@ const RAT_SPACE_COLORS: Record<RatRaceSpaceType, { fill: string; stroke: string;
   downsized: { fill: '#8b5cf6', stroke: '#7c3aed', text: '#ffffff' },
 };
 
-// 1288x920 SVG viewBox for 48-space rectangular perimeter (16 cols x 10 rows)
-// Center of inner circle = (644, 460)
-const BOARD_CX = 644;
+// 1640x920 SVG viewBox for 48-space rectangular perimeter (16 cols x 10 rows)
+// Center of inner circle = (820, 460)
+const BOARD_CX = 820;
 const BOARD_CY = 460;
 const RAT_RACE_START_ANGLE = 225;
 
@@ -46,40 +46,40 @@ function getFastTrackRect(
 ): { x: number; y: number; w: number; h: number; cx: number; cy: number; isSide: boolean; isCorner: boolean } {
   // 0: Top-Left Corner (CASHFLOW)
   if (index === 0) {
-    return { x: 12, y: 12, w: 128, h: 112, cx: 76, cy: 68, isSide: false, isCorner: true };
+    return { x: 12, y: 12, w: 136, h: 112, cx: 80, cy: 68, isSide: false, isCorner: true };
   }
   // 1..14: Top Edge (Left to Right)
   if (index >= 1 && index <= 14) {
-    const x = 140 + (index - 1) * 72;
-    return { x, y: 12, w: 72, h: 112, cx: x + 36, cy: 68, isSide: false, isCorner: false };
+    const x = 148 + (index - 1) * 96;
+    return { x, y: 12, w: 96, h: 112, cx: x + 48, cy: 68, isSide: false, isCorner: false };
   }
   // 15: Top-Right Corner (CASHFLOW)
   if (index === 15) {
-    return { x: 1148, y: 12, w: 128, h: 112, cx: 1212, cy: 68, isSide: false, isCorner: true };
+    return { x: 1492, y: 12, w: 136, h: 112, cx: 1560, cy: 68, isSide: false, isCorner: true };
   }
   // 16..23: Right Edge (Top to Bottom)
   if (index >= 16 && index <= 23) {
     const y = 124 + (index - 16) * 84;
-    return { x: 1148, y, w: 128, h: 84, cx: 1212, cy: y + 42, isSide: true, isCorner: false };
+    return { x: 1492, y, w: 136, h: 84, cx: 1560, cy: y + 42, isSide: true, isCorner: false };
   }
   // 24: Bottom-Right Corner (CASHFLOW)
   if (index === 24) {
-    return { x: 1148, y: 796, w: 128, h: 112, cx: 1212, cy: 852, isSide: false, isCorner: true };
+    return { x: 1492, y: 796, w: 136, h: 112, cx: 1560, cy: 852, isSide: false, isCorner: true };
   }
   // 25..38: Bottom Edge (Right to Left)
   if (index >= 25 && index <= 38) {
     const colFromLeft = 13 - (index - 25);
-    const x = 140 + colFromLeft * 72;
-    return { x, y: 796, w: 72, h: 112, cx: x + 36, cy: 852, isSide: false, isCorner: false };
+    const x = 148 + colFromLeft * 96;
+    return { x, y: 796, w: 96, h: 112, cx: x + 48, cy: 852, isSide: false, isCorner: false };
   }
   // 39: Bottom-Left Corner (CASHFLOW)
   if (index === 39) {
-    return { x: 12, y: 796, w: 128, h: 112, cx: 76, cy: 852, isSide: false, isCorner: true };
+    return { x: 12, y: 796, w: 136, h: 112, cx: 80, cy: 852, isSide: false, isCorner: true };
   }
   // 40..47: Left Edge (Bottom to Top)
   const rowFromTop = 7 - (index - 40);
   const y = 124 + rowFromTop * 84;
-  return { x: 12, y, w: 128, h: 84, cx: 76, cy: y + 42, isSide: true, isCorner: false };
+  return { x: 12, y, w: 136, h: 84, cx: 80, cy: y + 42, isSide: true, isCorner: false };
 }
 
 function getFastTrackColors(type: FastTrackSpace['type'], isPlayerDream: boolean) {
@@ -145,8 +145,25 @@ function describeAnnularSector(
   ].join(' ');
 }
 
+function splitVisualClusters(text: string): string[] {
+  const clusters: string[] = [];
+  const isThaiCombining = /[\u0E31\u0E33\u0E34-\u0E3A\u0E47-\u0E4E]/;
+  for (const ch of text) {
+    if (clusters.length > 0 && isThaiCombining.test(ch)) {
+      clusters[clusters.length - 1] += ch;
+    } else {
+      clusters.push(ch);
+    }
+  }
+  return clusters;
+}
+
+function visualLength(text: string): number {
+  return splitVisualClusters(text).length;
+}
+
 function wrapLabelLines(text: string, maxChars: number, maxLines = 3): string[] {
-  if (text.length <= maxChars) return [text];
+  if (visualLength(text) <= maxChars) return [text];
   const words = text.split(' ').filter(Boolean);
   const lines: string[] = [];
 
@@ -155,7 +172,7 @@ function wrapLabelLines(text: string, maxChars: number, maxLines = 3): string[] 
     for (const w of words) {
       if (!current) {
         current = w;
-      } else if ((current + ' ' + w).length <= maxChars) {
+      } else if (visualLength(current + ' ' + w) <= maxChars) {
         current += ' ' + w;
       } else {
         lines.push(current);
@@ -164,13 +181,17 @@ function wrapLabelLines(text: string, maxChars: number, maxLines = 3): string[] 
     }
     if (current) lines.push(current);
   } else {
-    for (let i = 0; i < text.length; i += maxChars) {
-      lines.push(text.slice(i, i + maxChars));
+    const clusters = splitVisualClusters(text);
+    for (let i = 0; i < clusters.length; i += maxChars) {
+      lines.push(clusters.slice(i, i + maxChars).join(''));
     }
   }
 
   if (lines.length <= maxLines) return lines;
-  return [...lines.slice(0, maxLines - 1), lines.slice(maxLines - 1).join(' ').slice(0, maxChars)];
+  const tail = splitVisualClusters(lines.slice(maxLines - 1).join(' '))
+    .slice(0, maxChars)
+    .join('');
+  return [...lines.slice(0, maxLines - 1), tail];
 }
 
 function renderDicePips(value: number, x: number, y: number, size: number, rolling: boolean) {
@@ -336,6 +357,7 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
     let elapsed = 0;
     let lastFaces = targetDice.map(() => 1);
     setIsRollingDice(true);
+    soundFX.diceRoll(targetDice.length);
 
     diceDelays.forEach((gap, idx) => {
       elapsed += gap;
@@ -348,13 +370,12 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
         });
         lastFaces = nextFaces;
         setDisplayDice(nextFaces);
-        soundFX.diceTick();
 
         if (idx === diceDelays.length - 1) {
           const settleId = window.setTimeout(() => {
             setDisplayDice(targetDice);
             setIsRollingDice(false);
-            soundFX.dice();
+            soundFX.dice(targetDice.length);
 
             if (!movedPlayerId) {
               const doneId = window.setTimeout(() => {
@@ -369,11 +390,11 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
       timersRef.current.push(tId);
     });
 
-    // Phase 2: Step-by-step pawn walk (only if player moved)
+    // Phase 2: Step-by-step pawn walk (only if player moved — starts 0.5s after dice settle)
     if (movedPlayerId) {
       const totalSpaces = moveTrack === 'rat_race' ? RAT_RACE_SPACES.length : FAST_TRACK_SPACES.length;
       const stepCount = (toPos - fromPos + totalSpaces) % totalSpaces;
-      const walkStart = elapsed + 300;
+      const walkStart = elapsed + 260 + 500;
       const stepInterval = 340;
 
       for (let s = 1; s <= stepCount; s++) {
@@ -470,13 +491,13 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
 
   return (
     <div className="relative w-full h-full flex flex-col items-center justify-center select-none">
-      <div className="w-full h-full max-w-[1288px] max-h-[calc(100vh-105px)] aspect-[1288/920] flex items-center justify-center">
-        <svg viewBox="0 0 1288 920" className="w-full h-full drop-shadow-xl">
+      <div className="w-full h-full max-h-[calc(100vh-100px)] flex items-center justify-center">
+        <svg viewBox="0 0 1640 920" className="w-full h-full drop-shadow-xl">
           {/* Outer Board Frame */}
           <rect
             x="4"
             y="4"
-            width="1280"
+            width="1632"
             height="912"
             rx="24"
             fill="#f8fafc"
@@ -498,13 +519,37 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
             const isActivePos =
               visualCurrent?.track === 'fast_track' && visualCurrent.position === space.index;
 
-            const maxChars = rect.isCorner ? 11 : rect.isSide ? 14 : 8;
-            const lines = wrapLabelLines(space.label[language], maxChars, rect.isSide ? 2 : 3);
-            const fontSize = rect.isCorner ? 18 : rect.isSide ? 14 : 12;
-            const lineH = rect.isSide ? 16 : 14;
-            const hasSub = Boolean(space.subLabel || space.cashFlow || space.type === 'dream');
+            const isDreamSpace = space.type === 'dream';
+            const maxChars = rect.isCorner ? 11 : rect.isSide ? 17 : 10;
+            const lines = isDreamSpace
+              ? [space.label[language]]
+              : wrapLabelLines(space.label[language], maxChars, rect.isSide ? 2 : 3);
+            const longestLine = Math.max(...lines.map((l) => visualLength(l)), 0);
+            const dreamTitleLen = visualLength(space.label[language]);
+            const fontSize = rect.isCorner
+              ? 18
+              : isDreamSpace
+              ? rect.isSide
+                ? dreamTitleLen > 14
+                  ? 12.2
+                  : 13.5
+                : dreamTitleLen >= 15
+                ? 9.2
+                : dreamTitleLen >= 13
+                ? 10
+                : dreamTitleLen >= 11
+                ? 10.8
+                : 11.5
+              : rect.isSide
+              ? 14
+              : longestLine > 10
+              ? 11
+              : 12;
+            const lineH = rect.isSide ? 16 : 14.5;
+            const hasSub = Boolean(space.subLabel || space.cashFlow);
             const totalTextH = lines.length * lineH + (hasSub ? 17 : 0);
             const startY = rect.cy - totalTextH / 2 + lineH / 2;
+            const dreamGap = rect.isSide ? 17 : 18;
 
             return (
               <g
@@ -583,34 +628,87 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
                   </>
                 ) : (
                   <>
-                    {lines.map((ln, idx) => (
-                      <text
-                        key={idx}
-                        x={rect.cx}
-                        y={startY + idx * lineH}
-                        textAnchor="middle"
-                        dominantBaseline="central"
-                        fill={colors.text}
-                        fontSize={fontSize}
-                        fontWeight="800"
-                      >
-                        {ln}
-                      </text>
-                    ))}
+                    {isDreamSpace ? (
+                      <>
+                        <text
+                          x={rect.cx}
+                          y={rect.cy - dreamGap}
+                          textAnchor="middle"
+                          dominantBaseline="central"
+                          fill={colors.text}
+                          fontSize={fontSize}
+                          fontWeight="800"
+                        >
+                          {space.label[language]}
+                        </text>
+                        <text
+                          x={rect.cx}
+                          y={rect.cy}
+                          textAnchor="middle"
+                          dominantBaseline="central"
+                          fill={colors.sub}
+                          fontSize={
+                            rect.isSide
+                              ? 11.5
+                              : space.subLabel && visualLength(space.subLabel[language]) > 14
+                              ? 9.2
+                              : 10
+                          }
+                          fontWeight="700"
+                        >
+                          {space.subLabel?.[language] || ''}
+                        </text>
+                        {space.cost && (
+                          <text
+                            x={rect.cx}
+                            y={rect.cy + dreamGap}
+                            textAnchor="middle"
+                            dominantBaseline="central"
+                            fill="#fef08a"
+                            fontSize={rect.isSide ? 12 : 10.5}
+                            fontWeight="800"
+                          >
+                            {space.cost.toLocaleString()} ฿
+                          </text>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {lines.map((ln, idx) => (
+                          <text
+                            key={idx}
+                            x={rect.cx}
+                            y={startY + idx * lineH}
+                            textAnchor="middle"
+                            dominantBaseline="central"
+                            fill={colors.text}
+                            fontSize={fontSize}
+                            fontWeight="800"
+                          >
+                            {ln}
+                          </text>
+                        ))}
 
-                    {space.subLabel && (
-                      <text
-                        x={rect.cx}
-                        y={startY + lines.length * lineH + 3}
-                        textAnchor="middle"
-                        dominantBaseline="central"
-                        fill={colors.sub}
-                        fontSize={rect.isSide ? 12.5 : 10.8}
-                        fontFamily="IBM Plex Mono, monospace"
-                        fontWeight="700"
-                      >
-                        {space.subLabel[language]}
-                      </text>
+                        {space.subLabel && (
+                          <text
+                            x={rect.cx}
+                            y={startY + lines.length * lineH + 3}
+                            textAnchor="middle"
+                            dominantBaseline="central"
+                            fill={colors.sub}
+                            fontSize={
+                              rect.isSide
+                                ? 12
+                                : visualLength(space.subLabel[language]) > 14
+                                ? 9.4
+                                : 10.4
+                            }
+                            fontWeight="700"
+                          >
+                            {space.subLabel[language]}
+                          </text>
+                        )}
+                      </>
                     )}
 
                     {isDreamMatch && (
@@ -635,45 +733,45 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
             );
           })}
 
-          {/* Subtle Left & Right Wing Board Notes inside 48-space Fast Track */}
+          {/* Left & Right Wing Board Notes centered cleanly in the white space */}
           <g>
             <text
-              x="228"
-              y="184"
+              x="355"
+              y="176"
               textAnchor="middle"
               fill="#0f172a"
-              fontSize="16"
+              fontSize="24"
               fontWeight="800"
             >
               {language === 'th' ? 'เป้าหมายชนะสนามแข่งหนู' : 'RAT RACE GOAL'}
             </text>
             <text
-              x="228"
-              y="207"
+              x="355"
+              y="212"
               textAnchor="middle"
               fill="#059669"
-              fontSize="14.5"
+              fontSize="21"
               fontWeight="700"
             >
               {language === 'th' ? 'รายได้จากทรัพย์สิน > รายจ่ายรวม' : 'Passive > Total Expenses'}
             </text>
 
             <text
-              x="228"
-              y="716"
+              x="355"
+              y="708"
               textAnchor="middle"
               fill="#0f172a"
-              fontSize="16"
+              fontSize="24"
               fontWeight="800"
             >
               {language === 'th' ? 'เป้าหมายชนะเส้นทางเศรษฐี' : 'FAST TRACK WIN'}
             </text>
             <text
-              x="228"
-              y="739"
+              x="355"
+              y="744"
               textAnchor="middle"
               fill="#7c3aed"
-              fontSize="14"
+              fontSize="21"
               fontWeight="700"
             >
               {language === 'th' ? '+500,000 ฿/ด. หรือ ซื้อความฝัน' : '+500k/mo or Buy Your Dream'}
@@ -682,32 +780,32 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
 
           <g>
             <text
-              x="1060"
-              y="184"
+              x="1285"
+              y="172"
               textAnchor="middle"
               fill="#0f172a"
-              fontSize="16"
+              fontSize="24"
               fontWeight="800"
             >
               {language === 'th' ? 'ความฝันของคุณ' : 'YOUR DREAM'}
             </text>
             <text
-              x="1060"
-              y="209"
+              x="1285"
+              y="208"
               textAnchor="middle"
               fill="#db2777"
-              fontSize="14"
+              fontSize="21"
               fontWeight="800"
             >
-              ★ {localDream ? localDream.name[language].slice(0, 20) : '-'}
+              ★ {localDream ? localDream.name[language].slice(0, 26) : '-'}
             </text>
             {localDream && (
               <text
-                x="1060"
-                y="231"
+                x="1285"
+                y="240"
                 textAnchor="middle"
                 fill="#475569"
-                fontSize="13.5"
+                fontSize="20.5"
                 fontFamily="IBM Plex Mono, monospace"
                 fontWeight="700"
               >
@@ -822,7 +920,7 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
             className={canPickDeck ? 'cursor-pointer' : ''}
           >
             <rect
-              x="498"
+              x={BOARD_CX - 146}
               y="336"
               width="138"
               height="70"
@@ -832,7 +930,7 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
               strokeWidth={canPickDeck || activeDeck === 'small_deal' ? 4 : 2}
             />
             <text
-              x="567"
+              x={BOARD_CX - 77}
               y="371"
               textAnchor="middle"
               dominantBaseline="central"
@@ -850,7 +948,7 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
             className={canPickDeck ? 'cursor-pointer' : ''}
           >
             <rect
-              x="652"
+              x={BOARD_CX + 8}
               y="336"
               width="138"
               height="70"
@@ -860,7 +958,7 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
               strokeWidth={canPickDeck || activeDeck === 'big_deal' ? 4 : 2}
             />
             <text
-              x="721"
+              x={BOARD_CX + 77}
               y="371"
               textAnchor="middle"
               dominantBaseline="central"
@@ -875,7 +973,7 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
           {/* Bottom-Left: ซื้อขาย */}
           <g>
             <rect
-              x="498"
+              x={BOARD_CX - 146}
               y="514"
               width="138"
               height="70"
@@ -885,7 +983,7 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
               strokeWidth={activeDeck === 'market' ? 4 : 2}
             />
             <text
-              x="567"
+              x={BOARD_CX - 77}
               y="549"
               textAnchor="middle"
               dominantBaseline="central"
@@ -900,7 +998,7 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
           {/* Bottom-Right: จ่ายซะ (Pink) */}
           <g>
             <rect
-              x="652"
+              x={BOARD_CX + 8}
               y="514"
               width="138"
               height="70"
@@ -910,7 +1008,7 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
               strokeWidth={activeDeck === 'doodad' ? 4 : 2}
             />
             <text
-              x="721"
+              x={BOARD_CX + 77}
               y="549"
               textAnchor="middle"
               dominantBaseline="central"
@@ -977,7 +1075,7 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
       </div>
 
       {/* Bottom Legend & Inspected Space Bar */}
-      <div className="w-full max-w-[1288px] mt-1.5 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 px-2">
+      <div className="w-full max-w-[1640px] mt-1.5 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 px-2">
         <div className="flex flex-wrap items-center gap-3">
           {roomState.players.map((p, idx) => (
             <div

@@ -35,7 +35,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
   return (
     <header className="h-14 border-b border-slate-200 bg-white/95 backdrop-blur px-5 flex items-center justify-between gap-8 shrink-0 shadow-xs">
       {/* Zone 1: Brand wordmark only */}
-      <div className="font-display text-lg font-extrabold tracking-tight text-emerald-600 whitespace-nowrap shrink-0">
+      <div className="font-display text-lg font-extrabold tracking-tight text-violet-600 whitespace-nowrap shrink-0">
         {t(language, 'appTitle')}
       </div>
 

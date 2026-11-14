@@ -348,7 +348,7 @@ export default function App() {
           roomState={roomState}
           playerId={playerId}
           errorMsg={errorMsg}
-          onCreateRoom={(playerName, botCount, adminPlays, adminPassword) =>
+          onCreateRoom={(playerName, botCount, adminPlays, adminPassword, isSolo) =>
             socketRef.current?.emit('room:create', {
               playerId,
               playerName,
@@ -356,6 +356,7 @@ export default function App() {
               botCount,
               adminPlays,
               adminPassword,
+              isSolo,
             })
           }
           onJoinRoom={(roomCode, playerName) =>
@@ -366,6 +367,7 @@ export default function App() {
             })
           }
           onAddBot={() => emit('room:add_bot')}
+          onToggleAdminPlay={() => emit('room:toggle_admin_play')}
           onRemovePlayer={(targetId) =>
             emit('room:remove_player', { requesterId: playerId, targetId })
           }
@@ -417,7 +419,7 @@ export default function App() {
           onEndTurn={() => emit('game:end_turn')}
         />
       ) : (
-        <main className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)_320px] xl:grid-cols-[320px_minmax(0,1fr)_340px] overflow-y-auto lg:overflow-hidden">
+        <main className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[285px_minmax(0,1fr)_305px] xl:grid-cols-[300px_minmax(0,1fr)_320px] overflow-y-auto lg:overflow-hidden">
           {/* Left: Financial Statement Dashboard */}
           <div className="min-h-[420px] lg:min-h-0 lg:h-full overflow-hidden">
             <FinancialStatement
@@ -428,14 +430,11 @@ export default function App() {
               onTakeLoan={(amount) => emit('game:take_loan', { amount })}
               onRepayLoan={(amount) => emit('game:repay_loan', { amount })}
               onPayOffLiability={(key) => emit('game:payoff_liability', { key })}
-              onCustomizePlayer={(targetId, avatarId, color) =>
-                emit('player:customize', { requesterId: playerId, targetId, avatarId, color })
-              }
             />
           </div>
 
           {/* Center: Cashflow Board (receives live roomState to animate dice & walking steps) */}
-          <div className="flex items-center justify-center p-2 lg:p-3 min-h-[460px] lg:min-h-0 lg:h-full overflow-hidden">
+          <div className="flex items-center justify-center p-1 lg:p-1.5 min-h-[460px] lg:min-h-0 lg:h-full overflow-hidden">
             <CashflowBoard
               roomState={roomState}
               language={language}

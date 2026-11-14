@@ -96,6 +96,7 @@ io.on('connection', (socket: Socket) => {
       botCount = 0,
       adminPlays = false,
       adminPassword = '',
+      isSolo = false,
     }: {
       playerId: string;
       playerName: string;
@@ -103,8 +104,9 @@ io.on('connection', (socket: Socket) => {
       botCount?: number;
       adminPlays?: boolean;
       adminPassword?: string;
+      isSolo?: boolean;
     }) => {
-      if (!adminPlays && adminPassword !== 'Bradley') {
+      if (!isSolo && adminPassword !== 'Bradley') {
         socket.emit('room:error', {
           th: 'รหัสผ่าน Admin ไม่ถูกต้อง กรุณากรอกรหัสผ่านให้ถูกต้อง',
           en: 'Incorrect Admin password. Please enter the valid password.',
@@ -113,24 +115,28 @@ io.on('connection', (socket: Socket) => {
       }
 
       const code = generateRoomCode();
-      const safeName = playerName?.trim() || (adminPlays ? 'Player 1' : 'Admin');
-      const isSoloMode = Boolean(adminPlays);
+      const isSoloMode = Boolean(isSolo);
+      const safeName = isSoloMode
+        ? playerName?.trim() || 'Player 1'
+        : adminPlays
+        ? 'Admin'
+        : 'Admin';
       const room = new GameRoom(
         code,
         playerId,
         language,
         () => broadcastRoom(code),
         safeName,
-        !adminPlays,
+        !isSoloMode && !adminPlays,
         isSoloMode
       );
 
-      if (adminPlays) {
+      if (isSoloMode || adminPlays) {
         room.addPlayer(playerId, safeName, true);
       }
 
-      const maxBots = adminPlays ? 5 : 6;
-      const defaultBots = adminPlays ? Math.max(1, botCount) : botCount;
+      const maxBots = isSoloMode || adminPlays ? 5 : 6;
+      const defaultBots = isSoloMode ? Math.max(1, botCount) : botCount;
       const safeBots = Math.min(maxBots, Math.max(0, Math.floor(defaultBots)));
       for (let i = 0; i < safeBots; i++) {
         room.addBot(playerId);
@@ -220,6 +226,17 @@ io.on('connection', (socket: Socket) => {
     const room = ensureSocketMembership(socket, roomCode, playerId);
     if (!room) return;
     const res = room.addBot(playerId);
+    if (!res.success && res.error) {
+      socket.emit('room:error', res.error);
+      return;
+    }
+    broadcastRoom(room.state.roomCode);
+  });
+
+  socket.on('room:toggle_admin_play', ({ roomCode, playerId }: { roomCode: string; playerId: string }) => {
+    const room = ensureSocketMembership(socket, roomCode, playerId);
+    if (!room) return;
+    const res = room.toggleAdminPlay(playerId);
     if (!res.success && res.error) {
       socket.emit('room:error', res.error);
       return;

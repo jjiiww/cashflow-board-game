@@ -16,10 +16,12 @@ interface LobbyViewProps {
     playerName: string,
     botCount: number,
     adminPlays: boolean,
-    adminPassword?: string
+    adminPassword?: string,
+    isSolo?: boolean
   ) => void;
   onJoinRoom: (roomCode: string, playerName: string) => void;
   onAddBot: () => void;
+  onToggleAdminPlay?: () => void;
   onRemovePlayer: (targetId: string) => void;
   onAssignCareer: (targetId: string, careerId: string) => void;
   onAssignDream: (targetId: string, dreamId: string) => void;
@@ -35,6 +37,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   onCreateRoom,
   onJoinRoom,
   onAddBot,
+  onToggleAdminPlay,
   onRemovePlayer,
   onAssignCareer,
   onAssignDream,
@@ -61,7 +64,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
       return;
     }
     setLocalError(null);
-    onCreateRoom(playerName, 0, false, adminPassword);
+    onCreateRoom(playerName, 0, false, adminPassword, false);
   };
 
   const isServerAdminPassError = Boolean(
@@ -136,7 +139,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                 type="button"
                 onClick={() => {
                   setLocalError(null);
-                  onCreateRoom(playerName, 1, true);
+                  onCreateRoom(playerName, 1, true, undefined, true);
                 }}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm transition-colors whitespace-nowrap shadow-xs"
               >
@@ -145,7 +148,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
               </button>
             </div>
 
-            {/* 6. ปุ่มสร้างห้องใหม่ (Admin) & 7. textbox ใส่รหัสผ่าน admin */}
+            {/* 6. ปุ่มสร้างห้องใหม่ (Admin) & textbox ใส่รหัสผ่าน admin */}
             <div className="pt-4 border-t border-slate-100 space-y-2.5">
               <button
                 type="button"
@@ -217,12 +220,11 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
           )}
         </div>
 
-        {roomState.isAdminSpectator && isHost && (
-          <div className="px-4 py-3 rounded-xl bg-orange-50 border border-orange-200 text-orange-900 text-xs sm:text-sm font-medium flex items-center justify-between gap-3">
-            <span>{t(language, 'adminSpectatorLobbyNote')}</span>
-            <span className="font-mono text-xs font-bold text-orange-700 shrink-0">
-              {t(language, 'hostLabel')}: {roomState.hostName}
-            </span>
+        {isHost && !roomState.isSoloMode && (
+          <div className="px-4 py-3 rounded-xl bg-orange-50 border border-orange-200 text-orange-900 text-xs sm:text-sm font-medium">
+            {roomState.isAdminSpectator
+              ? t(language, 'adminSpectatorLobbyNote')
+              : t(language, 'adminPlayerLobbyNote')}
           </div>
         )}
 
@@ -234,19 +236,42 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
 
         {/* Players List (1 to 6) */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <h3 className="text-sm font-bold text-slate-800">
               {t(language, 'playersInRoom')} ({roomState.players.length}/6)
             </h3>
-            {isHost && roomState.players.length < 6 && (
-              <button
-                type="button"
-                onClick={onAddBot}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>{t(language, 'addRobot')}</span>
-              </button>
+            {isHost && (
+              <div className="flex items-center gap-2 flex-wrap">
+                {!roomState.isSoloMode && onToggleAdminPlay && (
+                  <button
+                    type="button"
+                    disabled={roomState.isAdminSpectator && roomState.players.length >= 6}
+                    onClick={onToggleAdminPlay}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                      roomState.isAdminSpectator
+                        ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                        : 'bg-slate-200 hover:bg-slate-300 text-slate-800'
+                    }`}
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                    <span>
+                      {roomState.isAdminSpectator
+                        ? t(language, 'adminJoinPlay')
+                        : t(language, 'adminLeavePlay')}
+                    </span>
+                  </button>
+                )}
+                {roomState.players.length < 6 && (
+                  <button
+                    type="button"
+                    onClick={onAddBot}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>{t(language, 'addRobot')}</span>
+                  </button>
+                )}
+              </div>
             )}
           </div>
 

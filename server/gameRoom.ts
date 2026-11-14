@@ -225,6 +225,52 @@ export class GameRoom {
     return { success: true };
   }
 
+  public toggleAdminPlay(requesterId: string): { success: boolean; error?: BilingualText } {
+    if (requesterId !== this.state.hostId) {
+      return {
+        success: false,
+        error: {
+          th: 'เฉพาะ Admin เท่านั้นที่ทำรายการนี้ได้',
+          en: 'Only the Admin host can perform this action.',
+        },
+      };
+    }
+    if (this.state.phase !== 'LOBBY') {
+      return {
+        success: false,
+        error: {
+          th: 'เปลี่ยนสถานะการร่วมเล่นได้เฉพาะในหน้า Lobby',
+          en: 'Can only toggle participation in the lobby.',
+        },
+      };
+    }
+    if (this.state.isSoloMode) {
+      return { success: false };
+    }
+
+    if (this.state.isAdminSpectator) {
+      if (this.state.players.length >= 6) {
+        return {
+          success: false,
+          error: { th: 'ห้องเต็มแล้ว (สูงสุด 6 คน)', en: 'Room is full (max 6 players).' },
+        };
+      }
+      const res = this.addPlayer(requesterId, 'Admin', true);
+      if (!res.success) return res;
+      const adminIdx = this.state.players.findIndex((p) => p.id === requesterId);
+      if (adminIdx > 0) {
+        const [adminPlayer] = this.state.players.splice(adminIdx, 1);
+        this.state.players.unshift(adminPlayer);
+      }
+      this.state.isAdminSpectator = false;
+      return { success: true };
+    }
+
+    this.state.players = this.state.players.filter((p) => p.id !== requesterId);
+    this.state.isAdminSpectator = true;
+    return { success: true };
+  }
+
   public assignCareer(playerId: string, careerId: string): { success: boolean } {
     if (this.state.phase !== 'LOBBY') return { success: false };
     const player = this.state.players.find((p) => p.id === playerId);
@@ -469,8 +515,8 @@ export class GameRoom {
         player,
         'FAST_TRACK_ESCAPE',
         {
-          th: `🎉 ${player.name} หลุดจากสนามแข่งหนูแล้ว! รายได้จากทรัพย์สิน (${player.finance.passiveIncome.toLocaleString()} ฿) มากกว่ารายจ่ายรวม (${player.finance.totalExpenses.toLocaleString()} ฿)`,
-          en: `🎉 ${player.name} escaped the Rat Race! Passive Income (${player.finance.passiveIncome.toLocaleString()} ฿) exceeds Total Expenses (${player.finance.totalExpenses.toLocaleString()} ฿)!`,
+          th: `🎉 ${player.name} (อาชีพ: ${player.career.name.th}) หลุดจากสนามแข่งหนูแล้ว! รายได้จากทรัพย์สิน (${player.finance.passiveIncome.toLocaleString()} ฿) มากกว่ารายจ่ายรวม (${player.finance.totalExpenses.toLocaleString()} ฿)`,
+          en: `🎉 ${player.name} (${player.career.name.en}) escaped the Rat Race! Passive Income (${player.finance.passiveIncome.toLocaleString()} ฿) exceeds Total Expenses (${player.finance.totalExpenses.toLocaleString()} ฿)!`,
         },
         delta
       );

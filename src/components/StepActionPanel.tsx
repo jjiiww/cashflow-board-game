@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   XCircle,
   TrendingUp,
+  TrendingDown,
 } from 'lucide-react';
 import { DREAM_OPTIONS } from '../../shared/board';
 import { formatStockSymbol } from '../../shared/cards';
@@ -403,8 +404,8 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
         <div className="flex items-center justify-between gap-3 bg-sky-50 border border-sky-200 rounded-xl p-3">
           <div className="text-xs font-semibold text-sky-800">
             {language === 'th'
-              ? `ตาของ ${currentPlayer?.name} (ขั้นตอนที่ ${roomState.botStepStage + 1}/4)`
-              : `${currentPlayer?.name}'s Turn (Step ${roomState.botStepStage + 1}/4)`}
+              ? `ตาของ ${currentPlayer?.name}`
+              : `${currentPlayer?.name}'s Turn`}
           </div>
           <button
             type="button"
@@ -440,7 +441,7 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
             <button
               type="button"
               onClick={() => onRollDice(2)}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm transition-colors whitespace-nowrap shadow-xs"
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-orange-400 hover:bg-orange-500 text-white font-bold text-sm transition-colors whitespace-nowrap shadow-xs"
             >
               <Dices className="w-4 h-4" />
               <span>{t(language, 'rollDiceTwoFT')}</span>
@@ -451,11 +452,11 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
 
       if (isFastTrack && hasThreeDice) {
         return (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2">
             <button
               type="button"
               onClick={() => onRollDice(1)}
-              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs transition-colors whitespace-nowrap shadow-xs"
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-orange-200 hover:bg-orange-300 text-orange-950 font-bold text-sm transition-colors whitespace-nowrap shadow-xs"
             >
               <Dices className="w-4 h-4" />
               <span>{t(language, 'rollDice')}</span>
@@ -463,7 +464,7 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
             <button
               type="button"
               onClick={() => onRollDice(2)}
-              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-3 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold text-xs transition-colors whitespace-nowrap shadow-xs"
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-orange-400 hover:bg-orange-500 text-white font-bold text-sm transition-colors whitespace-nowrap shadow-xs"
             >
               <Dices className="w-4 h-4" />
               <span>{t(language, 'rollDiceTwo')}</span>
@@ -485,7 +486,7 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
           <button
             type="button"
             onClick={() => onRollDice(1)}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm transition-colors whitespace-nowrap shadow-xs"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-orange-200 hover:bg-orange-300 text-orange-950 font-bold text-sm transition-colors whitespace-nowrap shadow-xs"
           >
             <Dices className="w-4 h-4" />
             <span>{t(language, 'rollDice')}</span>
@@ -494,7 +495,7 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
             <button
               type="button"
               onClick={() => onRollDice(2)}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold text-sm transition-colors whitespace-nowrap shadow-xs"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-orange-400 hover:bg-orange-500 text-white font-bold text-sm transition-colors whitespace-nowrap shadow-xs"
             >
               <Dices className="w-4 h-4" />
               <span>{t(language, 'rollDiceTwo')}</span>
@@ -966,9 +967,17 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
       return isMyTurn ? (
         <div className="bg-pink-50 border border-pink-300 rounded-xl p-4 space-y-3">
           <div className="flex items-center gap-2 text-pink-700 font-bold text-sm">
-            <Sparkles className="w-4 h-4" />
+            <Sparkles className="w-4 h-4 shrink-0" />
             <span>{t(language, 'chooseDreamTitle')}</span>
           </div>
+          {currentPlayer?.career && (
+            <div className="text-xs font-semibold text-pink-900">
+              {currentPlayer.name} ·{' '}
+              {language === 'th'
+                ? `อาชีพ: ${currentPlayer.career.name.th}`
+                : currentPlayer.career.name.en}
+            </div>
+          )}
           <p className="text-xs text-slate-700">{t(language, 'chooseDreamSub')}</p>
           <div className="space-y-2">
             {DREAM_OPTIONS.map((dream) => (
@@ -1105,7 +1114,7 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
       className={
         isAdminBottom
           ? 'p-3 space-y-2.5 overflow-y-auto h-full'
-          : 'p-3.5 border-b border-slate-200 space-y-3 shrink-0 max-h-[65%] overflow-y-auto'
+          : 'flex-1 min-h-0 p-3.5 border-b border-slate-200 space-y-3 overflow-y-auto'
       }
     >
       <div>
@@ -1135,28 +1144,55 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
       </div>
 
       {/* Last Step Financial Delta Highlight (waits until pawn finishes walking) */}
-      {!isAnimating && roomState.lastStepDelta && (
-        <div className="flex flex-wrap items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-mono tabular-nums">
-          <TrendingUp className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-          <span className="text-slate-700 font-sans font-medium">{roomState.lastStepDelta.reason[language]}:</span>
-          {roomState.lastStepDelta.cashDelta !== 0 && (
+      {!isAnimating && roomState.lastStepDelta && (() => {
+        const delta = roomState.lastStepDelta;
+        const isPenaltyTone =
+          roomState.logs[0]?.type === 'FT_PENALTY' ||
+          roomState.logs[0]?.type === 'DOODAD_PAID' ||
+          roomState.logs[0]?.type === 'BOT_PAY_DOODAD' ||
+          roomState.activeFastTrackSpace?.type === 'divorce' ||
+          roomState.activeFastTrackSpace?.type === 'tax_audit' ||
+          roomState.activeFastTrackSpace?.type === 'lawsuit' ||
+          (delta.cashDelta < 0 && delta.passiveIncomeDelta <= 0);
+        return (
+          <div
+            className={`flex flex-wrap items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono tabular-nums ${
+              isPenaltyTone
+                ? 'bg-rose-50 border-2 border-rose-300'
+                : 'bg-emerald-50 border border-emerald-200'
+            }`}
+          >
+            {isPenaltyTone ? (
+              <TrendingDown className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+            ) : (
+              <TrendingUp className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            )}
             <span
-              className={
-                roomState.lastStepDelta.cashDelta > 0 ? 'text-emerald-600 font-bold' : 'text-pink-600 font-bold'
-              }
+              className={`font-sans font-medium ${
+                isPenaltyTone ? 'text-rose-900' : 'text-slate-700'
+              }`}
             >
-              {language === 'th' ? 'เงินสด' : 'Cash'} {roomState.lastStepDelta.cashDelta > 0 ? '+' : ''}
-              {roomState.lastStepDelta.cashDelta.toLocaleString()} ฿
+              {delta.reason[language]}:
             </span>
-          )}
-          {roomState.lastStepDelta.passiveIncomeDelta !== 0 && (
-            <span className="text-violet-600 font-bold">
-              {language === 'th' ? 'รายได้จากทรัพย์สิน' : 'Passive'} {roomState.lastStepDelta.passiveIncomeDelta > 0 ? '+' : ''}
-              {roomState.lastStepDelta.passiveIncomeDelta.toLocaleString()} ฿/m
-            </span>
-          )}
-        </div>
-      )}
+            {delta.cashDelta !== 0 && (
+              <span
+                className={
+                  delta.cashDelta > 0 ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'
+                }
+              >
+                {language === 'th' ? 'เงินสด' : 'Cash'} {delta.cashDelta > 0 ? '+' : ''}
+                {delta.cashDelta.toLocaleString()} ฿
+              </span>
+            )}
+            {delta.passiveIncomeDelta !== 0 && (
+              <span className="text-violet-600 font-bold">
+                {language === 'th' ? 'รายได้จากทรัพย์สิน' : 'Passive'} {delta.passiveIncomeDelta > 0 ? '+' : ''}
+                {delta.passiveIncomeDelta.toLocaleString()} ฿/m
+              </span>
+            )}
+          </div>
+        );
+      })()}
 
       {errorMsg && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-pink-50 border border-pink-200 text-pink-700 text-xs font-medium">
@@ -1174,7 +1210,7 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
       className={
         isAdminBottom
           ? 'flex flex-col min-h-0 h-full overflow-hidden bg-slate-50/70 border-t md:border-t-0 md:border-l border-slate-200'
-          : 'flex-1 flex flex-col min-h-0 overflow-hidden bg-slate-50/70'
+          : 'h-1/3 shrink-0 flex flex-col min-h-0 overflow-hidden bg-slate-50/70'
       }
     >
       <div className="px-4 py-2 border-b border-slate-200 text-xs font-bold text-slate-500 shrink-0">

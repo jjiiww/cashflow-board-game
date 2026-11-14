@@ -143,7 +143,7 @@ export const CAREERS: Career[] = [
     id: 'nurse',
     name: { th: 'พยาบาล', en: 'Nurse' },
     salary: 31000,
-    savings: 4800,
+    savings: 4000,
     expenses: {
       taxes: 6000,
       homeMortgage: 4000,
@@ -166,7 +166,7 @@ export const CAREERS: Career[] = [
     id: 'police',
     name: { th: 'ตำรวจ', en: 'Police Officer' },
     salary: 30000,
-    savings: 5200,
+    savings: 4000,
     expenses: {
       taxes: 5800,
       homeMortgage: 4000,
@@ -189,7 +189,7 @@ export const CAREERS: Career[] = [
     id: 'secretary',
     name: { th: 'เลขานุการ', en: 'Secretary' },
     salary: 25000,
-    savings: 7100,
+    savings: 4000,
     expenses: {
       taxes: 4600,
       homeMortgage: 4000,
@@ -212,7 +212,7 @@ export const CAREERS: Career[] = [
     id: 'truck_driver',
     name: { th: 'คนขับรถบรรทุก', en: 'Truck Driver' },
     salary: 25000,
-    savings: 6000,
+    savings: 4000,
     expenses: {
       taxes: 4600,
       homeMortgage: 4000,
@@ -235,7 +235,7 @@ export const CAREERS: Career[] = [
     id: 'mechanic',
     name: { th: 'ช่าง', en: 'Mechanic' },
     salary: 20000,
-    savings: 6700,
+    savings: 4000,
     expenses: {
       taxes: 3600,
       homeMortgage: 3000,
@@ -258,7 +258,7 @@ export const CAREERS: Career[] = [
     id: 'janitor',
     name: { th: 'พนักงานทำความสะอาด', en: 'Janitor' },
     salary: 16000,
-    savings: 5600,
+    savings: 4000,
     expenses: {
       taxes: 2800,
       homeMortgage: 2000,
