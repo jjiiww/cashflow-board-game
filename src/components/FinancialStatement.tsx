@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Landmark, TrendingUp, ArrowUpRight, ArrowDownRight, Layers } from 'lucide-react';
+import { Landmark, TrendingUp, ArrowUpRight, ArrowDownRight, Layers, UserX } from 'lucide-react';
 import { DREAM_OPTIONS, FAST_TRACK_WIN_CASHFLOW_TARGET } from '../../shared/board';
 import { Language, Player } from '../../shared/types';
 import { t } from '../i18n';
@@ -52,6 +52,9 @@ interface FinancialStatementProps {
       | 'creditCardBalance'
       | 'otherDebtBalance'
   ) => void;
+  isHost?: boolean;
+  hostId?: string;
+  onKickPlayer?: (targetId: string) => void;
 }
 
 function formatDelta(val: number): string {
@@ -67,11 +70,15 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
   onTakeLoan,
   onRepayLoan,
   onPayOffLiability,
+  isHost = false,
+  hostId,
+  onKickPlayer,
 }) => {
   const [ledgerTab, setLedgerTab] = useState<'fast_track' | 'rat_race'>('rat_race');
   const [showLoanModal, setShowLoanModal] = useState(false);
   const [loanInput, setLoanInput] = useState('10000');
   const [repayInput, setRepayInput] = useState('10000');
+  const [kickTarget, setKickTarget] = useState<Player | null>(null);
 
   const inspected = players.find((p) => p.id === localPlayerId) || players[0];
 
@@ -153,6 +160,16 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
                   )}
                   {isTurn && (
                     <span className="text-[10px] text-orange-600 font-bold shrink-0">★</span>
+                  )}
+                  {isHost && onKickPlayer && p.id !== hostId && (
+                    <button
+                      type="button"
+                      onClick={() => setKickTarget(p)}
+                      title={t(language, 'kickPlayer')}
+                      className="ml-0.5 p-0.5 rounded hover:bg-rose-200/80 text-rose-600 transition-colors cursor-pointer shrink-0"
+                    >
+                      <UserX className="w-3 h-3" />
+                    </button>
                   )}
                 </div>
               );
@@ -737,6 +754,50 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {kickTarget && (
+        <div className="fixed inset-0 z-50 bg-slate-900/55 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="max-w-sm w-full bg-white border-2 border-rose-300 rounded-2xl p-6 space-y-4 shadow-2xl">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-rose-100 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0">
+                <UserX className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-display font-bold text-base text-slate-900">
+                  {t(language, 'kickPlayerConfirmTitle')}
+                </h3>
+                <p className="text-sm font-bold text-rose-700 mt-0.5 truncate">
+                  {kickTarget.name}
+                  {kickTarget.isBot ? ' (Robot)' : ''}
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              {t(language, 'kickPlayerConfirmDesc')}
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setKickTarget(null)}
+                className="px-4 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs transition-colors cursor-pointer"
+              >
+                {t(language, 'cancelBtn')}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const targetId = kickTarget.id;
+                  setKickTarget(null);
+                  onKickPlayer?.(targetId);
+                }}
+                className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-colors shadow-xs cursor-pointer"
+              >
+                {t(language, 'kickPlayerConfirmBtn')}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </aside>

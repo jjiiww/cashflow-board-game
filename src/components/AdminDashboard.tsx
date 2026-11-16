@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowDownRight, ArrowUpRight, Bot, Landmark, TrendingUp, Users } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, Bot, Landmark, TrendingUp, Users, UserX } from 'lucide-react';
 import { DREAM_OPTIONS, FAST_TRACK_WIN_CASHFLOW_TARGET } from '../../shared/board';
 import { GameRoomState, Language, Player } from '../../shared/types';
 import { t } from '../i18n';
@@ -55,6 +55,7 @@ interface AdminDashboardProps {
   onChooseDream: (dreamId: string) => void;
   onDecideFastTrack: (buy: boolean) => void;
   onEndTurn: () => void;
+  onKickPlayer?: (targetId: string) => void;
 }
 
 function formatDelta(val: number): string {
@@ -66,7 +67,8 @@ const PlayerAdminFinanceCard: React.FC<{
   player: Player;
   isActiveTurn: boolean;
   language: Language;
-}> = ({ player, isActiveTurn, language }) => {
+  onRequestKick?: (player: Player) => void;
+}> = ({ player, isActiveTurn, language, onRequestKick }) => {
   const f = player.finance;
   const totalBankPrincipal = f.bankLoans.reduce((sum, loan) => sum + loan.principal, 0);
   const totalDebt =
@@ -147,15 +149,28 @@ const PlayerAdminFinanceCard: React.FC<{
         </div>
 
         <div className="text-right shrink-0">
-          <span
-            className={`inline-block text-[10px] font-bold px-1.5 py-0.5 rounded ${
-              player.track === 'fast_track'
-                ? 'bg-emerald-100 text-emerald-800'
-                : 'bg-slate-100 text-slate-700'
-            }`}
-          >
-            {player.track === 'fast_track' ? t(language, 'fastTrackTrack') : t(language, 'ratRaceTrack')}
-          </span>
+          <div className="flex items-center justify-end gap-1.5">
+            <span
+              className={`inline-block text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                player.track === 'fast_track'
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : 'bg-slate-100 text-slate-700'
+              }`}
+            >
+              {player.track === 'fast_track' ? t(language, 'fastTrackTrack') : t(language, 'ratRaceTrack')}
+            </span>
+            {onRequestKick && (
+              <button
+                type="button"
+                onClick={() => onRequestKick(player)}
+                title={t(language, 'kickPlayer')}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors cursor-pointer"
+              >
+                <UserX className="w-3 h-3 shrink-0" />
+                <span>{t(language, 'kickPlayerShort')}</span>
+              </button>
+            )}
+          </div>
           <div className="font-mono font-bold text-sm text-emerald-600 tabular-nums mt-0.5">
             {f.cash.toLocaleString()} ฿
           </div>
@@ -470,9 +485,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onChooseDream,
   onDecideFastTrack,
   onEndTurn,
+  onKickPlayer,
 }) => {
   const players = uiState.players;
   const activeTurnPlayerId = players[uiState.currentTurnIndex]?.id || '';
+  const [kickTarget, setKickTarget] = useState<Player | null>(null);
 
   const [isDesktop, setIsDesktop] = useState<boolean>(() =>
     typeof window !== 'undefined' ? window.matchMedia('(min-width: 1024px)').matches : true
@@ -582,6 +599,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 player={p}
                 isActiveTurn={p.id === activeTurnPlayerId}
                 language={language}
+                onRequestKick={
+                  onKickPlayer && p.id !== roomState.hostId ? (target) => setKickTarget(target) : undefined
+                }
               />
             ))}
           </div>
@@ -679,6 +699,51 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           />
         </section>
       </div>
+
+      {/* Confirmation Modal for Kicking Player */}
+      {kickTarget && (
+        <div className="fixed inset-0 z-50 bg-slate-900/55 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="max-w-sm w-full bg-white border-2 border-rose-300 rounded-2xl p-6 space-y-4 shadow-2xl">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-rose-100 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0">
+                <UserX className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-display font-bold text-base text-slate-900">
+                  {t(language, 'kickPlayerConfirmTitle')}
+                </h3>
+                <p className="text-sm font-bold text-rose-700 mt-0.5 truncate">
+                  {kickTarget.name}
+                  {kickTarget.isBot ? ' (Robot)' : ''}
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              {t(language, 'kickPlayerConfirmDesc')}
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setKickTarget(null)}
+                className="px-4 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs transition-colors cursor-pointer"
+              >
+                {t(language, 'cancelBtn')}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const targetId = kickTarget.id;
+                  setKickTarget(null);
+                  onKickPlayer?.(targetId);
+                }}
+                className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-colors shadow-xs cursor-pointer"
+              >
+                {t(language, 'kickPlayerConfirmBtn')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 };

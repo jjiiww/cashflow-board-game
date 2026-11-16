@@ -182,6 +182,13 @@ export const UI_TEXT = {
     adminJoinPlay: 'Admin ร่วมเล่นด้วย',
     adminLeavePlay: 'Admin ไม่ร่วมเล่น',
     adminPlayerLobbyNote: 'รอผู้เล่นเข้าร่วมด้วยรหัสห้อง หรือ กดเพิ่ม Robot จำนวนผู้เล่นสูงสุด 6 คน',
+    kickPlayer: 'ดีดผู้เล่นออกจากเกม',
+    kickPlayerShort: 'ดีดออก',
+    kickPlayerConfirmTitle: 'ยืนยันการนำผู้เล่นออกจากเกม',
+    kickPlayerConfirmDesc: 'ต้องการดีดผู้เล่นคนนี้ออกจากเกมใช่หรือไม่? หากเป็นตาของผู้เล่นคนนี้ ระบบจะข้ามไปยังผู้เล่นถัดไปทันที',
+    kickPlayerConfirmBtn: 'ยืนยันดีดออก',
+    cancelBtn: 'ยกเลิก',
+    kickedByAdminMsg: 'คุณถูก Admin นำออกจากเกมแล้ว',
   },
   en: {
     appTitle: 'Cashflow Board Game',
@@ -364,6 +371,13 @@ export const UI_TEXT = {
     adminJoinPlay: 'Play as Admin',
     adminLeavePlay: 'Spectate Only',
     adminPlayerLobbyNote: 'Waiting for players to join with the room code or click Add Robot. Max 6 players.',
+    kickPlayer: 'Remove player from game',
+    kickPlayerShort: 'Kick',
+    kickPlayerConfirmTitle: 'Remove Player from Game?',
+    kickPlayerConfirmDesc: 'Are you sure you want to remove this player from the game? If it is currently their turn, play will advance to the next player.',
+    kickPlayerConfirmBtn: 'Confirm Remove',
+    cancelBtn: 'Cancel',
+    kickedByAdminMsg: 'You were removed from the game by Admin.',
   },
 } as const;
 

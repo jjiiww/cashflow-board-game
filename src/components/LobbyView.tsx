@@ -68,7 +68,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   };
 
   const isServerAdminPassError = Boolean(
-    errorMsg && (errorMsg.includes('Admin') || errorMsg.includes('รหัสผ่าน'))
+    errorMsg && (errorMsg.includes('รหัสผ่าน') || errorMsg.toLowerCase().includes('password'))
   );
   const adminError = localError || (isServerAdminPassError ? errorMsg : null);
   const joinError = !isServerAdminPassError ? errorMsg : null;

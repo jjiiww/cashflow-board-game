@@ -44,6 +44,11 @@ export class GameRoom {
   private doodadDeck: DoodadCard[] = [];
   private botAuctionTimer: NodeJS.Timeout | null = null;
   private onStateChange?: () => void;
+  private kickedPlayerIds = new Set<string>();
+
+  public isPlayerKicked(playerId: string): boolean {
+    return this.kickedPlayerIds.has(playerId);
+  }
 
   constructor(
     roomCode: string,
@@ -155,6 +160,7 @@ export class GameRoom {
       };
     }
 
+    this.kickedPlayerIds.delete(id);
     const career = this.pickUnusedCareer();
     const color = this.pickUnusedColor();
     const avatarId = AVATAR_OPTIONS[this.state.players.length % AVATAR_OPTIONS.length].id;
@@ -218,13 +224,173 @@ export class GameRoom {
     return { success: true };
   }
 
-  public removePlayer(requesterId: string, targetId: string): { success: boolean } {
-    if (requesterId !== this.state.hostId && requesterId !== targetId) return { success: false };
-    if (this.state.phase !== 'LOBBY') return { success: false };
-    if (targetId === this.state.hostId) return { success: false };
+  public removePlayer(
+    requesterId: string,
+    targetId: string
+  ): { success: boolean; error?: BilingualText; kickedMidGame?: boolean } {
+    if (requesterId !== this.state.hostId && requesterId !== targetId) {
+      return {
+        success: false,
+        error: {
+          th: 'เฉพาะ Admin เท่านั้นที่สามารถนำผู้เล่นออกจากเกมได้',
+          en: 'Only the Admin can remove players.',
+        },
+      };
+    }
+    if (targetId === this.state.hostId) {
+      return {
+        success: false,
+        error: {
+          th: 'ไม่สามารถนำ Admin ออกจากเกมได้',
+          en: 'Cannot remove the Admin host.',
+        },
+      };
+    }
 
-    this.state.players = this.state.players.filter((p) => p.id !== targetId);
-    return { success: true };
+    const targetIdx = this.state.players.findIndex((p) => p.id === targetId);
+    if (targetIdx === -1) {
+      return { success: false };
+    }
+
+    if (this.state.phase === 'LOBBY') {
+      this.state.players.splice(targetIdx, 1);
+      return { success: true, kickedMidGame: false };
+    }
+
+    const target = this.state.players[targetIdx];
+    const prevTurnIdx = this.state.currentTurnIndex;
+    const wasCurrentTurn = targetIdx === prevTurnIdx;
+
+    if (!target.isBot) {
+      this.kickedPlayerIds.add(targetId);
+    }
+
+    this.state.players.splice(targetIdx, 1);
+
+    if (this.state.players.length === 0 || this.state.players.every((p) => p.isBankrupt)) {
+      this.state.activeCard = null;
+      this.state.activeFastTrackSpace = null;
+      this.state.auction = null;
+      this.state.pendingMarketResponses = [];
+      this.state.pendingStockSells = [];
+      this.state.lastStepDelta = null;
+      this.state.botStepStage = 0;
+      this.state.currentTurnIndex = 0;
+      this.state.phase = 'GAME_OVER';
+      this.state.winnerId = null;
+      this.state.winReason = {
+        th: 'ไม่มีผู้เล่นที่สามารถเล่นต่อได้ จบการแข่งขัน',
+        en: 'No active players remaining. Game Over!',
+      };
+      this.addLog(
+        target,
+        'PLAYER_KICKED',
+        {
+          th: `🚪 ${target.name} ถูก Admin นำออกจากเกม`,
+          en: `🚪 ${target.name} was removed from the game by Admin.`,
+        },
+        null
+      );
+      this.emitChange();
+      return { success: true, kickedMidGame: true };
+    }
+
+    if (wasCurrentTurn) {
+      this.state.activeCard = null;
+      this.state.activeFastTrackSpace = null;
+      this.state.auction = null;
+      this.state.pendingMarketResponses = [];
+      this.state.pendingStockSells = [];
+      this.state.lastStepDelta = null;
+      this.state.botStepStage = 0;
+
+      const total = this.state.players.length;
+      const startIdx = prevTurnIdx % total;
+      let nextIndex = startIdx;
+      for (let offset = 0; offset < total; offset++) {
+        const candidate = (startIdx + offset) % total;
+        if (!this.state.players[candidate].isBankrupt) {
+          nextIndex = candidate;
+          break;
+        }
+      }
+      if (prevTurnIdx >= total || nextIndex < startIdx) {
+        this.state.turnCount += 1;
+      }
+      this.state.currentTurnIndex = nextIndex;
+
+      this.addLog(
+        target,
+        'PLAYER_KICKED',
+        {
+          th: `🚪 ${target.name} ถูก Admin นำออกจากเกม (ข้ามไปยังตาถัดไป)`,
+          en: `🚪 ${target.name} was removed from the game by Admin (advancing turn).`,
+        },
+        null
+      );
+      if (this.state.phase !== 'GAME_OVER') {
+        this.beginTurnForCurrentPlayer();
+      }
+      this.emitChange();
+      return { success: true, kickedMidGame: true };
+    }
+
+    if (targetIdx < prevTurnIdx) {
+      this.state.currentTurnIndex = prevTurnIdx - 1;
+    }
+
+    this.state.pendingStockSells = this.state.pendingStockSells.filter((s) => s.playerId !== targetId);
+    this.state.pendingMarketResponses = this.state.pendingMarketResponses.filter((r) => r.playerId !== targetId);
+
+    if (this.state.auction) {
+      if (this.state.auction.sellerId === targetId) {
+        this.state.auction = null;
+        if (this.state.phase === 'AUCTION_ACTIVE') {
+          this.state.phase = this.currentPlayer.isBot ? 'BOT_THINKING' : 'TURN_COMPLETE';
+          if (this.currentPlayer.isBot) this.state.botStepStage = 3;
+        }
+      } else {
+        this.state.auction.passedPlayerIds = this.state.auction.passedPlayerIds.filter((id) => id !== targetId);
+        if (this.state.auction.highestBidderId === targetId) {
+          this.state.auction.highestBidderId = null;
+          this.state.auction.highestBidderName = null;
+          this.state.auction.highestBid = this.state.auction.startingBid;
+        }
+      }
+    }
+
+    this.addLog(
+      target,
+      'PLAYER_KICKED',
+      {
+        th: `🚪 ${target.name} ถูก Admin นำออกจากเกม`,
+        en: `🚪 ${target.name} was removed from the game by Admin.`,
+      },
+      undefined,
+      this.state.currentStepText
+    );
+
+    if (this.state.phase === 'STOCK_MARKET_SELL') {
+      this.checkStockSellCompletion();
+    } else if (this.state.phase === 'MARKET_RESPONSE') {
+      if (this.state.pendingMarketResponses.every((r) => r.responded)) {
+        this.state.pendingMarketResponses = [];
+        const active = this.currentPlayer;
+        if (active.track === 'fast_track' && !active.dreamId && !active.isBot) {
+          this.state.phase = 'CHOOSE_DREAM';
+        } else if (active.isBot) {
+          this.state.phase = 'BOT_THINKING';
+          this.state.botStepStage = 3;
+        } else {
+          this.state.phase = 'TURN_COMPLETE';
+        }
+      }
+    } else if (this.state.phase === 'AUCTION_ACTIVE' && this.state.auction) {
+      this.checkAuctionAutoResolve();
+    }
+
+    this.emitChange();
+    return { success: true, kickedMidGame: true };
   }
 
   public toggleAdminPlay(requesterId: string): { success: boolean; error?: BilingualText } {
@@ -3144,42 +3310,7 @@ export class GameRoom {
     this.state.botStepStage = 3;
   }
 
-  private advanceToNextPlayer(): void {
-    this.state.activeCard = null;
-    this.state.activeFastTrackSpace = null;
-    this.state.auction = null;
-    this.state.pendingMarketResponses = [];
-    this.state.pendingStockSells = [];
-    this.state.lastStepDelta = null;
-
-    const activePlayers = this.state.players.filter((p) => !p.isBankrupt);
-    if (activePlayers.length === 0) {
-      this.state.phase = 'GAME_OVER';
-      this.state.winnerId = null;
-      this.state.winReason = {
-        th: 'ผู้เล่นทุกคนล้มละลายหมดแล้ว จบการแข่งขัน',
-        en: 'All players went bankrupt. Game Over!',
-      };
-      this.emitChange();
-      return;
-    }
-
-    const total = this.state.players.length;
-    const prevIndex = this.state.currentTurnIndex;
-    let nextIndex = prevIndex;
-    for (let offset = 1; offset <= total; offset++) {
-      const candidate = (prevIndex + offset) % total;
-      if (!this.state.players[candidate].isBankrupt) {
-        nextIndex = candidate;
-        break;
-      }
-    }
-
-    if (nextIndex <= prevIndex) {
-      this.state.turnCount += 1;
-    }
-    this.state.currentTurnIndex = nextIndex;
-
+  private beginTurnForCurrentPlayer(): void {
     const next = this.currentPlayer;
     if (next.isBot) {
       if (next.downsizedTurnsLeft > 0) {
@@ -3234,6 +3365,44 @@ export class GameRoom {
         null
       );
     }
+  }
+
+  private advanceToNextPlayer(): void {
+    this.state.activeCard = null;
+    this.state.activeFastTrackSpace = null;
+    this.state.auction = null;
+    this.state.pendingMarketResponses = [];
+    this.state.pendingStockSells = [];
+    this.state.lastStepDelta = null;
+
+    const activePlayers = this.state.players.filter((p) => !p.isBankrupt);
+    if (activePlayers.length === 0) {
+      this.state.phase = 'GAME_OVER';
+      this.state.winnerId = null;
+      this.state.winReason = {
+        th: 'ผู้เล่นทุกคนล้มละลายหมดแล้ว จบการแข่งขัน',
+        en: 'All players went bankrupt. Game Over!',
+      };
+      this.emitChange();
+      return;
+    }
+
+    const total = this.state.players.length;
+    const prevIndex = this.state.currentTurnIndex;
+    let nextIndex = prevIndex;
+    for (let offset = 1; offset <= total; offset++) {
+      const candidate = (prevIndex + offset) % total;
+      if (!this.state.players[candidate].isBankrupt) {
+        nextIndex = candidate;
+        break;
+      }
+    }
+
+    if (nextIndex <= prevIndex) {
+      this.state.turnCount += 1;
+    }
+    this.state.currentTurnIndex = nextIndex;
+    this.beginTurnForCurrentPlayer();
     this.emitChange();
   }
 }

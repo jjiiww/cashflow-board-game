@@ -192,6 +192,14 @@ io.on('connection', (socket: Socket) => {
         return;
       }
 
+      if (room.state.phase !== 'LOBBY' && room.isPlayerKicked(playerId)) {
+        socket.emit('room:kicked', {
+          th: 'คุณถูก Admin นำออกจากเกมแล้ว',
+          en: 'You were removed from the game by Admin.',
+        });
+        return;
+      }
+
       const res = room.addPlayer(playerId, playerName, false);
       if (!res.success) {
         socket.emit('room:error', res.error);
@@ -210,6 +218,15 @@ io.on('connection', (socket: Socket) => {
     if (!code) return;
     const room = rooms.get(code);
     if (!room) return;
+    if (playerId && room.state.hostId !== playerId && room.isPlayerKicked(playerId)) {
+      socket.emit('room:kicked', {
+        th: 'คุณถูก Admin นำออกจากเกมแล้ว',
+        en: 'You were removed from the game by Admin.',
+      });
+      socket.leave(code);
+      socketToPlayer.delete(socket.id);
+      return;
+    }
     if (playerId && !socket.rooms.has(code)) {
       ensureSocketMembership(socket, code, playerId);
       socket.emit('room:state', room.state);
@@ -219,6 +236,15 @@ io.on('connection', (socket: Socket) => {
   socket.on('room:sync', ({ roomCode, playerId }: { roomCode: string; playerId?: string }) => {
     const room = ensureSocketMembership(socket, roomCode, playerId);
     if (!room) return;
+    if (playerId && room.state.hostId !== playerId && room.isPlayerKicked(playerId)) {
+      socket.emit('room:kicked', {
+        th: 'คุณถูก Admin นำออกจากเกมแล้ว',
+        en: 'You were removed from the game by Admin.',
+      });
+      socket.leave(room.state.roomCode);
+      socketToPlayer.delete(socket.id);
+      return;
+    }
     socket.emit('room:state', room.state);
   });
 
@@ -249,9 +275,26 @@ io.on('connection', (socket: Socket) => {
     ({ roomCode, requesterId, targetId }: { roomCode: string; requesterId: string; targetId: string }) => {
       const room = ensureSocketMembership(socket, roomCode, requesterId);
       if (!room) return;
-      if (room.removePlayer(requesterId, targetId).success) {
-        broadcastRoom(room.state.roomCode);
+      const res = room.removePlayer(requesterId, targetId);
+      if (!res.success) {
+        if (res.error) socket.emit('room:error', res.error);
+        return;
       }
+      const code = room.state.roomCode;
+      for (const [sid, mapping] of Array.from(socketToPlayer.entries())) {
+        if (mapping.roomCode === code && mapping.playerId === targetId) {
+          const targetSocket = io.sockets.sockets.get(sid);
+          if (targetSocket) {
+            targetSocket.emit('room:kicked', {
+              th: 'คุณถูก Admin นำออกจากเกมแล้ว',
+              en: 'You were removed from the game by Admin.',
+            });
+            targetSocket.leave(code);
+          }
+          socketToPlayer.delete(sid);
+        }
+      }
+      broadcastRoom(code);
     }
   );
 

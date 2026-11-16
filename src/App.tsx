@@ -256,6 +256,25 @@ export default function App() {
       setErrorMsg(null);
     });
 
+    socket.on('room:kicked', (err?: BilingualText | string) => {
+      prevRoomRef.current = null;
+      latestRoomRef.current = null;
+      setRoomState(null);
+      setSettledState(null);
+      setIsBoardAnimating(false);
+      setVictoryModalDismissed(false);
+      setEscapeCelebration(null);
+      setBankruptAnnouncement(null);
+      seenWinRoomRef.current = null;
+      const lang = languageRef.current;
+      const msg =
+        typeof err === 'string'
+          ? err
+          : err?.[lang] || err?.th || t(lang, 'kickedByAdminMsg');
+      setErrorMsg(msg);
+      setTimeout(() => setErrorMsg(null), 6000);
+    });
+
     socket.on('room:error', (err: BilingualText | string) => {
       const lang = languageRef.current;
       const msg = typeof err === 'string' ? err : err[lang] || err.th;
@@ -547,6 +566,7 @@ export default function App() {
           onChooseDream={(dreamId) => emit('game:choose_dream', { dreamId })}
           onDecideFastTrack={(buy) => emit('game:decide_fast_track', { buy })}
           onEndTurn={() => emit('game:end_turn')}
+          onKickPlayer={(targetId) => emit('room:remove_player', { requesterId: playerId, targetId })}
         />
       ) : (
         <main
@@ -566,6 +586,9 @@ export default function App() {
               onTakeLoan={(amount) => emit('game:take_loan', { amount })}
               onRepayLoan={(amount) => emit('game:repay_loan', { amount })}
               onPayOffLiability={(key) => emit('game:payoff_liability', { key })}
+              isHost={isHost}
+              hostId={roomState.hostId}
+              onKickPlayer={(targetId) => emit('room:remove_player', { requesterId: playerId, targetId })}
             />
           </div>
 
