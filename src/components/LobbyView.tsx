@@ -305,9 +305,6 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                           {p.isHost && (
                             <span className="text-xs font-medium text-orange-600">· {t(language, 'hostLabel')}</span>
                           )}
-                          {p.isBot && (
-                            <span className="text-xs font-medium text-sky-600">· {t(language, 'robotLabel')}</span>
-                          )}
                           {p.id === playerId && !p.isHost && (
                             <span className="text-xs font-medium text-emerald-600">· {t(language, 'youLabel')}</span>
                           )}

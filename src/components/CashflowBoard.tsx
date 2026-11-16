@@ -13,6 +13,7 @@ interface CashflowBoardProps {
   roomState: GameRoomState;
   language: Language;
   localPlayerId: string;
+  alignTop?: boolean;
   onSelectDealDeck?: (deck: 'small_deal' | 'big_deal') => void;
   onAnimationChange?: (animating: boolean) => void;
 }
@@ -257,6 +258,7 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
   roomState,
   language,
   localPlayerId,
+  alignTop = false,
   onSelectDealDeck,
   onAnimationChange,
 }) => {
@@ -489,9 +491,21 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
   };
 
   return (
-    <div className="relative w-full h-full flex flex-col items-center justify-center select-none">
-      <div className="w-full h-full max-h-[calc(100vh-100px)] flex items-center justify-center">
-        <svg viewBox="0 0 1640 920" className="w-full h-full drop-shadow-xl">
+    <div
+      className={`relative w-full h-full flex flex-col items-center select-none ${
+        alignTop ? 'justify-start' : 'justify-center'
+      }`}
+    >
+      <div
+        className={`w-full h-full flex justify-center ${
+          alignTop ? 'max-h-full items-start' : 'max-h-[calc(100vh-100px)] items-center'
+        }`}
+      >
+        <svg
+          viewBox="0 0 1640 920"
+          preserveAspectRatio={alignTop ? 'xMidYMin meet' : 'xMidYMid meet'}
+          className="w-full h-full drop-shadow-xl"
+        >
           {/* Outer Board Frame */}
           <rect
             x="4"
@@ -554,13 +568,19 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
               <g
                 key={`ft_${space.index}`}
                 className="cursor-pointer"
-                onClick={() =>
+                onClick={() => {
+                  const inspectSub =
+                    space.type === 'charity'
+                      ? language === 'th'
+                        ? 'ทอยลูกเต๋า 1/2/3 ลูกตลอดไป'
+                        : 'Roll 1/2/3 Dice Forever'
+                      : space.subLabel?.[language];
                   setInspectedSpace(
                     `Fast Track #${space.index + 1}: ${space.label[language]}${
-                      space.subLabel ? ` (${space.subLabel[language]})` : ''
+                      inspectSub ? ` (${inspectSub})` : ''
                     }${space.cost ? ` · ${space.cost.toLocaleString()} ฿` : ''}`
-                  )
-                }
+                  );
+                }}
               >
                 <rect
                   x={rect.x + 1.5}
@@ -841,12 +861,15 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
             const isActivePos =
               visualCurrent?.track === 'rat_race' && visualCurrent.position === space.index;
 
-            const labelPos = polarToCartesian(BOARD_CX, BOARD_CY, 274, centerAngle);
-            const numPos = polarToCartesian(BOARD_CX, BOARD_CY, 212, centerAngle);
-            let textRotation = centerAngle + 90;
-            if (normAngle > 0 && normAngle < 180) {
-              textRotation = centerAngle - 90;
+            const labelPos = polarToCartesian(BOARD_CX, BOARD_CY, 268, centerAngle);
+            const numPos = polarToCartesian(BOARD_CX, BOARD_CY, 207, centerAngle);
+            let textRotation = centerAngle;
+            if (normAngle >= 90 && normAngle < 270) {
+              textRotation = centerAngle + 180;
             }
+            const labelText = space.label[language];
+            const labelLen = visualLength(labelText);
+            const labelFontSize = labelLen >= 11 ? 16.5 : labelLen >= 9 ? 17.9 : 19.6;
 
             return (
               <g
@@ -868,11 +891,11 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
                   textAnchor="middle"
                   dominantBaseline="central"
                   fill={colors.text}
-                  fontSize="15.5"
+                  fontSize={labelFontSize}
                   fontWeight="800"
                   transform={`rotate(${textRotation}, ${labelPos.x}, ${labelPos.y})`}
                 >
-                  {space.label[language]}
+                  {labelText}
                 </text>
                 <text
                   x={numPos.x}
@@ -880,9 +903,9 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
                   textAnchor="middle"
                   dominantBaseline="central"
                   fill={space.type === 'payday' ? 'rgba(15,23,42,0.82)' : 'rgba(255,255,255,0.92)'}
-                  fontSize="13"
+                  fontSize="17.5"
                   fontFamily="IBM Plex Mono, monospace"
-                  fontWeight="700"
+                  fontWeight="400"
                 >
                   {space.index + 1}
                 </text>
@@ -1086,7 +1109,7 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
       {/* Inspected Space Bar (only shown when hovering/inspecting a space) */}
       {inspectedSpace && (
         <div className="w-full max-w-[1640px] mt-1 flex items-center justify-end text-xs px-2">
-          <div className="text-emerald-700 font-semibold truncate max-w-[420px]">{inspectedSpace}</div>
+          <div className="text-emerald-700 font-semibold truncate max-w-full">{inspectedSpace}</div>
         </div>
       )}
     </div>

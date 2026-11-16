@@ -1524,7 +1524,7 @@ export const MARKET_CARDS: MarketCard[] = [
     title: { th: 'ต้องการซื้อห้างหุ้นส่วนจำกัด (2,000,000 ฿)', en: 'Limited Partnership Buyout (2,000,000 ฿)' },
     description: {
       th: 'เจ้าของห้างหุ้นส่วนจำกัดที่คุณร่วมลงทุนตัดสินใจขายกิจการ คุณได้รับค่าตอบแทน 2 เท่าของเงินลงทุน การ์ดนี้มีผลกับทุกห้างหุ้นส่วนจำกัด (เต็นท์รถยนต์มือสอง, พิซซ่าแช่แข็ง, คลินิก, ร้านเบเกอรี่) · เสนอซื้อในราคา 2,000,000 บาท',
-      en: 'The owner of the Limited Partnership you invested in decides to sell the business. This card applies to all Limited Partnerships (Used Car Lot, Frozen Pizza, Clinic, Bakery) · Buyout offer: 2,000,000 ฿.',
+      en: 'The owner of the Limited Partnership you invested in decides to sell the business. You receive 2x your original investment. This card applies to all Limited Partnerships (Used Car Lot, Frozen Pizza, Clinic, Bakery) · Buyout offer: 2,000,000 ฿.',
     },
   },
   {

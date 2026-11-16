@@ -3,6 +3,7 @@ import { io, Socket } from 'socket.io-client';
 import { LogOut, Trophy } from 'lucide-react';
 import { BilingualText, GameLogEntry, GameRoomState, Language, Player } from '../shared/types';
 import { AdminDashboard } from './components/AdminDashboard';
+import { ActivityLogPanel } from './components/ActivityLogPanel';
 import { CashflowBoard } from './components/CashflowBoard';
 import {
   BankruptcyAnnouncementModal,
@@ -24,6 +25,10 @@ const MIN_LEFT_WIDTH = 220;
 const MIN_RIGHT_WIDTH = 240;
 const MAX_SIDE_WIDTH = 580;
 const MIN_BOARD_WIDTH = 340;
+
+const DEFAULT_CENTER_LOG_PCT = 22;
+const MIN_CENTER_LOG_PCT = 12;
+const MAX_CENTER_LOG_PCT = 55;
 
 function readStoredNumber(key: string, fallback: number, min: number, max: number): number {
   try {
@@ -112,12 +117,22 @@ export default function App() {
   const [rightWidth, setRightWidth] = useState<number>(() =>
     readStoredNumber('cashflow_player_right_w', DEFAULT_RIGHT_WIDTH, MIN_RIGHT_WIDTH, MAX_SIDE_WIDTH)
   );
+  const [centerLogPct, setCenterLogPct] = useState<number>(() =>
+    readStoredNumber(
+      'cashflow_player_center_log_pct',
+      DEFAULT_CENTER_LOG_PCT,
+      MIN_CENTER_LOG_PCT,
+      MAX_CENTER_LOG_PCT
+    )
+  );
   const [mainWidth, setMainWidth] = useState<number>(0);
 
   const socketRef = useRef<Socket | null>(null);
   const mainRef = useRef<HTMLElement | null>(null);
+  const centerColRef = useRef<HTMLDivElement | null>(null);
   const dragStartLeftRef = useRef<number>(DEFAULT_LEFT_WIDTH);
   const dragStartRightRef = useRef<number>(DEFAULT_RIGHT_WIDTH);
+  const dragStartCenterLogPctRef = useRef<number>(DEFAULT_CENTER_LOG_PCT);
   const prevLogIdRef = useRef<string | null>(null);
   const prevRoomRef = useRef<GameRoomState | null>(null);
   const latestRoomRef = useRef<GameRoomState | null>(null);
@@ -586,6 +601,14 @@ export default function App() {
   }, [rightWidth]);
 
   useEffect(() => {
+    try {
+      localStorage.setItem('cashflow_player_center_log_pct', String(centerLogPct));
+    } catch {
+      // ignore storage quota errors
+    }
+  }, [centerLogPct]);
+
+  useEffect(() => {
     const el = mainRef.current;
     if (!isPlayerBoardView || !el) return;
     setMainWidth(el.clientWidth);
@@ -778,15 +801,55 @@ export default function App() {
             onDoubleClick={() => setLeftWidth(DEFAULT_LEFT_WIDTH)}
           />
 
-          {/* Center: Cashflow Board (receives live roomState to animate dice & walking steps) */}
-          <div className="flex-1 min-w-0 flex items-center justify-center p-1 lg:p-1.5 min-h-[460px] lg:min-h-0 lg:h-full overflow-hidden">
-            <CashflowBoard
-              roomState={roomState}
-              language={language}
-              localPlayerId={playerId}
-              onSelectDealDeck={(deckType) => emit('game:choose_deal_type', { deckType })}
-              onAnimationChange={handleAnimationChange}
+          {/* Center: Top-aligned Cashflow Board + Vertically Resizable Horizontal Activity Log */}
+          <div
+            ref={centerColRef}
+            className="flex-1 min-w-0 flex flex-col min-h-[480px] lg:min-h-0 lg:h-full overflow-hidden"
+          >
+            <div
+              style={isDesktop ? { height: `${100 - centerLogPct}%` } : undefined}
+              className="min-h-[300px] lg:min-h-0 lg:shrink-0 flex flex-col items-center justify-start px-1 pt-0 pb-1 lg:px-1.5 lg:pt-0 lg:pb-1 overflow-hidden"
+            >
+              <CashflowBoard
+                roomState={roomState}
+                language={language}
+                localPlayerId={playerId}
+                alignTop
+                onSelectDealDeck={(deckType) => emit('game:choose_deal_type', { deckType })}
+                onAnimationChange={handleAnimationChange}
+              />
+            </div>
+
+            <ResizeHandle
+              orientation="horizontal"
+              title={resizeHint}
+              className="hidden lg:flex z-20 shrink-0"
+              onDragStart={() => {
+                dragStartCenterLogPctRef.current = centerLogPct;
+              }}
+              onDragMove={(deltaPx) => {
+                const totalHeight = centerColRef.current?.clientHeight || 0;
+                if (totalHeight <= 0) return;
+                const deltaPct = (deltaPx / totalHeight) * 100;
+                const next = Math.min(
+                  MAX_CENTER_LOG_PCT,
+                  Math.max(MIN_CENTER_LOG_PCT, dragStartCenterLogPctRef.current - deltaPct)
+                );
+                setCenterLogPct(Math.round(next * 10) / 10);
+              }}
+              onDoubleClick={() => setCenterLogPct(DEFAULT_CENTER_LOG_PCT)}
             />
+
+            <div
+              style={isDesktop ? { height: `${centerLogPct}%` } : undefined}
+              className="min-h-[180px] lg:min-h-0 lg:shrink-0 overflow-hidden border-t border-slate-200 bg-white"
+            >
+              <ActivityLogPanel
+                logs={(uiState || roomState).logs}
+                language={language}
+                orientation="horizontal"
+              />
+            </div>
           </div>
 
           <ResizeHandle

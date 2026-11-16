@@ -186,9 +186,6 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
             <div className="min-w-0">
               <div className="font-display font-bold text-base text-slate-900 flex items-center gap-1.5 flex-wrap">
                 <span className="truncate">{inspected.name}</span>
-                {inspected.isBot && (
-                  <span className="text-xs font-medium text-sky-600 shrink-0">· Robot</span>
-                )}
                 {inspected.isBankrupt && (
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-100 text-rose-700 border border-rose-300 shrink-0">
                     {t(language, 'bankruptBadge')}
@@ -406,7 +403,7 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
                     delta.monthlyCashFlowDelta > 0 ? 'text-orange-600' : 'text-pink-600'
                   }`}
                 >
-                  <span className="shrink-0">{language === 'th' ? 'เงินคงเหลือต่อเดือน' : 'Payday'}</span>
+                  <span className="shrink-0">{language === 'th' ? 'เงินคงเหลือต่อเดือน' : 'Monthly Cash Flow'}</span>
                   <span className="font-bold shrink-0">{formatDelta(delta.monthlyCashFlowDelta)}</span>
                 </div>
               )}
@@ -770,7 +767,6 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
                 </h3>
                 <p className="text-sm font-bold text-rose-700 mt-0.5 truncate">
                   {kickTarget.name}
-                  {kickTarget.isBot ? ' (Robot)' : ''}
                 </p>
               </div>
             </div>

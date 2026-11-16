@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowDownRight, ArrowUpRight, Bot, Landmark, TrendingUp, Users, UserX } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, Landmark, TrendingUp, Users, UserX } from 'lucide-react';
 import { DREAM_OPTIONS, FAST_TRACK_WIN_CASHFLOW_TARGET } from '../../shared/board';
 import { GameRoomState, Language, Player } from '../../shared/types';
 import { t } from '../i18n';
@@ -124,12 +124,6 @@ const PlayerAdminFinanceCard: React.FC<{
               >
                 {player.name}
               </span>
-              {player.isBot && (
-                <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-sky-700 bg-sky-50 border border-sky-200 px-1.5 py-0.5 rounded">
-                  <Bot className="w-2.5 h-2.5" />
-                  Robot
-                </span>
-              )}
               {player.isBankrupt && (
                 <span className="text-[10px] font-bold text-rose-800 bg-rose-100 border border-rose-300 px-1.5 py-0.5 rounded">
                   {t(language, 'bankruptBadge')}
@@ -219,7 +213,7 @@ const PlayerAdminFinanceCard: React.FC<{
             </div>
             <div className="bg-orange-50/80 border border-orange-200 rounded-lg px-2 py-1.5">
               <div className="text-orange-800 truncate">
-                {language === 'th' ? 'เงินคงเหลือต่อเดือน' : 'Payday'}
+                {language === 'th' ? 'เงินคงเหลือต่อเดือน' : 'Monthly Cash Flow'}
               </div>
               <div
                 className={`font-mono font-bold tabular-nums ${
@@ -714,7 +708,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </h3>
                 <p className="text-sm font-bold text-rose-700 mt-0.5 truncate">
                   {kickTarget.name}
-                  {kickTarget.isBot ? ' (Robot)' : ''}
                 </p>
               </div>
             </div>

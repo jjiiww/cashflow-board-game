@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Dices,
   ArrowRight,
@@ -19,23 +19,7 @@ import {
   MarketCard,
 } from '../../shared/types';
 import { t } from '../i18n';
-import { ResizeHandle } from './ResizeHandle';
-
-const DEFAULT_LOG_HEIGHT_PCT = 33.3;
-const MIN_LOG_HEIGHT_PCT = 14;
-const MAX_LOG_HEIGHT_PCT = 78;
-
-function readStoredLogPct(): number {
-  try {
-    const raw = localStorage.getItem('cashflow_player_log_pct');
-    if (!raw) return DEFAULT_LOG_HEIGHT_PCT;
-    const parsed = Number(raw);
-    if (!Number.isFinite(parsed)) return DEFAULT_LOG_HEIGHT_PCT;
-    return Math.min(MAX_LOG_HEIGHT_PCT, Math.max(MIN_LOG_HEIGHT_PCT, parsed));
-  } catch {
-    return DEFAULT_LOG_HEIGHT_PCT;
-  }
-}
+import { ActivityLogPanel } from './ActivityLogPanel';
 
 interface StepActionPanelProps {
   layoutMode?: 'sidebar' | 'adminBottom';
@@ -92,18 +76,6 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
   const [auctionStartFee, setAuctionStartFee] = useState('1000');
   const [bidAmount, setBidAmount] = useState('1000');
   const [selectedMarketIds, setSelectedMarketIds] = useState<string[]>([]);
-  const [logHeightPercent, setLogHeightPercent] = useState<number>(() => readStoredLogPct());
-
-  const sidebarAsideRef = useRef<HTMLElement | null>(null);
-  const dragStartLogPctRef = useRef<number>(DEFAULT_LOG_HEIGHT_PCT);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('cashflow_player_log_pct', String(logHeightPercent));
-    } catch {
-      // ignore storage quota errors
-    }
-  }, [logHeightPercent]);
 
   const currentPlayer = roomState.players[roomState.currentTurnIndex];
   const localPlayer = roomState.players.find((p) => p.id === localPlayerId);
@@ -955,7 +927,7 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
               {card.offerType === 'cashflow_adjust'
                 ? language === 'th'
                   ? 'ตกลงขายให้น้องเขย'
-                  : 'Accept Offer'
+                  : 'Sell to Brother-in-Law'
                 : t(language, 'sellSelected')}
             </button>
             <button
@@ -1081,8 +1053,14 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
         <div className={`border-2 rounded-xl p-3.5 space-y-3 ${boxTheme}`}>
           <div>
             <div className={`text-sm font-bold ${titleTheme}`}>{space.label[language]}</div>
-            {space.subLabel && (
-              <div className="text-xs text-slate-600 mt-0.5">{space.subLabel[language]}</div>
+            {(isCharity || space.subLabel) && (
+              <div className="text-xs text-slate-600 mt-0.5">
+                {isCharity
+                  ? language === 'th'
+                    ? 'ทอยลูกเต๋า 1/2/3 ลูกตลอดไป'
+                    : 'Roll 1/2/3 Dice Forever'
+                  : space.subLabel?.[language]}
+              </div>
             )}
           </div>
 
@@ -1167,7 +1145,7 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
       className={
         isAdminBottom
           ? 'p-3 space-y-2.5 @[460px]:overflow-y-auto @[460px]:h-full'
-          : 'flex-1 min-h-0 p-3.5 border-b border-slate-200 space-y-3 overflow-y-auto'
+          : 'flex-1 min-h-0 p-3.5 space-y-3 overflow-y-auto'
       }
     >
       <div>
@@ -1189,7 +1167,21 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
             </span>
           ) : (
             <>
-              <p>{roomState.currentStepText[language]}</p>
+              <div className="space-y-1">
+                {roomState.currentStepText[language].split('\n').map((line, lineIdx) => {
+                  const isNoHolderLine =
+                    line.includes('ไม่มีผู้เล่นที่มีทรัพย์สินนี้') ||
+                    line.includes('No players own this asset');
+                  return (
+                    <p
+                      key={lineIdx}
+                      className={isNoHolderLine ? 'font-extrabold text-slate-950' : undefined}
+                    >
+                      {line}
+                    </p>
+                  );
+                })}
+              </div>
               {activeCard && renderCardBox()}
             </>
           )}
@@ -1271,85 +1263,25 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
     </div>
   );
 
-  const activityLogZone = (
-    <div
-      style={!isAdminBottom ? { height: `${logHeightPercent}%` } : undefined}
-      className={
-        isAdminBottom
-          ? 'flex flex-col min-h-[200px] @[460px]:min-h-0 @[460px]:h-full @[460px]:overflow-hidden bg-slate-50/70 border-t @[460px]:border-t-0 @[460px]:border-l border-slate-200'
-          : 'min-h-[88px] shrink-0 flex flex-col overflow-hidden bg-slate-50/70'
-      }
-    >
-      <div className="px-4 py-2 border-b border-slate-200 text-xs font-bold text-slate-500 shrink-0">
-        {t(language, 'activityLog')}
-      </div>
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
-        {roomState.logs.map((entry) => (
-          <div
-            key={entry.id}
-            className="text-xs bg-white border border-slate-200 rounded-lg p-2.5 space-y-1 shadow-2xs"
-          >
-            <div className="flex items-center justify-between text-[11px] text-slate-400">
-              <span className="font-bold text-emerald-600">
-                {entry.actorName} {entry.isBot ? '· Robot' : ''}
-              </span>
-              <span className="font-mono">
-                {new Date(entry.timestamp).toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit',
-                })}
-              </span>
-            </div>
-            <p className="text-slate-700 leading-relaxed">{entry.message[language]}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
   if (isAdminBottom) {
     return (
       <aside className="@container h-full bg-white overflow-hidden">
         <div className="h-full grid grid-cols-1 @[460px]:grid-cols-[1.25fr_0.95fr] overflow-y-auto @[460px]:overflow-hidden">
           {narrationZone}
-          {activityLogZone}
+          <ActivityLogPanel
+            logs={roomState.logs}
+            language={language}
+            orientation="vertical"
+            className="min-h-[200px] @[460px]:min-h-0 @[460px]:h-full @[460px]:overflow-hidden border-t @[460px]:border-t-0 @[460px]:border-l border-slate-200"
+          />
         </div>
       </aside>
     );
   }
 
-  const resizeHint =
-    language === 'th'
-      ? 'ลากเพื่อปรับขนาด · ดับเบิลคลิกเพื่อรีเซ็ต'
-      : 'Drag to resize · Double-click to reset';
-
   return (
-    <aside
-      ref={sidebarAsideRef}
-      className="h-full flex flex-col bg-white border-l border-slate-200 overflow-hidden"
-    >
+    <aside className="h-full flex flex-col bg-white border-l border-slate-200 overflow-hidden">
       {narrationZone}
-      <ResizeHandle
-        orientation="horizontal"
-        title={resizeHint}
-        className="flex z-20 shrink-0"
-        onDragStart={() => {
-          dragStartLogPctRef.current = logHeightPercent;
-        }}
-        onDragMove={(deltaPx) => {
-          const totalHeight = sidebarAsideRef.current?.clientHeight || 0;
-          if (totalHeight <= 0) return;
-          const deltaPct = (deltaPx / totalHeight) * 100;
-          const next = Math.min(
-            MAX_LOG_HEIGHT_PCT,
-            Math.max(MIN_LOG_HEIGHT_PCT, dragStartLogPctRef.current - deltaPct)
-          );
-          setLogHeightPercent(Math.round(next * 10) / 10);
-        }}
-        onDoubleClick={() => setLogHeightPercent(DEFAULT_LOG_HEIGHT_PCT)}
-      />
-      {activityLogZone}
     </aside>
   );
 };
