@@ -189,6 +189,10 @@ export const UI_TEXT = {
     kickPlayerConfirmBtn: 'ยืนยันดีดออก',
     cancelBtn: 'ยกเลิก',
     kickedByAdminMsg: 'คุณถูก Admin นำออกจากเกมแล้ว',
+    leaveRoomConfirmTitle: 'ยืนยันการออกจากห้อง',
+    leaveRoomConfirmDescLobby: 'ต้องการออกจากห้องเตรียมพร้อมนี้กลับไปยังหน้าหลักใช่หรือไม่?',
+    leaveRoomConfirmDescGame: 'ต้องการออกจากหน้าห้องเกมนี้กลับไปยังหน้าหลักใช่หรือไม่?',
+    leaveRoomConfirmBtn: 'ยืนยันออกจากห้อง',
   },
   en: {
     appTitle: 'Cashflow Board Game',
@@ -378,6 +382,10 @@ export const UI_TEXT = {
     kickPlayerConfirmBtn: 'Confirm Remove',
     cancelBtn: 'Cancel',
     kickedByAdminMsg: 'You were removed from the game by Admin.',
+    leaveRoomConfirmTitle: 'Leave Room?',
+    leaveRoomConfirmDescLobby: 'Are you sure you want to leave this lobby and return to the home screen?',
+    leaveRoomConfirmDescGame: 'Are you sure you want to leave this game room and return to the home screen?',
+    leaveRoomConfirmBtn: 'Leave Room',
   },
 } as const;
 

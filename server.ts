@@ -76,13 +76,23 @@ app.get('/api/rooms/:code', (req, res) => {
   const code = req.params.code.toUpperCase();
   const room = rooms.get(code);
   if (!room) {
-    res.status(404).json({ exists: false });
+    res.status(404).json({ exists: false, canResume: false });
     return;
   }
+  const pid = typeof req.query.playerId === 'string' ? req.query.playerId : '';
+  const isHostSpectator = Boolean(pid && room.state.isAdminSpectator && room.state.hostId === pid);
+  const hasPlayer = Boolean(pid && room.state.players.some((p) => p.id === pid));
+  const canResume = Boolean(
+    pid &&
+      !room.isPlayerKicked(pid) &&
+      room.state.phase !== 'GAME_OVER' &&
+      (isHostSpectator || hasPlayer)
+  );
   res.json({
     exists: true,
     playerCount: room.state.players.length,
     phase: room.state.phase,
+    canResume,
   });
 });
 
@@ -184,6 +194,9 @@ io.on('connection', (socket: Socket) => {
       // Idempotent reconnect check for existing player
       const existing = room.state.players.find((p) => p.id === playerId);
       if (existing) {
+        if (room.state.phase === 'LOBBY' && playerName && playerName.trim()) {
+          existing.name = playerName.trim();
+        }
         existing.connected = true;
         socketToPlayer.set(socket.id, { roomCode: code, playerId });
         socket.join(code);
@@ -198,6 +211,28 @@ io.on('connection', (socket: Socket) => {
           en: 'You were removed from the game by Admin.',
         });
         return;
+      }
+
+      // Allow returning mid-game with the same Room Code + Name if that player's browser disconnected
+      if (room.state.phase !== 'LOBBY') {
+        const cleanName = (playerName || '').trim().toLowerCase();
+        if (cleanName) {
+          const disconnectedMatch = room.state.players.find(
+            (p) => !p.isBot && !p.connected && p.name.trim().toLowerCase() === cleanName
+          );
+          if (disconnectedMatch) {
+            disconnectedMatch.connected = true;
+            socketToPlayer.set(socket.id, { roomCode: code, playerId: disconnectedMatch.id });
+            socket.join(code);
+            socket.emit('room:joined', {
+              roomCode: code,
+              playerId: disconnectedMatch.id,
+              state: room.state,
+            });
+            broadcastRoom(code);
+            return;
+          }
+        }
       }
 
       const res = room.addPlayer(playerId, playerName, false);
@@ -246,6 +281,29 @@ io.on('connection', (socket: Socket) => {
       return;
     }
     socket.emit('room:state', room.state);
+  });
+
+  socket.on('room:leave', ({ roomCode, playerId }: { roomCode: string; playerId?: string }) => {
+    const code = roomCode?.trim().toUpperCase();
+    if (!code) return;
+    socket.leave(code);
+    socketToPlayer.delete(socket.id);
+
+    const room = rooms.get(code);
+    if (!room || !playerId) return;
+
+    if (room.state.phase === 'LOBBY' && playerId !== room.state.hostId) {
+      if (room.removePlayer(playerId, playerId).success) {
+        broadcastRoom(code);
+      }
+      return;
+    }
+
+    const player = room.state.players.find((p) => p.id === playerId);
+    if (player) {
+      player.connected = false;
+      broadcastRoom(code);
+    }
   });
 
   socket.on('room:add_bot', ({ roomCode, playerId }: { roomCode: string; playerId: string }) => {

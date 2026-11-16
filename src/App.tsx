@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { Trophy } from 'lucide-react';
+import { LogOut, Trophy } from 'lucide-react';
 import { BilingualText, GameLogEntry, GameRoomState, Language, Player } from '../shared/types';
 import { AdminDashboard } from './components/AdminDashboard';
 import { CashflowBoard } from './components/CashflowBoard';
@@ -37,6 +37,44 @@ function readStoredNumber(key: string, fallback: number, min: number, max: numbe
   }
 }
 
+const LAST_SESSION_KEY = 'cashflow_last_session';
+
+interface SavedRoomSession {
+  roomCode: string;
+  playerId: string;
+}
+
+function readSavedSession(): SavedRoomSession | null {
+  try {
+    const raw = localStorage.getItem(LAST_SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<SavedRoomSession>;
+    if (
+      typeof parsed.roomCode === 'string' &&
+      typeof parsed.playerId === 'string' &&
+      parsed.roomCode &&
+      parsed.playerId
+    ) {
+      return { roomCode: parsed.roomCode, playerId: parsed.playerId };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function writeSavedSession(session: SavedRoomSession | null): void {
+  try {
+    if (!session) {
+      localStorage.removeItem(LAST_SESSION_KEY);
+    } else {
+      localStorage.setItem(LAST_SESSION_KEY, JSON.stringify(session));
+    }
+  } catch {
+    // ignore storage quota errors
+  }
+}
+
 function getOrCreatePlayerId(): string {
   const key = 'cashflow_player_id';
   let id = sessionStorage.getItem(key);
@@ -48,7 +86,7 @@ function getOrCreatePlayerId(): string {
 }
 
 export default function App() {
-  const [playerId] = useState<string>(() => getOrCreatePlayerId());
+  const [playerId, setPlayerId] = useState<string>(() => getOrCreatePlayerId());
   const [language, setLanguage] = useState<Language>('th');
   const [muted, setMuted] = useState(false);
   const [roomState, setRoomState] = useState<GameRoomState | null>(null);
@@ -56,6 +94,7 @@ export default function App() {
   const [isBoardAnimating, setIsBoardAnimating] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [victoryModalDismissed, setVictoryModalDismissed] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [escapeCelebration, setEscapeCelebration] = useState<{
     log: GameLogEntry;
     player?: Player;
@@ -82,6 +121,7 @@ export default function App() {
   const prevLogIdRef = useRef<string | null>(null);
   const prevRoomRef = useRef<GameRoomState | null>(null);
   const latestRoomRef = useRef<GameRoomState | null>(null);
+  const playerIdRef = useRef<string>(playerId);
   const languageRef = useRef<Language>(language);
   const seenEscapeLogIdsRef = useRef<Set<string>>(new Set());
   const seenBankruptLogIdsRef = useRef<Set<string>>(new Set());
@@ -89,7 +129,18 @@ export default function App() {
   const escapeTimerRef = useRef<number | null>(null);
   const bankruptTimerRef = useRef<number | null>(null);
 
+  playerIdRef.current = playerId;
   languageRef.current = language;
+
+  const updatePlayerId = useCallback((nextId: string) => {
+    playerIdRef.current = nextId;
+    try {
+      sessionStorage.setItem('cashflow_player_id', nextId);
+    } catch {
+      // ignore storage errors
+    }
+    setPlayerId(nextId);
+  }, []);
 
   const triggerEscapeCelebration = useCallback((state: GameRoomState) => {
     const newEscapeLog = state.logs
@@ -168,6 +219,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     const socket = io({
       transports: ['websocket', 'polling'],
       reconnection: true,
@@ -177,18 +229,116 @@ export default function App() {
     });
     socketRef.current = socket;
 
+    const channel =
+      typeof BroadcastChannel !== 'undefined'
+        ? new BroadcastChannel('cashflow_session_presence')
+        : null;
+
+    if (channel) {
+      channel.onmessage = (event) => {
+        const msg = event.data as {
+          type?: string;
+          roomCode?: string;
+          playerId?: string;
+          nonce?: string;
+        } | null;
+        if (
+          msg?.type === 'CHECK_SESSION' &&
+          latestRoomRef.current?.roomCode === msg.roomCode &&
+          playerIdRef.current === msg.playerId
+        ) {
+          channel.postMessage({
+            type: 'SESSION_ACTIVE',
+            roomCode: msg.roomCode,
+            playerId: msg.playerId,
+            nonce: msg.nonce,
+          });
+        }
+      };
+    }
+
+    const attemptResumeSavedSession = async () => {
+      const saved = readSavedSession();
+      if (!saved || latestRoomRef.current) return;
+
+      // Check if another open tab in this browser already owns this session (supports multi-tab testing)
+      let heldByLiveTab = false;
+      if (channel) {
+        const nonce = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        heldByLiveTab = await new Promise<boolean>((resolve) => {
+          const prevHandler = channel.onmessage;
+          const timer = window.setTimeout(() => {
+            if (channel.onmessage === checkListener) {
+              channel.onmessage = prevHandler;
+            }
+            resolve(false);
+          }, 140);
+          const checkListener = (event: MessageEvent) => {
+            prevHandler?.call(channel, event);
+            const msg = event.data as { type?: string; nonce?: string } | null;
+            if (msg?.type === 'SESSION_ACTIVE' && msg.nonce === nonce) {
+              window.clearTimeout(timer);
+              channel.onmessage = prevHandler;
+              resolve(true);
+            }
+          };
+          channel.onmessage = checkListener;
+          channel.postMessage({
+            type: 'CHECK_SESSION',
+            roomCode: saved.roomCode,
+            playerId: saved.playerId,
+            nonce,
+          });
+        });
+      }
+
+      if (heldByLiveTab || cancelled || latestRoomRef.current) return;
+
+      try {
+        const resp = await fetch(
+          `/api/rooms/${encodeURIComponent(saved.roomCode)}?playerId=${encodeURIComponent(saved.playerId)}`
+        );
+        if (cancelled || latestRoomRef.current) return;
+        const data = (await resp.json()) as { exists?: boolean; canResume?: boolean };
+        if (data.exists && data.canResume) {
+          updatePlayerId(saved.playerId);
+          socket.emit('room:join', {
+            roomCode: saved.roomCode,
+            playerId: saved.playerId,
+            playerName: '',
+          });
+        } else {
+          writeSavedSession(null);
+        }
+      } catch {
+        // ignore network failures on cold boot
+      }
+    };
+
+    void attemptResumeSavedSession();
+
     socket.on('connect', () => {
       const activeRoom = latestRoomRef.current;
       if (activeRoom?.roomCode) {
         socket.emit('room:join', {
           roomCode: activeRoom.roomCode,
-          playerId,
+          playerId: playerIdRef.current,
           playerName: '',
         });
       }
     });
 
-    socket.on('room:joined', ({ state }: { state: GameRoomState }) => {
+    socket.on('room:joined', ({ playerId: joinedPlayerId, state }: { playerId?: string; state: GameRoomState }) => {
+      const effectiveId = joinedPlayerId || playerIdRef.current;
+      if (joinedPlayerId && joinedPlayerId !== playerIdRef.current) {
+        updatePlayerId(joinedPlayerId);
+      }
+      if (state.phase === 'GAME_OVER') {
+        writeSavedSession(null);
+      } else {
+        writeSavedSession({ roomCode: state.roomCode, playerId: effectiveId });
+      }
+
       const isSameRoom = latestRoomRef.current?.roomCode === state.roomCode;
       setErrorMsg(null);
       prevRoomRef.current = state;
@@ -217,7 +367,9 @@ export default function App() {
       prevRoomRef.current = state;
       latestRoomRef.current = state;
       setRoomState(state);
-      if (state.phase !== 'GAME_OVER') {
+      if (state.phase === 'GAME_OVER') {
+        writeSavedSession(null);
+      } else {
         setVictoryModalDismissed(false);
         seenWinRoomRef.current = null;
       }
@@ -244,12 +396,14 @@ export default function App() {
     });
 
     socket.on('room:closed', () => {
+      writeSavedSession(null);
       prevRoomRef.current = null;
       latestRoomRef.current = null;
       setRoomState(null);
       setSettledState(null);
       setIsBoardAnimating(false);
       setVictoryModalDismissed(false);
+      setShowLeaveConfirm(false);
       setEscapeCelebration(null);
       setBankruptAnnouncement(null);
       seenWinRoomRef.current = null;
@@ -257,12 +411,14 @@ export default function App() {
     });
 
     socket.on('room:kicked', (err?: BilingualText | string) => {
+      writeSavedSession(null);
       prevRoomRef.current = null;
       latestRoomRef.current = null;
       setRoomState(null);
       setSettledState(null);
       setIsBoardAnimating(false);
       setVictoryModalDismissed(false);
+      setShowLeaveConfirm(false);
       setEscapeCelebration(null);
       setBankruptAnnouncement(null);
       seenWinRoomRef.current = null;
@@ -289,7 +445,7 @@ export default function App() {
       if (socket.disconnected) {
         socket.connect();
       } else {
-        socket.emit('room:ping', { roomCode: code, playerId });
+        socket.emit('room:ping', { roomCode: code, playerId: playerIdRef.current });
       }
     }, 25000);
 
@@ -300,7 +456,7 @@ export default function App() {
       if (socket.disconnected) {
         socket.connect();
       } else {
-        socket.emit('room:sync', { roomCode: code, playerId });
+        socket.emit('room:sync', { roomCode: code, playerId: playerIdRef.current });
       }
     };
 
@@ -308,6 +464,8 @@ export default function App() {
     window.addEventListener('focus', handleResumeSync);
 
     return () => {
+      cancelled = true;
+      channel?.close();
       window.clearInterval(keepaliveId);
       if (escapeTimerRef.current) {
         window.clearTimeout(escapeTimerRef.current);
@@ -319,7 +477,7 @@ export default function App() {
       window.removeEventListener('focus', handleResumeSync);
       socket.disconnect();
     };
-  }, [playerId, playStateSound, triggerBankruptcyAnnouncement, triggerEscapeCelebration]);
+  }, [playStateSound, triggerBankruptcyAnnouncement, triggerEscapeCelebration, updatePlayerId]);
 
   const handleAnimationChange = useCallback(
     (animating: boolean) => {
@@ -362,26 +520,34 @@ export default function App() {
   };
 
   const handleLeaveRoom = () => {
+    writeSavedSession(null);
+    const activeCode = latestRoomRef.current?.roomCode || roomState?.roomCode;
+    if (activeCode && socketRef.current) {
+      socketRef.current.emit('room:leave', {
+        roomCode: activeCode,
+        playerId: playerIdRef.current,
+      });
+    }
     prevRoomRef.current = null;
     latestRoomRef.current = null;
     setRoomState(null);
     setSettledState(null);
     setIsBoardAnimating(false);
     setVictoryModalDismissed(false);
+    setShowLeaveConfirm(false);
     setEscapeCelebration(null);
     setBankruptAnnouncement(null);
     seenWinRoomRef.current = null;
     setErrorMsg(null);
-    socketRef.current?.disconnect();
-    socketRef.current?.connect();
   };
 
   const handleCloseGame = () => {
+    writeSavedSession(null);
     if (!roomState || !socketRef.current) return;
     if (socketRef.current.disconnected) socketRef.current.connect();
     socketRef.current.emit('game:close', {
       roomCode: roomState.roomCode,
-      playerId,
+      playerId: playerIdRef.current,
     });
   };
 
@@ -460,7 +626,7 @@ export default function App() {
         turnCount={uiState && uiState.phase !== 'LOBBY' ? uiState.turnCount : undefined}
         activePlayerName={uiState && uiState.phase !== 'LOBBY' ? currentPlayer?.name : undefined}
         isAdminObserver={isAdminSpectator}
-        onLeaveRoom={roomState && !isGameOver ? handleLeaveRoom : undefined}
+        onLeaveRoom={roomState && !isGameOver ? () => setShowLeaveConfirm(true) : undefined}
         onCloseGame={roomState && isGameOver && isHost ? handleCloseGame : undefined}
       />
 
@@ -757,6 +923,53 @@ export default function App() {
             </div>
           </div>
         </>
+      )}
+
+      {/* Leave Room Confirmation Modal */}
+      {showLeaveConfirm && roomState && (
+        <div className="fixed inset-0 z-50 bg-slate-900/55 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="max-w-sm w-full bg-white border-2 border-pink-300 rounded-2xl p-6 space-y-4 shadow-2xl">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-pink-100 border border-pink-200 flex items-center justify-center text-pink-600 shrink-0">
+                <LogOut className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-display font-bold text-base text-slate-900">
+                  {t(language, 'leaveRoomConfirmTitle')}
+                </h3>
+                {!roomState.isSoloMode && (
+                  <p className="text-xs font-mono font-bold text-slate-500 mt-0.5">
+                    {t(language, 'roomCode')}: {roomState.roomCode}
+                  </p>
+                )}
+              </div>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              {roomState.phase === 'LOBBY'
+                ? t(language, 'leaveRoomConfirmDescLobby')
+                : t(language, 'leaveRoomConfirmDescGame')}
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowLeaveConfirm(false)}
+                className="px-4 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs transition-colors cursor-pointer"
+              >
+                {t(language, 'cancelBtn')}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLeaveConfirm(false);
+                  handleLeaveRoom();
+                }}
+                className="px-4 py-2 rounded-lg bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs transition-colors shadow-xs cursor-pointer"
+              >
+                {t(language, 'leaveRoomConfirmBtn')}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
