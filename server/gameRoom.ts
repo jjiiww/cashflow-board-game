@@ -1872,12 +1872,14 @@ export class GameRoom {
 
       this.checkEscapedRatRace(winner);
     } else {
+      const cleanTitleTh = card.title.th.replace(/^ต้องการขาย/, '').replace(/^ต้องการ/, '').trim();
+      const cleanTitleEn = card.title.en.replace(/\s+For Sale$/i, '').trim();
       this.addLog(
         seller,
         'AUCTION_NO_BID',
         {
-          th: `ไม่มีผู้ประมูลสิทธิ์การ์ด "${card.title.th}" การ์ดถูกทิ้งลงกอง`,
-          en: `No bids placed for "${card.title.en}". Card discarded.`,
+          th: `ไม่มีผู้ประมูลสิทธิ์ ${cleanTitleTh} การ์ดถูกทิ้งลงกอง`,
+          en: `No bids placed for ${cleanTitleEn}. Card discarded.`,
         },
         null
       );
