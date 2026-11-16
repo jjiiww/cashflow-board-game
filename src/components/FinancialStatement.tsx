@@ -302,7 +302,7 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
               {dream && (
                 <div className="bg-pink-50 border-2 border-slate-900 rounded-lg p-2 flex justify-between items-center gap-2">
                   <span className="font-bold text-pink-900 truncate">
-                    ★ {dream.name[language]}
+                    {dream.name[language]}
                   </span>
                   <span className="font-mono font-bold text-slate-900 shrink-0">
                     {dream.cost.toLocaleString()} ฿
@@ -701,7 +701,10 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
                 <button
                   type="button"
                   disabled={Number(loanInput) <= 0 || Number(loanInput) > f.maxLoanLimit}
-                  onClick={() => onTakeLoan(Number(loanInput))}
+                  onClick={() => {
+                    onTakeLoan(Number(loanInput));
+                    setShowLoanModal(false);
+                  }}
                   className="px-3 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white font-bold text-xs whitespace-nowrap"
                 >
                   {t(language, 'takeLoan')}
@@ -722,7 +725,10 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
                   <button
                     type="button"
                     disabled={Number(repayInput) <= 0 || f.cash < Number(repayInput)}
-                    onClick={() => onRepayLoan(Number(repayInput))}
+                    onClick={() => {
+                    onRepayLoan(Number(repayInput));
+                    setShowLoanModal(false);
+                  }}
                     className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 disabled:opacity-40 text-white font-bold text-xs whitespace-nowrap"
                   >
                     {t(language, 'repayLoan')}

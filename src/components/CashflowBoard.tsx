@@ -796,7 +796,7 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
               fontSize="21"
               fontWeight="800"
             >
-              ★ {localDream ? localDream.name[language].slice(0, 26) : '-'}
+              {localDream ? localDream.name[language].slice(0, 26) : '-'}
             </text>
             {localDream && (
               <text

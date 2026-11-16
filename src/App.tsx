@@ -107,7 +107,7 @@ export default function App() {
       }
       escapeTimerRef.current = window.setTimeout(() => {
         setEscapeCelebration(null);
-      }, 7500);
+      }, 15000);
     }
   }, []);
 

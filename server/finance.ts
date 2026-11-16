@@ -76,7 +76,8 @@ export class FinancialEngine {
       0
     );
 
-    // 4. Children Expenses
+    // 4. Children Expenses (max 3 children)
+    finance.childrenCount = Math.min(3, Math.max(0, finance.childrenCount));
     finance.expenses.childrenExpenses =
       finance.childrenCount * finance.expenses.perChildExpense;
 

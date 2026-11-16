@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bot, Copy, Check, Lock, Palette, Play, Plus, Sparkles, Trash2, Users, UserPlus, X } from 'lucide-react';
+import { Bot, Copy, Check, Lock, Palette, Play, Plus, Trash2, Users, UserPlus, X } from 'lucide-react';
 import { PLAYER_COLOR_OPTIONS } from '../../shared/avatars';
 import { DREAM_OPTIONS } from '../../shared/board';
 import { CAREERS } from '../../shared/careers';
@@ -315,11 +315,8 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                         <div className="text-xs text-slate-500 font-mono mt-0.5 truncate">
                           {p.career.name[language]} · {t(language, 'salary')}: {p.career.salary.toLocaleString()} ฿
                         </div>
-                        <div className="text-xs text-pink-600 font-medium mt-0.5 flex items-center gap-1 truncate">
-                          <Sparkles className="w-3 h-3 shrink-0" />
-                          <span className="truncate">
-                            {selectedDream.name[language]} ({(selectedDream.cost / 1000000).toFixed(1)}M ฿)
-                          </span>
+                        <div className="text-xs text-pink-600 font-medium mt-0.5 truncate">
+                          {selectedDream.name[language]} ({(selectedDream.cost / 1000000).toFixed(1)}M ฿)
                         </div>
                       </div>
                     </div>
@@ -413,31 +410,49 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
 
                   {canEdit && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-slate-200/80">
-                      <select
-                        value={p.career.id}
-                        onChange={(e) => onAssignCareer(p.id, e.target.value)}
-                        aria-label={t(language, 'selectCareer')}
-                        className="w-full text-xs bg-white border border-slate-300 text-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500"
-                      >
-                        {CAREERS.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.name[language]}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="space-y-1">
+                        <label
+                          htmlFor={`career-select-${p.id}`}
+                          className="block text-[11px] font-semibold text-slate-600"
+                        >
+                          {t(language, 'chooseCareerLabel')}
+                        </label>
+                        <select
+                          id={`career-select-${p.id}`}
+                          value={p.career.id}
+                          onChange={(e) => onAssignCareer(p.id, e.target.value)}
+                          aria-label={t(language, 'chooseCareerLabel')}
+                          className="w-full text-xs bg-white border border-slate-300 text-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500"
+                        >
+                          {CAREERS.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name[language]}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-                      <select
-                        value={p.dreamId || DREAM_OPTIONS[0].id}
-                        onChange={(e) => onAssignDream(p.id, e.target.value)}
-                        aria-label={t(language, 'dreamLabel')}
-                        className="w-full text-xs bg-white border border-pink-300 text-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-pink-500"
-                      >
-                        {DREAM_OPTIONS.map((d) => (
-                          <option key={d.id} value={d.id}>
-                            ★ {d.name[language]} ({(d.cost / 1000000).toFixed(1)}M)
-                          </option>
-                        ))}
-                      </select>
+                      <div className="space-y-1">
+                        <label
+                          htmlFor={`dream-select-${p.id}`}
+                          className="block text-[11px] font-semibold text-pink-700"
+                        >
+                          {t(language, 'chooseDreamLabel')}
+                        </label>
+                        <select
+                          id={`dream-select-${p.id}`}
+                          value={p.dreamId || DREAM_OPTIONS[0].id}
+                          onChange={(e) => onAssignDream(p.id, e.target.value)}
+                          aria-label={t(language, 'chooseDreamLabel')}
+                          className="w-full text-xs bg-white border border-pink-300 text-slate-800 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-pink-500"
+                        >
+                          {DREAM_OPTIONS.map((d) => (
+                            <option key={d.id} value={d.id}>
+                              {d.name[language]} ({(d.cost / 1000000).toFixed(1)}M)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   )}
                 </div>

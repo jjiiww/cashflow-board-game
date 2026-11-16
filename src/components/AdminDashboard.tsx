@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowDownRight, ArrowUpRight, Bot, Landmark, Sparkles, TrendingUp, Users } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, Bot, Landmark, TrendingUp, Users } from 'lucide-react';
 import { DREAM_OPTIONS, FAST_TRACK_WIN_CASHFLOW_TARGET } from '../../shared/board';
 import { GameRoomState, Language, Player } from '../../shared/types';
 import { t } from '../i18n';
@@ -165,9 +165,8 @@ const PlayerAdminFinanceCard: React.FC<{
       {/* Dream Badge */}
       {dream && (
         <div className="flex items-center justify-between gap-2 bg-pink-50/80 border border-pink-200 rounded-lg px-2 py-1 text-[11px]">
-          <span className="font-semibold text-pink-900 flex items-center gap-1 truncate">
-            <Sparkles className="w-3 h-3 text-pink-500 shrink-0" />
-            <span className="truncate">{dream.name[language]}</span>
+          <span className="font-semibold text-pink-900 truncate">
+            {dream.name[language]}
           </span>
           <span className="font-mono font-bold text-pink-700 shrink-0 tabular-nums">
             {(dream.cost / 1000000).toFixed(1)}M ฿

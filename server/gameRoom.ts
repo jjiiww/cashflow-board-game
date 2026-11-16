@@ -804,7 +804,7 @@ export class GameRoom {
           player,
           'CHARITY_PROMPT',
           {
-            th: `${player.name} ตกช่องการกุศล: สามารถบริจาค 10% ของรายได้ (${donation.toLocaleString()} ฿) เพื่อสิทธิ์เลือกทอย 1-2 ลูกได้ 3 ตา`,
+            th: `${player.name} ตกช่องการกุศล: สามารถบริจาค 10% ของรายได้ (${donation.toLocaleString()} ฿) จะได้สิทธิ์ทอยลูกเต๋า 2 ลูกได้ 3 ตา`,
             en: `${player.name} landed on Charity: Donate 10% of Total Income (${donation.toLocaleString()} ฿) to roll 1 or 2 dice for 3 turns.`,
           },
           null
@@ -834,8 +834,8 @@ export class GameRoom {
             player,
             'BABY_MAX',
             {
-              th: `${player.name} ตกช่องมีลูก แต่มีครบ 3 คนแล้ว (ไม่เพิ่มรายจ่าย)`,
-              en: `${player.name} landed on Baby, already at max 3 children.`,
+              th: `${player.name} ตกช่องมีลูก แต่มีครบ 3 คนแล้ว (ไม่เพิ่มลูกและไม่เพิ่มรายจ่าย)`,
+              en: `${player.name} landed on Baby, already at max 3 children (no new child or expense added).`,
             },
             null
           );
@@ -956,8 +956,29 @@ export class GameRoom {
     return { success: true };
   }
 
+  private populatePendingStockSells(activePlayer: Player, card: DealCard): void {
+    this.state.pendingStockSells = [];
+    if (card.kind !== 'stock' || !card.symbol) return;
+
+    for (const p of this.state.players) {
+      if (p.id === activePlayer.id || p.isBankrupt || p.track !== activePlayer.track) continue;
+      if (p.isBot) continue;
+      const holding = p.finance.assets.find((a) => a.category === 'stock' && a.symbol === card.symbol);
+      if (holding && (holding.shares || 0) > 0) {
+        this.state.pendingStockSells.push({
+          playerId: p.id,
+          symbol: card.symbol,
+          sharesOwned: holding.shares || 0,
+          pricePerShare: card.pricePerShare || card.cost,
+          responded: false,
+        });
+      }
+    }
+  }
+
   private presentDealCard(player: Player, card: DealCard): void {
     this.state.activeCard = card;
+    this.state.pendingStockSells = [];
     const details = this.formatDealDetails(card);
 
     if (card.kind === 'stock_split') {
@@ -1032,6 +1053,10 @@ export class GameRoom {
         }
       );
       return;
+    }
+
+    if (card.kind === 'stock') {
+      this.populatePendingStockSells(player, card);
     }
 
     this.state.phase = 'DEAL_DECISION';
@@ -1196,13 +1221,20 @@ export class GameRoom {
     }
 
     const isActivePlayer = this.currentPlayer.id === playerId && this.state.phase === 'DEAL_DECISION';
-    const isOtherSeller = this.state.phase === 'STOCK_MARKET_SELL';
+    const pendingForOther =
+      playerId !== this.currentPlayer.id &&
+      (this.state.phase === 'STOCK_MARKET_SELL' ||
+        this.state.phase === 'DEAL_DECISION' ||
+        this.state.phase === 'BOT_THINKING')
+        ? this.state.pendingStockSells.find((s) => s.playerId === playerId && !s.responded)
+        : undefined;
+    const isOtherSeller = Boolean(pendingForOther);
     if (!isActivePlayer && !isOtherSeller) {
       return { success: false, error: { th: 'ไม่สามารถขายหุ้นในขณะนี้ได้', en: 'Cannot sell stock right now.' } };
     }
 
     const player = this.state.players.find((p) => p.id === playerId);
-    if (!player) return { success: false };
+    if (!player || player.isBankrupt) return { success: false };
 
     const symEn = formatStockSymbol(card.symbol, 'en');
     const holding = player.finance.assets.find((a) => a.category === 'stock' && a.symbol === card.symbol);
@@ -1244,69 +1276,69 @@ export class GameRoom {
 
     if (isActivePlayer) {
       this.afterActiveStockDecision(player, card);
-    } else if (isOtherSeller) {
-      const pending = this.state.pendingStockSells.find((s) => s.playerId === playerId);
-      if (pending) pending.responded = true;
-      this.checkStockSellCompletion();
+    } else if (pendingForOther) {
+      pendingForOther.responded = true;
+      if (this.state.phase === 'STOCK_MARKET_SELL') {
+        this.checkStockSellCompletion();
+      }
     }
     return { success: true };
   }
 
   public skipStockSell(playerId: string): { success: boolean } {
-    if (this.state.phase !== 'STOCK_MARKET_SELL') return { success: false };
-    const pending = this.state.pendingStockSells.find((s) => s.playerId === playerId);
+    if (
+      this.state.phase !== 'STOCK_MARKET_SELL' &&
+      this.state.phase !== 'DEAL_DECISION' &&
+      this.state.phase !== 'BOT_THINKING'
+    ) {
+      return { success: false };
+    }
+    if (playerId === this.currentPlayer.id) return { success: false };
+    const pending = this.state.pendingStockSells.find((s) => s.playerId === playerId && !s.responded);
     if (!pending) return { success: false };
     pending.responded = true;
-    this.checkStockSellCompletion();
+    if (this.state.phase === 'STOCK_MARKET_SELL') {
+      this.checkStockSellCompletion();
+    }
     return { success: true };
   }
 
   private afterActiveStockDecision(activePlayer: Player, card: DealCard): void {
-    // Check if OTHER players hold this stock so they can choose to SELL ONLY at card price
+    // Process any OTHER bot holders of this stock, then ask any remaining unresponded human holders
     const symEn = formatStockSymbol(card.symbol, 'en');
-    const pending: typeof this.state.pendingStockSells = [];
     for (const p of this.state.players) {
-      if (p.id === activePlayer.id || p.isBankrupt || p.track !== activePlayer.track) continue;
+      if (p.id === activePlayer.id || p.isBankrupt || p.track !== activePlayer.track || !p.isBot) continue;
       const holding = p.finance.assets.find((a) => a.category === 'stock' && a.symbol === card.symbol);
       if (holding && (holding.shares || 0) > 0) {
-        if (p.isBot) {
-          // Bot sells if price >= 200 or >= 1.5x avg cost
-          const avgBuy = holding.cost / (holding.shares || 1);
-          const price = card.pricePerShare || 0;
-          if (price >= avgBuy * 1.5 || price >= 250) {
-            const before = FinancialEngine.snapshot(p.finance);
-            const proceeds = (holding.shares || 0) * price;
-            p.finance.cash += proceeds;
-            p.finance.assets = p.finance.assets.filter((a) => a.id !== holding.id);
-            FinancialEngine.recalculate(p.finance, p.career);
-            const delta = FinancialEngine.buildDelta(before, p.finance, {
-              th: `${p.name} ขายหุ้น ${card.symbol} (+${proceeds.toLocaleString()} ฿)`,
-              en: `${p.name} sold ${symEn} (+${proceeds.toLocaleString()} ฿)`,
-            });
-            this.addLog(
-              p,
-              'BOT_SELL_STOCK',
-              {
-                th: `${p.name} (Robot) ตัดสินใจขายหุ้น ${card.symbol} ทั้งหมด รับเงิน +${proceeds.toLocaleString()} ฿`,
-                en: `${p.name} (Robot) sold all ${symEn} shares for +${proceeds.toLocaleString()} ฿.`,
-              },
-              delta
-            );
-          }
-        } else {
-          pending.push({
-            playerId: p.id,
-            symbol: card.symbol!,
-            sharesOwned: holding.shares || 0,
-            pricePerShare: card.pricePerShare || card.cost,
-            responded: false,
+        // Bot sells if price >= 250 or >= 1.5x avg cost
+        const avgBuy = holding.cost / (holding.shares || 1);
+        const price = card.pricePerShare || 0;
+        if (price >= avgBuy * 1.5 || price >= 250) {
+          const before = FinancialEngine.snapshot(p.finance);
+          const proceeds = (holding.shares || 0) * price;
+          p.finance.cash += proceeds;
+          p.finance.assets = p.finance.assets.filter((a) => a.id !== holding.id);
+          FinancialEngine.recalculate(p.finance, p.career);
+          const delta = FinancialEngine.buildDelta(before, p.finance, {
+            th: `${p.name} ขายหุ้น ${card.symbol} (+${proceeds.toLocaleString()} ฿)`,
+            en: `${p.name} sold ${symEn} (+${proceeds.toLocaleString()} ฿)`,
           });
+          this.addLog(
+            p,
+            'BOT_SELL_STOCK',
+            {
+              th: `${p.name} (Robot) ตัดสินใจขายหุ้น ${card.symbol} ทั้งหมด รับเงิน +${proceeds.toLocaleString()} ฿`,
+              en: `${p.name} (Robot) sold all ${symEn} shares for +${proceeds.toLocaleString()} ฿.`,
+            },
+            delta
+          );
         }
       }
     }
 
-    if (pending.length > 0) {
-      this.state.pendingStockSells = pending;
+    const remainingPending = this.state.pendingStockSells.filter((s) => !s.responded);
+    if (remainingPending.length > 0) {
+      this.state.pendingStockSells = remainingPending;
       this.state.phase = 'STOCK_MARKET_SELL';
       this.addLog(
         activePlayer,
@@ -1318,6 +1350,7 @@ export class GameRoom {
         null
       );
     } else {
+      this.state.pendingStockSells = [];
       if (this.checkEscapedRatRace(activePlayer)) {
         if (activePlayer.isBot) {
           this.state.phase = 'BOT_THINKING';
@@ -2451,6 +2484,7 @@ export class GameRoom {
           const deckType = bot.finance.cash >= 150000 ? 'big_deal' : 'small_deal';
           const card = deckType === 'big_deal' ? this.drawBigDeal() : this.drawSmallDeal();
           this.state.activeCard = card;
+          this.populatePendingStockSells(bot, card);
           const details = this.formatDealDetails(card);
           this.addLog(
             bot,
@@ -2633,6 +2667,16 @@ export class GameRoom {
             en: `👶 ${bot.name} (Robot) had child #${bot.finance.childrenCount} (+${bot.finance.expenses.perChildExpense.toLocaleString()} ฿/mo).`,
           },
           delta
+        );
+      } else {
+        this.addLog(
+          bot,
+          'BOT_BABY_MAX',
+          {
+            th: `${bot.name} (Robot) ตกช่องมีลูก แต่มีครบ 3 คนแล้ว (ไม่เพิ่มลูกและไม่เพิ่มรายจ่าย)`,
+            en: `${bot.name} (Robot) landed on Baby, already at max 3 children (no new child or expense added).`,
+          },
+          null
         );
       }
     } else if (spaceType === 'downsized') {
@@ -3138,14 +3182,42 @@ export class GameRoom {
 
     const next = this.currentPlayer;
     if (next.isBot) {
-      this.state.phase = 'BOT_THINKING';
+      if (next.downsizedTurnsLeft > 0) {
+        next.downsizedTurnsLeft -= 1;
+        this.state.phase = 'BOT_THINKING';
+        this.state.botStepStage = 3;
+        this.addLog(
+          next,
+          'BOT_DOWNSIZED_SKIP',
+          {
+            th: `${next.name} (Robot) ตกงานอยู่ ต้องหยุดพัก (เหลืออีก ${next.downsizedTurnsLeft} ตา) — กด "ถัดไป" เพื่อจบเทิร์น`,
+            en: `${next.name} (Robot) is Downsized (${next.downsizedTurnsLeft} turn(s) left after this). Click Next Step to end turn.`,
+          },
+          null
+        );
+      } else {
+        this.state.phase = 'BOT_THINKING';
+        this.state.botStepStage = 0;
+        this.addLog(
+          next,
+          'TURN_START_BOT',
+          {
+            th: `ถึงตาของ ${next.name} (Robot) — กดปุ่ม "ถัดไป" เพื่อให้ Robot ทอยลูกเต๋า`,
+            en: `${next.name} (Robot)'s turn — Click "Next Step" to roll dice.`,
+          },
+          null
+        );
+      }
+    } else if (next.downsizedTurnsLeft > 0) {
+      next.downsizedTurnsLeft -= 1;
+      this.state.phase = 'TURN_COMPLETE';
       this.state.botStepStage = 0;
       this.addLog(
         next,
-        'TURN_START_BOT',
+        'SKIP_DOWNSIZED',
         {
-          th: `ถึงตาของ ${next.name} (Robot) — กดปุ่ม "ถัดไป" เพื่อให้ Robot ทอยลูกเต๋า`,
-          en: `${next.name} (Robot)'s turn — Click "Next Step" to roll dice.`,
+          th: `${next.name} ตกงานอยู่ ต้องหยุดพัก (เหลืออีก ${next.downsizedTurnsLeft} ตา) — กด "จบเทิร์นนี้" เพื่อผ่านตา`,
+          en: `${next.name} is Downsized (${next.downsizedTurnsLeft} turn(s) remaining after this) — Click "End Turn" to skip.`,
         },
         null
       );

@@ -427,23 +427,60 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
   const renderPhaseControls = () => {
     const phase = roomState.phase;
 
-    // 1. Robot Step-by-Step Control
-    if (phase === 'BOT_THINKING') {
-      return (
-        <div className="flex items-center justify-between gap-3 bg-sky-50 border border-sky-200 rounded-xl p-3">
-          <div className="text-xs font-semibold text-sky-800">
-            {language === 'th'
-              ? `ตาของ ${currentPlayer?.name}`
-              : `${currentPlayer?.name}'s Turn`}
-          </div>
+    const renderOtherStockSellBox = (
+      pending: { sharesOwned: number; pricePerShare: number }
+    ) => (
+      <div className="bg-sky-50 border border-sky-300 rounded-xl p-3 space-y-2.5">
+        <p className="text-xs font-bold text-sky-800">{t(language, 'stockSellPrompt')}</p>
+        <div className="text-xs text-slate-700 font-mono">
+          {t(language, 'ownedShares')}: {pending.sharesOwned.toLocaleString()} ×{' '}
+          {pending.pricePerShare.toLocaleString()} ฿ ={' '}
+          <strong className="text-emerald-600">
+            {(pending.sharesOwned * pending.pricePerShare).toLocaleString()} ฿
+          </strong>
+        </div>
+        <div className="flex gap-2">
           <button
             type="button"
-            onClick={onNextBotStep}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-sm transition-colors whitespace-nowrap shrink-0 shadow-xs"
+            onClick={() => onSellStock(pending.sharesOwned)}
+            className="flex-1 py-2.5 px-3 rounded-lg bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs"
           >
-            <span>{t(language, 'nextStep')}</span>
-            <ArrowRight className="w-4 h-4" />
+            {t(language, 'sellAllShares')} ({pending.sharesOwned.toLocaleString()})
           </button>
+          <button
+            type="button"
+            onClick={onSkipStockSell}
+            className="flex-1 py-2.5 px-3 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold text-xs"
+          >
+            {t(language, 'keepShares')}
+          </button>
+        </div>
+      </div>
+    );
+
+    // 1. Robot Step-by-Step Control
+    if (phase === 'BOT_THINKING') {
+      const myPending = roomState.pendingStockSells.find(
+        (s) => s.playerId === localPlayerId && !s.responded
+      );
+      return (
+        <div className="space-y-2.5">
+          {myPending && renderOtherStockSellBox(myPending)}
+          <div className="flex items-center justify-between gap-3 bg-sky-50 border border-sky-200 rounded-xl p-3">
+            <div className="text-xs font-semibold text-sky-800">
+              {language === 'th'
+                ? `ตาของ ${currentPlayer?.name}`
+                : `${currentPlayer?.name}'s Turn`}
+            </div>
+            <button
+              type="button"
+              onClick={onNextBotStep}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-sm transition-colors whitespace-nowrap shrink-0 shadow-xs"
+            >
+              <span>{t(language, 'nextStep')}</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       );
     }
@@ -594,6 +631,10 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
         (a) => a.category === 'stock' && a.symbol === card.symbol
       );
 
+      const myPending = !isMyTurn
+        ? roomState.pendingStockSells.find((s) => s.playerId === localPlayerId && !s.responded)
+        : undefined;
+
       return isMyTurn ? (
         isStock ? (
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2.5">
@@ -676,7 +717,7 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
                   >
                     <Gavel className="w-3.5 h-3.5 shrink-0" />
                     <span>
-                      {t(language, 'sellDealRight')}
+                      {t(language, 'sellDealRight')}{' '}
                       <span className="block font-mono text-[11px] font-semibold">
                         ({parsedStartFee.toLocaleString()} ฿)
                       </span>
@@ -692,10 +733,13 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
           </div>
         )
       ) : (
-        <div className="text-xs text-slate-500 bg-slate-100 rounded-xl p-3">
-          {language === 'th'
-            ? `${currentPlayer?.name} กำลังตัดสินใจ...`
-            : `${currentPlayer?.name} is deciding...`}
+        <div className="space-y-2.5">
+          {myPending && renderOtherStockSellBox(myPending)}
+          <div className="text-xs text-slate-500 bg-slate-100 rounded-xl p-3">
+            {language === 'th'
+              ? `${currentPlayer?.name} กำลังตัดสินใจ...`
+              : `${currentPlayer?.name} is deciding...`}
+          </div>
         </div>
       );
     }
@@ -707,32 +751,7 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
       );
 
       return myPending ? (
-        <div className="bg-sky-50 border border-sky-300 rounded-xl p-3 space-y-2.5">
-          <p className="text-xs font-bold text-sky-800">{t(language, 'stockSellPrompt')}</p>
-          <div className="text-xs text-slate-700 font-mono">
-            {t(language, 'ownedShares')}: {myPending.sharesOwned.toLocaleString()} ×{' '}
-            {myPending.pricePerShare.toLocaleString()} ฿ ={' '}
-            <strong className="text-emerald-600">
-              {(myPending.sharesOwned * myPending.pricePerShare).toLocaleString()} ฿
-            </strong>
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => onSellStock(myPending.sharesOwned)}
-              className="flex-1 py-2.5 px-3 rounded-lg bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs"
-            >
-              {t(language, 'sellAllShares')} ({myPending.sharesOwned.toLocaleString()})
-            </button>
-            <button
-              type="button"
-              onClick={onSkipStockSell}
-              className="flex-1 py-2.5 px-3 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold text-xs"
-            >
-              {t(language, 'keepShares')}
-            </button>
-          </div>
-        </div>
+        renderOtherStockSellBox(myPending)
       ) : (
         <div className="text-xs text-slate-500 bg-slate-100 rounded-xl p-3">
           {language === 'th'
