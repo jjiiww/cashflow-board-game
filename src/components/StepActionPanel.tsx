@@ -194,32 +194,30 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
       return (
         <div className="bg-emerald-50/80 text-slate-900 rounded-xl p-3.5 border-2 border-emerald-400 space-y-2.5">
           <div className="space-y-1.5">
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-1.5 min-w-0">
-                <span className="text-[11px] font-bold text-emerald-700">
-                  {card.deck === 'small_deal' ? t(language, 'smallDeal') : t(language, 'bigDeal')}
-                </span>
-                <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
-                    canSellRight
-                      ? 'bg-orange-100 text-orange-800 border-orange-300'
-                      : 'bg-slate-100 text-slate-700 border-slate-300'
-                  }`}
-                >
-                  {isStock
-                    ? t(language, 'stockRuleBadge')
-                    : isSplit
-                    ? t(language, 'splitRuleBadge')
-                    : canSellRight
-                    ? t(language, 'dealSellableBadge')
-                    : t(language, 'dealExclusiveBadge')}
-                </span>
-              </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] font-bold text-emerald-700">
+                {card.deck === 'small_deal' ? t(language, 'smallDeal') : t(language, 'bigDeal')}
+              </span>
               {card.symbol && (
                 <span className="font-mono text-xs font-bold px-2 py-1 rounded bg-emerald-500 text-white shrink-0">
                   {formatStockSymbol(card.symbol, language)}
                 </span>
               )}
+            </div>
+            <div
+              className={`w-full text-[11px] font-bold px-2.5 py-1 rounded-md border ${
+                canSellRight
+                  ? 'bg-orange-100 text-orange-800 border-orange-300'
+                  : 'bg-slate-100 text-slate-700 border-slate-300'
+              }`}
+            >
+              {isStock
+                ? t(language, 'stockRuleBadge')
+                : isSplit
+                ? t(language, 'splitRuleBadge')
+                : canSellRight
+                ? t(language, 'dealSellableBadge')
+                : t(language, 'dealExclusiveBadge')}
             </div>
             <h4 className="w-full font-display font-bold text-base text-slate-900">
               {card.title[language]}

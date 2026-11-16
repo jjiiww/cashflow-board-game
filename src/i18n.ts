@@ -150,7 +150,7 @@ export const UI_TEXT = {
     ownedShares: 'หุ้นที่ถืออยู่',
     dealSellableBadge: 'ขายสิทธิ์ / ประมูลต่อได้',
     dealExclusiveBadge: 'ซื้อได้เฉพาะผู้เปิดการ์ด (ห้ามขายสิทธิ์)',
-    stockRuleBadge: 'ผู้เปิดซื้อ/ขายได้ · อื่นๆ ขายอย่างเดียว',
+    stockRuleBadge: 'ผู้เปิดซื้อ/ขายได้ คนอื่นขายได้อย่างเดียว',
     splitRuleBadge: 'มีผลทันทีกับผู้ถือหุ้นทุกคน',
     unitsLabel: 'จำนวนยูนิต',
     dividendLabel: 'ปันผล/เดือน/หุ้น',
