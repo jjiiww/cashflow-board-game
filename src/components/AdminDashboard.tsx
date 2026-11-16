@@ -95,10 +95,12 @@ const PlayerAdminFinanceCard: React.FC<{
 
   return (
     <article
-      className={`flex flex-col bg-white rounded-xl border p-3 shadow-2xs space-y-2.5 text-xs transition-all ${
-        isActiveTurn
-          ? 'border-orange-400 ring-2 ring-orange-200/80'
-          : 'border-slate-200'
+      className={`flex flex-col rounded-xl border p-3 shadow-2xs space-y-2.5 text-xs transition-all ${
+        player.isBankrupt
+          ? 'bg-rose-50/45 border-rose-300'
+          : isActiveTurn
+          ? 'bg-white border-orange-400 ring-2 ring-orange-200/80'
+          : 'bg-white border-slate-200'
       }`}
     >
       {/* Header: Identity, Turn Highlight, Track & Cash */}
@@ -108,12 +110,16 @@ const PlayerAdminFinanceCard: React.FC<{
             avatarId={player.avatarId}
             color={player.color}
             isBot={player.isBot}
-            isActiveTurn={isActiveTurn}
+            isActiveTurn={isActiveTurn && !player.isBankrupt}
             size="sm"
           />
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="font-display font-bold text-sm text-slate-900 truncate">
+              <span
+                className={`font-display font-bold text-sm truncate ${
+                  player.isBankrupt ? 'text-rose-900 line-through decoration-rose-500/70' : 'text-slate-900'
+                }`}
+              >
                 {player.name}
               </span>
               {player.isBot && (
@@ -122,7 +128,12 @@ const PlayerAdminFinanceCard: React.FC<{
                   Robot
                 </span>
               )}
-              {isActiveTurn && (
+              {player.isBankrupt && (
+                <span className="text-[10px] font-bold text-rose-800 bg-rose-100 border border-rose-300 px-1.5 py-0.5 rounded">
+                  {t(language, 'bankruptBadge')}
+                </span>
+              )}
+              {isActiveTurn && !player.isBankrupt && (
                 <span className="text-[10px] font-bold text-orange-800 bg-orange-100 border border-orange-300 px-1.5 py-0.5 rounded">
                   {t(language, 'activeTurnBadge')}
                 </span>

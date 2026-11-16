@@ -4,7 +4,11 @@ import { Trophy } from 'lucide-react';
 import { BilingualText, GameLogEntry, GameRoomState, Language, Player } from '../shared/types';
 import { AdminDashboard } from './components/AdminDashboard';
 import { CashflowBoard } from './components/CashflowBoard';
-import { ConfettiBurst, RatRaceEscapeCelebration } from './components/CelebrationOverlay';
+import {
+  BankruptcyAnnouncementModal,
+  ConfettiBurst,
+  RatRaceEscapeCelebration,
+} from './components/CelebrationOverlay';
 import { FinancialStatement } from './components/FinancialStatement';
 import { GameHeader } from './components/GameHeader';
 import { LobbyView } from './components/LobbyView';
@@ -56,6 +60,10 @@ export default function App() {
     log: GameLogEntry;
     player?: Player;
   } | null>(null);
+  const [bankruptAnnouncement, setBankruptAnnouncement] = useState<{
+    log: GameLogEntry;
+    player?: Player;
+  } | null>(null);
   const [isDesktop, setIsDesktop] = useState<boolean>(() =>
     typeof window !== 'undefined' ? window.matchMedia('(min-width: 1024px)').matches : true
   );
@@ -76,8 +84,10 @@ export default function App() {
   const latestRoomRef = useRef<GameRoomState | null>(null);
   const languageRef = useRef<Language>(language);
   const seenEscapeLogIdsRef = useRef<Set<string>>(new Set());
+  const seenBankruptLogIdsRef = useRef<Set<string>>(new Set());
   const seenWinRoomRef = useRef<string | null>(null);
   const escapeTimerRef = useRef<number | null>(null);
+  const bankruptTimerRef = useRef<number | null>(null);
 
   languageRef.current = language;
 
@@ -101,6 +111,26 @@ export default function App() {
     }
   }, []);
 
+  const triggerBankruptcyAnnouncement = useCallback((state: GameRoomState) => {
+    const newBankruptLog = state.logs
+      .slice(0, 8)
+      .find((entry) => entry.type === 'PLAYER_BANKRUPT' && !seenBankruptLogIdsRef.current.has(entry.id));
+
+    if (newBankruptLog) {
+      seenBankruptLogIdsRef.current.add(newBankruptLog.id);
+      const bankruptPlayer = state.players.find((p) => p.id === newBankruptLog.actorId);
+      setBankruptAnnouncement({ log: newBankruptLog, player: bankruptPlayer });
+      soundFX.bankrupt();
+
+      if (bankruptTimerRef.current) {
+        window.clearTimeout(bankruptTimerRef.current);
+      }
+      bankruptTimerRef.current = window.setTimeout(() => {
+        setBankruptAnnouncement(null);
+      }, 10000);
+    }
+  }, []);
+
   const playStateSound = useCallback((state: GameRoomState) => {
     if (state.phase === 'GAME_OVER') {
       const winKey = `${state.roomCode}_${state.winnerId || 'win'}_${state.turnCount}`;
@@ -121,6 +151,8 @@ export default function App() {
         }
       } else if (topLog.type === 'FAST_TRACK_ESCAPE') {
         // Sound already triggered by triggerEscapeCelebration
+      } else if (topLog.type === 'PLAYER_BANKRUPT') {
+        // Sound already triggered by triggerBankruptcyAnnouncement
       } else if (topLog.type.includes('DEAL') || topLog.type.includes('MARKET')) {
         soundFX.card();
       } else if (
@@ -169,9 +201,13 @@ export default function App() {
         seenEscapeLogIdsRef.current = new Set(
           state.logs.filter((l) => l.type === 'FAST_TRACK_ESCAPE').map((l) => l.id)
         );
+        seenBankruptLogIdsRef.current = new Set(
+          state.logs.filter((l) => l.type === 'PLAYER_BANKRUPT').map((l) => l.id)
+        );
         seenWinRoomRef.current = null;
         setVictoryModalDismissed(false);
         setEscapeCelebration(null);
+        setBankruptAnnouncement(null);
         setLanguage(state.language);
       }
     });
@@ -202,6 +238,7 @@ export default function App() {
         setIsBoardAnimating(false);
         setSettledState(state);
         triggerEscapeCelebration(state);
+        triggerBankruptcyAnnouncement(state);
         playStateSound(state);
       }
     });
@@ -214,6 +251,7 @@ export default function App() {
       setIsBoardAnimating(false);
       setVictoryModalDismissed(false);
       setEscapeCelebration(null);
+      setBankruptAnnouncement(null);
       seenWinRoomRef.current = null;
       setErrorMsg(null);
     });
@@ -255,11 +293,14 @@ export default function App() {
       if (escapeTimerRef.current) {
         window.clearTimeout(escapeTimerRef.current);
       }
+      if (bankruptTimerRef.current) {
+        window.clearTimeout(bankruptTimerRef.current);
+      }
       document.removeEventListener('visibilitychange', handleResumeSync);
       window.removeEventListener('focus', handleResumeSync);
       socket.disconnect();
     };
-  }, [playerId, playStateSound, triggerEscapeCelebration]);
+  }, [playerId, playStateSound, triggerBankruptcyAnnouncement, triggerEscapeCelebration]);
 
   const handleAnimationChange = useCallback(
     (animating: boolean) => {
@@ -267,10 +308,11 @@ export default function App() {
       if (!animating && latestRoomRef.current) {
         setSettledState(latestRoomRef.current);
         triggerEscapeCelebration(latestRoomRef.current);
+        triggerBankruptcyAnnouncement(latestRoomRef.current);
         playStateSound(latestRoomRef.current);
       }
     },
-    [playStateSound, triggerEscapeCelebration]
+    [playStateSound, triggerBankruptcyAnnouncement, triggerEscapeCelebration]
   );
 
   const handleToggleLanguage = (lang: Language) => {
@@ -308,6 +350,7 @@ export default function App() {
     setIsBoardAnimating(false);
     setVictoryModalDismissed(false);
     setEscapeCelebration(null);
+    setBankruptAnnouncement(null);
     seenWinRoomRef.current = null;
     setErrorMsg(null);
     socketRef.current?.disconnect();
@@ -617,6 +660,16 @@ export default function App() {
           player={escapeCelebration.player}
           language={language}
           onDismiss={() => setEscapeCelebration(null)}
+        />
+      )}
+
+      {/* Bankruptcy Announcement Modal & Sound Effect (visible to everyone) */}
+      {bankruptAnnouncement && !isGameOver && (
+        <BankruptcyAnnouncementModal
+          log={bankruptAnnouncement.log}
+          player={bankruptAnnouncement.player}
+          language={language}
+          onDismiss={() => setBankruptAnnouncement(null)}
         />
       )}
 

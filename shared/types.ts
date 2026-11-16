@@ -265,6 +265,7 @@ export interface Player {
   charityTurnsLeft: number;
   hasThreeDiceForever: boolean;
   downsizedTurnsLeft: number;
+  isBankrupt: boolean;
   dreamId: string | null;
   finance: PlayerFinance;
 }

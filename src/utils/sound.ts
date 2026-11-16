@@ -200,6 +200,19 @@ class SoundEffects {
     this.playTone(220, 0.18, 'sawtooth', 0.05, 0.1);
   }
 
+  public bankrupt(): void {
+    const notes: [number, number, number][] = [
+      [293.66, 0.18, 0],
+      [261.63, 0.18, 0.14],
+      [220.0, 0.22, 0.28],
+      [164.81, 0.48, 0.44],
+    ];
+    notes.forEach(([freq, dur, delay]) => {
+      this.playTone(freq, dur, 'sawtooth', 0.075, delay);
+      this.playTone(freq * 0.5, dur, 'triangle', 0.08, delay);
+    });
+  }
+
   public escapeFanfare(): void {
     const notes = [523.25, 659.25, 783.99, 1046.5, 1318.51, 1567.98];
     notes.forEach((freq, idx) => {

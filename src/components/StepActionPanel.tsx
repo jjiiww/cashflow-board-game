@@ -452,10 +452,17 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
     if (phase === 'ROLL_DICE') {
       if (!isMyTurn) {
         return (
-          <div className="text-xs text-slate-500 bg-slate-100 border border-slate-200 rounded-xl p-3">
-            {language === 'th'
-              ? `กำลังรอ ${currentPlayer?.name} ทอยลูกเต๋า...`
-              : `Waiting for ${currentPlayer?.name} to roll the dice...`}
+          <div className="space-y-2">
+            {localPlayer?.isBankrupt && (
+              <div className="text-xs font-semibold text-rose-800 bg-rose-50 border border-rose-300 rounded-xl p-3 leading-relaxed">
+                {t(language, 'bankruptBannerMsg')}
+              </div>
+            )}
+            <div className="text-xs text-slate-500 bg-slate-100 border border-slate-200 rounded-xl p-3">
+              {language === 'th'
+                ? `กำลังรอ ${currentPlayer?.name} ทอยลูกเต๋า...`
+                : `Waiting for ${currentPlayer?.name} to roll the dice...`}
+            </div>
           </div>
         );
       }
@@ -577,7 +584,7 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
           ? card.canSellRight
           : !isStock && card.kind !== 'stock_split' && card.kind !== 'cd';
       const sameTrackCount = roomState.players.filter(
-        (p) => p.track === (currentPlayer?.track || 'rat_race')
+        (p) => !p.isBankrupt && p.track === (currentPlayer?.track || 'rat_race')
       ).length;
       const parsedStartFee =
         auctionStartFee.trim() !== '' && Number.isFinite(Number(auctionStartFee))
@@ -785,7 +792,7 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
             </div>
           </div>
 
-          {!isSeller && isSameTrack && !hasPassed && !isHighest && (
+          {!isSeller && !localPlayer?.isBankrupt && isSameTrack && !hasPassed && !isHighest && (
             <div className="space-y-2">
               <div className="flex items-stretch gap-1.5 min-w-0">
                 <input
@@ -1176,9 +1183,12 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
       {!isAnimating && roomState.lastStepDelta && (() => {
         const delta = roomState.lastStepDelta;
         const isPenaltyTone =
+          roomState.logs[0]?.type === 'PLAYER_BANKRUPT' ||
           roomState.logs[0]?.type === 'FT_PENALTY' ||
           roomState.logs[0]?.type === 'DOODAD_PAID' ||
           roomState.logs[0]?.type === 'BOT_PAY_DOODAD' ||
+          roomState.logs[0]?.type === 'DOWNSIZED' ||
+          roomState.logs[0]?.type === 'BOT_DOWNSIZED' ||
           roomState.activeFastTrackSpace?.type === 'divorce' ||
           roomState.activeFastTrackSpace?.type === 'tax_audit' ||
           roomState.activeFastTrackSpace?.type === 'lawsuit' ||
@@ -1217,6 +1227,16 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
               <span className="text-violet-600 font-bold">
                 {language === 'th' ? 'รายได้จากทรัพย์สิน' : 'Passive'} {delta.passiveIncomeDelta > 0 ? '+' : ''}
                 {delta.passiveIncomeDelta.toLocaleString()} ฿/m
+              </span>
+            )}
+            {delta.totalExpensesDelta !== 0 && (
+              <span
+                className={
+                  delta.totalExpensesDelta > 0 ? 'text-rose-600 font-bold' : 'text-emerald-600 font-bold'
+                }
+              >
+                {language === 'th' ? 'รายจ่าย' : 'Expenses'} {delta.totalExpensesDelta > 0 ? '+' : ''}
+                {delta.totalExpensesDelta.toLocaleString()} ฿/m
               </span>
             )}
           </div>

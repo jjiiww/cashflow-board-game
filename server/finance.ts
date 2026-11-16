@@ -196,6 +196,158 @@ export class FinancialEngine {
     return { success: true, delta };
   }
 
+  public static getMaxBorrowable(finance: PlayerFinance): number {
+    return Math.floor(Math.max(0, finance.maxLoanLimit) / 1000) * 1000;
+  }
+
+  public static canCoverExpenseWithLoan(finance: PlayerFinance, amount: number): boolean {
+    if (finance.cash >= amount) return true;
+    const shortfall = amount - finance.cash;
+    const neededLoan = Math.ceil(shortfall / 1000) * 1000;
+    return neededLoan <= this.getMaxBorrowable(finance);
+  }
+
+  public static payExpenseOrBankrupt(
+    player: Player,
+    cost: number,
+    paidReason: BilingualText,
+    bankruptReason: BilingualText
+  ): {
+    bankrupt: boolean;
+    cashBefore: number;
+    loanAmt: number;
+    loanInterest: number;
+    maxLoanLimit: number;
+    delta: FinancialDelta;
+  } {
+    const before = this.snapshot(player.finance);
+    const cashBefore = player.finance.cash;
+    const maxLoanLimit = player.finance.maxLoanLimit;
+    const safeCost = Math.max(0, cost);
+    let loanAmt = 0;
+    let loanInterest = 0;
+
+    if (player.finance.cash < safeCost) {
+      const shortfall = safeCost - player.finance.cash;
+      const neededLoan = Math.ceil(shortfall / 1000) * 1000;
+      const maxBorrowable = this.getMaxBorrowable(player.finance);
+
+      if (neededLoan > maxBorrowable) {
+        player.isBankrupt = true;
+        player.finance.cash = 0;
+        const delta = this.buildDelta(before, player.finance, bankruptReason);
+        return {
+          bankrupt: true,
+          cashBefore,
+          loanAmt: 0,
+          loanInterest: 0,
+          maxLoanLimit,
+          delta,
+        };
+      }
+
+      loanAmt = neededLoan;
+      loanInterest = Math.round(loanAmt * 0.1);
+      player.finance.cash += loanAmt;
+      player.finance.bankLoans.push({
+        id: `loan_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        principal: loanAmt,
+        monthlyInterest: loanInterest,
+      });
+    }
+
+    player.finance.cash -= safeCost;
+    this.recalculate(player.finance, player.career);
+    const delta = this.buildDelta(before, player.finance, paidReason);
+    return {
+      bankrupt: false,
+      cashBefore,
+      loanAmt,
+      loanInterest,
+      maxLoanLimit,
+      delta,
+    };
+  }
+
+  public static payDownsizedExpense(player: Player): {
+    bankrupt: boolean;
+    penalty: number;
+    cashBefore: number;
+    loanAmt: number;
+    loanInterest: number;
+    maxLoanLimit: number;
+    delta: FinancialDelta;
+  } {
+    const before = this.snapshot(player.finance);
+    const cashBefore = player.finance.cash;
+    const maxLoanLimit = player.finance.maxLoanLimit;
+    const penalty = Math.max(0, player.finance.totalExpenses);
+    let loanAmt = 0;
+    let loanInterest = 0;
+
+    // 1. If cash on hand is insufficient, check if player can borrow enough within maxLoanLimit
+    if (player.finance.cash < penalty) {
+      const shortfall = penalty - player.finance.cash;
+      const neededLoan = Math.ceil(shortfall / 1000) * 1000;
+      const maxBorrowable = this.getMaxBorrowable(player.finance);
+
+      if (neededLoan > maxBorrowable) {
+        player.isBankrupt = true;
+        player.finance.cash = 0;
+        const delta = this.buildDelta(before, player.finance, {
+          th: `ล้มละลาย! ตกงานต้องจ่าย ${penalty.toLocaleString()} ฿ แต่เงินสดไม่พอและวงเงินกู้เต็มแล้ว`,
+          en: `Bankrupt! Downsized (${penalty.toLocaleString()} ฿ due) with insufficient cash and maxed-out loan limit`,
+        });
+        return {
+          bankrupt: true,
+          penalty,
+          cashBefore,
+          loanAmt: 0,
+          loanInterest: 0,
+          maxLoanLimit,
+          delta,
+        };
+      }
+
+      loanAmt = neededLoan;
+      loanInterest = Math.round(loanAmt * 0.1);
+      player.finance.cash += loanAmt;
+      player.finance.bankLoans.push({
+        id: `loan_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        principal: loanAmt,
+        monthlyInterest: loanInterest,
+      });
+    }
+
+    // 2. Deduct penalty from cash on hand
+    player.finance.cash -= penalty;
+
+    // 3. Recalculate so bank loan interest is added into bankLoanInterest & totalExpenses
+    this.recalculate(player.finance, player.career);
+
+    const reason: BilingualText =
+      loanAmt > 0
+        ? {
+            th: `ตกงาน! กู้ธนาคาร ${loanAmt.toLocaleString()} ฿ (ดอกเบี้ย +${loanInterest.toLocaleString()} ฿/ด.) แล้วจ่ายรายจ่ายรวม ${penalty.toLocaleString()} ฿`,
+            en: `Downsized! Borrowed ${loanAmt.toLocaleString()} ฿ (+${loanInterest.toLocaleString()} ฿/mo interest) and paid ${penalty.toLocaleString()} ฿ expenses`,
+          }
+        : {
+            th: `ตกงาน! จ่ายรายจ่ายรวม 1 เดือน (${penalty.toLocaleString()} ฿) และหยุดเล่น 2 ตา`,
+            en: `Downsized! Paid 1x Total Expenses (${penalty.toLocaleString()} ฿) and lose 2 turns`,
+          };
+
+    const delta = this.buildDelta(before, player.finance, reason);
+    return {
+      bankrupt: false,
+      penalty,
+      cashBefore,
+      loanAmt,
+      loanInterest,
+      maxLoanLimit,
+      delta,
+    };
+  }
+
   public static repayBankLoan(
     player: Player,
     amount: number

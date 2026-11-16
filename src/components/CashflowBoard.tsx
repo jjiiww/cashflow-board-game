@@ -1038,10 +1038,11 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
           {/* Player Pawns */}
           {roomState.players.map((p, idx) => {
             const coords = getPawnCoordinates(idx);
-            const isCurrent = idx === roomState.currentTurnIndex;
+            const isCurrent = idx === roomState.currentTurnIndex && !p.isBankrupt;
             return (
               <g
                 key={p.id}
+                opacity={p.isBankrupt ? 0.38 : 1}
                 style={{
                   transform: `translate(${coords.x}px, ${coords.y}px)`,
                   transition: 'transform 260ms cubic-bezier(0.22, 1, 0.36, 1)',
@@ -1054,6 +1055,15 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
                     stroke="#0f172a"
                     strokeWidth="3"
                     strokeDasharray="4 3"
+                  />
+                )}
+                {p.isBankrupt && (
+                  <circle
+                    r="20"
+                    fill="none"
+                    stroke="#e11d48"
+                    strokeWidth="2.5"
+                    strokeDasharray="3 2"
                   />
                 )}
                 <circle r="16" fill={p.color} stroke="#ffffff" strokeWidth="3" />

@@ -172,6 +172,7 @@ export class GameRoom {
       charityTurnsLeft: 0,
       hasThreeDiceForever: false,
       downsizedTurnsLeft: 0,
+      isBankrupt: false,
       dreamId: DREAM_OPTIONS[0].id,
       finance: FinancialEngine.createInitialFinance(career),
     };
@@ -209,6 +210,7 @@ export class GameRoom {
       charityTurnsLeft: 0,
       hasThreeDiceForever: false,
       downsizedTurnsLeft: 0,
+      isBankrupt: false,
       dreamId: randomDream.id,
       finance: FinancialEngine.createInitialFinance(career),
     };
@@ -508,7 +510,7 @@ export class GameRoom {
       player.finance.fastTrackCashFlowDay = ftIncome;
       player.finance.cash += ftIncome;
       const delta = FinancialEngine.buildDelta(before, player.finance, {
-        th: `หลุดพ้นจากสนามแข่งหนู! เข้าสู่เส้นทางเศรษฐี รับเงินวันรับกระแสเงินสด ${ftIncome.toLocaleString()} ฿`,
+        th: `หลุดจากสนามแข่งหนู! เข้าสู่เส้นทางเศรษฐี รับเงินวันรับกระแสเงินสด ${ftIncome.toLocaleString()} ฿`,
         en: `Escaped the Rat Race! Entered Fast Track with ${ftIncome.toLocaleString()} ฿ Cashflow Day!`,
       });
       this.addLog(
@@ -530,12 +532,36 @@ export class GameRoom {
     return false;
   }
 
+  private declareBankruptcy(
+    player: Player,
+    reason: BilingualText,
+    delta?: FinancialDelta | null
+  ): void {
+    player.isBankrupt = true;
+    player.finance.cash = 0;
+    this.addLog(
+      player,
+      'PLAYER_BANKRUPT',
+      {
+        th: `💥 ${player.name} ล้มละลาย! ${reason.th} — หมดสิทธิ์ทอยลูกเต่าต่อไป`,
+        en: `💥 ${player.name} declared Bankruptcy! ${reason.en} — Can no longer roll dice.`,
+      },
+      delta ?? null
+    );
+  }
+
   // ==================== HUMAN DICE & MOVEMENT ====================
 
   public rollDice(playerId: string, diceCount = 1): { success: boolean; error?: BilingualText } {
     const player = this.currentPlayer;
     if (player.id !== playerId || this.state.phase !== 'ROLL_DICE') {
       return { success: false, error: { th: 'ยังไม่ถึงตาของคุณในการทอยลูกเต๋า', en: 'Not your turn to roll.' } };
+    }
+    if (player.isBankrupt) {
+      return {
+        success: false,
+        error: { th: 'คุณล้มละลายแล้ว หมดสิทธิ์ทอยลูกเต่า', en: 'You are bankrupt and can no longer roll.' },
+      };
     }
 
     if (player.downsizedTurnsLeft > 0) {
@@ -598,6 +624,28 @@ export class GameRoom {
       if (paydaysPassed > 0) {
         const before = FinancialEngine.snapshot(player.finance);
         const amount = player.finance.monthlyCashFlow * paydaysPassed;
+        // Condition 2: Landed on / passed Payday with negative monthly cash flow exceeding cash on hand and max loan limit exhausted
+        if (player.finance.monthlyCashFlow < 0 && player.finance.cash + amount < 0 && player.finance.maxLoanLimit <= 0) {
+          const cashBefore = player.finance.cash;
+          player.finance.cash = 0;
+          const bankruptDelta = FinancialEngine.buildDelta(before, player.finance, {
+            th: `ล้มละลาย! รับเงินเดือนติดลบ (${amount.toLocaleString()} ฿) เกินเงินสดในมือและวงเงินกู้เต็มแล้ว`,
+            en: `Bankrupt! Negative Payday (${amount.toLocaleString()} ฿) exceeded cash on hand and loan limit`,
+          });
+          this.declareBankruptcy(
+            player,
+            {
+              th: `ตกช่อง "รับเงินเดือน" แต่เงินคงเหลือต่อเดือนติดลบ (${amount.toLocaleString()} ฿) มากกว่าเงินสดในมือ (${cashBefore.toLocaleString()} ฿) และกู้เพิ่มไม่ได้แล้ว`,
+              en: `Hit Payday with negative monthly cash flow (${amount.toLocaleString()} ฿) exceeding cash on hand (${cashBefore.toLocaleString()} ฿) and no remaining loan limit`,
+            },
+            bankruptDelta
+          );
+          if (!player.isBot) {
+            this.state.phase = 'TURN_COMPLETE';
+          }
+          return;
+        }
+
         player.finance.cash += amount;
         paydayDelta = FinancialEngine.buildDelta(before, player.finance, {
           th: `รับเงินเดือน (${paydaysPassed} ครั้ง) ${amount >= 0 ? '+' : ''}${amount.toLocaleString()} ฿`,
@@ -704,6 +752,28 @@ export class GameRoom {
           );
           this.state.phase = 'TURN_COMPLETE';
         } else {
+          const cost = this.getDoodadEffectiveCost(card, player);
+          if (cost > 0 && !FinancialEngine.canCoverExpenseWithLoan(player.finance, cost)) {
+            const before = FinancialEngine.snapshot(player.finance);
+            const cashBefore = player.finance.cash;
+            const maxLoan = player.finance.maxLoanLimit;
+            player.finance.cash = 0;
+            const delta = FinancialEngine.buildDelta(before, player.finance, {
+              th: `ล้มละลายจาก "${card.title.th}" (${cost.toLocaleString()} ฿)`,
+              en: `Bankrupt from "${card.title.en}" (${cost.toLocaleString()} ฿)`,
+            });
+            this.declareBankruptcy(
+              player,
+              {
+                th: `ตกช่อง "จ่ายซะ" (${card.title.th}: ${cost.toLocaleString()} ฿) แต่เงินสดมี ${cashBefore.toLocaleString()} ฿ และวงเงินกู้คงเหลือ ${maxLoan.toLocaleString()} ฿ ไม่พอจ่าย`,
+                en: `Landed on Doodad ("${card.title.en}": ${cost.toLocaleString()} ฿) with ${cashBefore.toLocaleString()} ฿ cash and ${maxLoan.toLocaleString()} ฿ loan limit`,
+              },
+              delta
+            );
+            this.state.phase = 'TURN_COMPLETE';
+            break;
+          }
+
           this.state.phase = 'DOODAD_PAY';
           this.addLog(
             player,
@@ -774,36 +844,36 @@ export class GameRoom {
         break;
       }
       case 'downsized': {
-        const before = FinancialEngine.snapshot(player.finance);
-        const penalty = player.finance.totalExpenses;
-        player.finance.cash -= penalty;
-        player.downsizedTurnsLeft = 2;
-        if (player.finance.cash < 0 && player.finance.maxLoanLimit > 0) {
-          const needed = Math.ceil(Math.abs(player.finance.cash) / 1000) * 1000;
-          const loanAmt = Math.min(needed, player.finance.maxLoanLimit);
-          if (loanAmt > 0) {
-            player.finance.cash += loanAmt;
-            player.finance.bankLoans.push({
-              id: `loan_${Date.now()}`,
-              principal: loanAmt,
-              monthlyInterest: Math.round(loanAmt * 0.1),
-            });
-            FinancialEngine.recalculate(player.finance, player.career);
-          }
+        const result = FinancialEngine.payDownsizedExpense(player);
+        if (result.bankrupt) {
+          this.declareBankruptcy(
+            player,
+            {
+              th: `ตกช่อง "ตกงาน" ต้องจ่ายรายจ่ายรวม ${result.penalty.toLocaleString()} ฿ แต่เงินสดมี ${result.cashBefore.toLocaleString()} ฿ และวงเงินกู้คงเหลือ ${result.maxLoanLimit.toLocaleString()} ฿ ไม่พอจ่าย`,
+              en: `Landed on Downsized (${result.penalty.toLocaleString()} ฿ due) with ${result.cashBefore.toLocaleString()} ฿ cash and ${result.maxLoanLimit.toLocaleString()} ฿ loan limit`,
+            },
+            result.delta
+          );
+        } else {
+          player.downsizedTurnsLeft = 2;
+          const loanNoteTh =
+            result.loanAmt > 0
+              ? ` (กู้ธนาคารเพิ่ม ${result.loanAmt.toLocaleString()} ฿ ดอกเบี้ย +${result.loanInterest.toLocaleString()} ฿/เดือน)`
+              : '';
+          const loanNoteEn =
+            result.loanAmt > 0
+              ? ` (borrowed ${result.loanAmt.toLocaleString()} ฿, +${result.loanInterest.toLocaleString()} ฿/mo interest)`
+              : '';
+          this.addLog(
+            player,
+            'DOWNSIZED',
+            {
+              th: `⚠️ ${player.name} ตกงาน! จ่ายค่าใช้จ่าย ${result.penalty.toLocaleString()} ฿${loanNoteTh} และพักการเดิน 2 ตา`,
+              en: `⚠️ ${player.name} was Downsized! Paid ${result.penalty.toLocaleString()} ฿${loanNoteEn} and skips 2 turns.`,
+            },
+            result.delta
+          );
         }
-        const delta = FinancialEngine.buildDelta(before, player.finance, {
-          th: `ตกงาน! จ่ายรายจ่ายรวม 1 เดือน (${penalty.toLocaleString()} ฿) และหยุดเล่น 2 ตา`,
-          en: `Downsized! Paid 1x Total Expenses (${penalty.toLocaleString()} ฿) and lose 2 turns.`,
-        });
-        this.addLog(
-          player,
-          'DOWNSIZED',
-          {
-            th: `⚠️ ${player.name} ตกงาน! จ่ายค่าใช้จ่าย ${penalty.toLocaleString()} ฿ และพักการเดิน 2 ตา`,
-            en: `⚠️ ${player.name} was Downsized! Paid ${penalty.toLocaleString()} ฿ and skips 2 turns.`,
-          },
-          delta
-        );
         this.state.phase = 'TURN_COMPLETE';
         break;
       }
@@ -1196,7 +1266,7 @@ export class GameRoom {
     const symEn = formatStockSymbol(card.symbol, 'en');
     const pending: typeof this.state.pendingStockSells = [];
     for (const p of this.state.players) {
-      if (p.id === activePlayer.id || p.track !== activePlayer.track) continue;
+      if (p.id === activePlayer.id || p.isBankrupt || p.track !== activePlayer.track) continue;
       const holding = p.finance.assets.find((a) => a.category === 'stock' && a.symbol === card.symbol);
       if (holding && (holding.shares || 0) > 0) {
         if (p.isBot) {
@@ -1312,7 +1382,7 @@ export class GameRoom {
       return { success: false };
     }
     const eligibleBidders = this.state.players.filter(
-      (p) => p.id !== player.id && p.track === player.track
+      (p) => p.id !== player.id && !p.isBankrupt && p.track === player.track
     );
     if (eligibleBidders.length < 1) {
       return {
@@ -1377,7 +1447,7 @@ export class GameRoom {
       placedAny = false;
       rounds++;
       for (const p of this.state.players) {
-        if (!p.isBot || p.id === auction.sellerId || p.track !== sellerTrack) continue;
+        if (!p.isBot || p.isBankrupt || p.id === auction.sellerId || p.track !== sellerTrack) continue;
         if (auction.passedPlayerIds.includes(p.id) || auction.highestBidderId === p.id) continue;
 
         const minNextBid = auction.highestBidderId
@@ -1427,10 +1497,17 @@ export class GameRoom {
 
     const bidder = this.state.players.find((p) => p.id === bidderId);
     const seller = this.state.players.find((p) => p.id === auction.sellerId);
-    if (!bidder || (seller && bidder.track !== seller.track)) {
+    if (!bidder || bidder.isBankrupt || (seller && bidder.track !== seller.track)) {
       return {
         success: false,
-        error: { th: 'ผู้เล่นวงนอกไม่สามารถเข้าร่วมประมูลการ์ดวงในได้', en: 'Players on another track cannot bid.' },
+        error: {
+          th: bidder?.isBankrupt
+            ? 'ผู้เล่นที่ล้มละลายแล้วไม่สามารถร่วมประมูลได้'
+            : 'ผู้เล่นวงนอกไม่สามารถเข้าร่วมประมูลการ์ดวงในได้',
+          en: bidder?.isBankrupt
+            ? 'Bankrupt players cannot bid.'
+            : 'Players on another track cannot bid.',
+        },
       };
     }
 
@@ -1504,7 +1581,7 @@ export class GameRoom {
     const seller = this.state.players.find((p) => p.id === auction.sellerId);
     const sellerTrack = seller?.track || 'rat_race';
     const eligibleBidders = this.state.players.filter(
-      (p) => p.id !== auction.sellerId && p.track === sellerTrack
+      (p) => p.id !== auction.sellerId && !p.isBankrupt && p.track === sellerTrack
     );
     const remainingActive = eligibleBidders.filter(
       (p) => !auction.passedPlayerIds.includes(p.id) && p.id !== auction.highestBidderId
@@ -1605,7 +1682,7 @@ export class GameRoom {
       let drawerDelta: FinancialDelta | null = null;
 
       for (const p of this.state.players) {
-        if (p.track !== drawer.track) continue;
+        if (p.isBankrupt || p.track !== drawer.track) continue;
         const matching = p.finance.assets.filter((a) => card.targetTags.includes(a.tag));
         if (matching.length === 0) continue;
 
@@ -1711,7 +1788,7 @@ export class GameRoom {
     const botSoldMessagesEn: string[] = [];
 
     for (const p of this.state.players) {
-      if (p.track !== drawer.track) continue;
+      if (p.isBankrupt || p.track !== drawer.track) continue;
       if (card.onlyDrawer && p.id !== drawer.id) continue;
 
       const matchingAssets = p.finance.assets.filter(
@@ -1914,6 +1991,27 @@ export class GameRoom {
     }
 
     if (player.finance.cash < cost) {
+      if (!FinancialEngine.canCoverExpenseWithLoan(player.finance, cost)) {
+        const before = FinancialEngine.snapshot(player.finance);
+        const cashBefore = player.finance.cash;
+        const maxLoan = player.finance.maxLoanLimit;
+        player.finance.cash = 0;
+        const delta = FinancialEngine.buildDelta(before, player.finance, {
+          th: `ล้มละลายจาก "${card.title.th}" (${cost.toLocaleString()} ฿)`,
+          en: `Bankrupt from "${card.title.en}" (${cost.toLocaleString()} ฿)`,
+        });
+        this.declareBankruptcy(
+          player,
+          {
+            th: `ต้องจ่าย "${card.title.th}" (${cost.toLocaleString()} ฿) แต่เงินสดมี ${cashBefore.toLocaleString()} ฿ และวงเงินกู้คงเหลือ ${maxLoan.toLocaleString()} ฿ ไม่พอจ่าย`,
+            en: `Owed ${cost.toLocaleString()} ฿ for "${card.title.en}" with ${cashBefore.toLocaleString()} ฿ cash and ${maxLoan.toLocaleString()} ฿ loan limit`,
+          },
+          delta
+        );
+        this.state.phase = 'TURN_COMPLETE';
+        return { success: true };
+      }
+
       return {
         success: false,
         error: {
@@ -2232,7 +2330,7 @@ export class GameRoom {
 
   public takeLoan(playerId: string, amount: number): { success: boolean; error?: BilingualText } {
     const player = this.state.players.find((p) => p.id === playerId);
-    if (!player) return { success: false };
+    if (!player || player.isBankrupt) return { success: false };
     const res = FinancialEngine.takeLoan(player, amount);
     if (res.success && res.delta) {
       this.addLog(
@@ -2250,7 +2348,7 @@ export class GameRoom {
 
   public repayBankLoan(playerId: string, amount: number): { success: boolean; error?: BilingualText } {
     const player = this.state.players.find((p) => p.id === playerId);
-    if (!player) return { success: false };
+    if (!player || player.isBankrupt) return { success: false };
     const res = FinancialEngine.repayBankLoan(player, amount);
     if (res.success && res.delta) {
       this.addLog(
@@ -2277,7 +2375,7 @@ export class GameRoom {
       | 'otherDebtBalance'
   ): { success: boolean; error?: BilingualText } {
     const player = this.state.players.find((p) => p.id === playerId);
-    if (!player) return { success: false };
+    if (!player || player.isBankrupt) return { success: false };
     const res = FinancialEngine.payOffLiability(player, key);
     if (res.success && res.delta) {
       this.addLog(
@@ -2341,7 +2439,7 @@ export class GameRoom {
       this.state.diceRollSeq += 1;
       const total = rolls.reduce((a, b) => a + b, 0);
       this.moveAndLand(bot, total, rolls);
-      this.state.botStepStage = 1;
+      this.state.botStepStage = bot.isBankrupt ? 3 : 1;
       return { success: true };
     }
 
@@ -2418,28 +2516,59 @@ export class GameRoom {
 
       if (card.deck === 'doodad') {
         const cost = this.getDoodadEffectiveCost(card as DoodadCard, bot);
-        const before = FinancialEngine.snapshot(bot.finance);
         if (cost > 0) {
-          if (bot.finance.cash < cost && bot.finance.maxLoanLimit > 0) {
-            const needed = Math.ceil((cost - bot.finance.cash) / 1000) * 1000;
-            const loanAmt = Math.min(needed, bot.finance.maxLoanLimit);
-            if (loanAmt > 0) FinancialEngine.takeLoan(bot, loanAmt);
+          const res = FinancialEngine.payExpenseOrBankrupt(
+            bot,
+            cost,
+            {
+              th: `${bot.name} จ่ายการ์ดจ่ายซะ (-${cost.toLocaleString()} ฿)`,
+              en: `${bot.name} paid Doodad (-${cost.toLocaleString()} ฿)`,
+            },
+            {
+              th: `ล้มละลายจาก "${card.title.th}" (${cost.toLocaleString()} ฿)`,
+              en: `Bankrupt from "${card.title.en}" (${cost.toLocaleString()} ฿)`,
+            }
+          );
+          if (res.bankrupt) {
+            this.declareBankruptcy(
+              bot,
+              {
+                th: `ตกช่อง "จ่ายซะ" (${card.title.th}: ${cost.toLocaleString()} ฿) แต่เงินสดมี ${res.cashBefore.toLocaleString()} ฿ และวงเงินกู้คงเหลือ ${res.maxLoanLimit.toLocaleString()} ฿ ไม่พอจ่าย`,
+                en: `Landed on Doodad ("${card.title.en}": ${cost.toLocaleString()} ฿) with ${res.cashBefore.toLocaleString()} ฿ cash and ${res.maxLoanLimit.toLocaleString()} ฿ loan limit`,
+              },
+              res.delta
+            );
+            this.state.botStepStage = 3;
+            return { success: true };
           }
-          bot.finance.cash -= cost;
+          const loanNoteTh =
+            res.loanAmt > 0
+              ? ` (กู้ธนาคารเพิ่ม ${res.loanAmt.toLocaleString()} ฿ ดอกเบี้ย +${res.loanInterest.toLocaleString()} ฿/ด.)`
+              : '';
+          const loanNoteEn =
+            res.loanAmt > 0
+              ? ` (borrowed ${res.loanAmt.toLocaleString()} ฿, +${res.loanInterest.toLocaleString()} ฿/mo interest)`
+              : '';
+          this.addLog(
+            bot,
+            'BOT_PAY_DOODAD',
+            {
+              th: `${bot.name} (Robot) จ่ายเงิน ${cost.toLocaleString()} ฿ สำหรับ "${card.title.th}"${loanNoteTh}`,
+              en: `${bot.name} (Robot) paid ${cost.toLocaleString()} ฿ for "${card.title.en}"${loanNoteEn}.`,
+            },
+            res.delta
+          );
+        } else {
+          this.addLog(
+            bot,
+            'BOT_PAY_DOODAD',
+            {
+              th: `${bot.name} (Robot) จ่ายเงิน 0 ฿ สำหรับ "${card.title.th}"`,
+              en: `${bot.name} (Robot) paid 0 ฿ for "${card.title.en}".`,
+            },
+            null
+          );
         }
-        const delta = FinancialEngine.buildDelta(before, bot.finance, {
-          th: `${bot.name} จ่ายการ์ดจ่ายซะ (-${cost.toLocaleString()} ฿)`,
-          en: `${bot.name} paid Doodad (-${cost.toLocaleString()} ฿)`,
-        });
-        this.addLog(
-          bot,
-          'BOT_PAY_DOODAD',
-          {
-            th: `${bot.name} (Robot) จ่ายเงิน ${cost.toLocaleString()} ฿ สำหรับ "${card.title.th}"`,
-            en: `${bot.name} (Robot) paid ${cost.toLocaleString()} ฿ for "${card.title.en}".`,
-          },
-          delta
-        );
         this.state.botStepStage = 3;
         return { success: true };
       }
@@ -2507,28 +2636,36 @@ export class GameRoom {
         );
       }
     } else if (spaceType === 'downsized') {
-      const before = FinancialEngine.snapshot(bot.finance);
-      const penalty = bot.finance.totalExpenses;
-      if (bot.finance.cash < penalty && bot.finance.maxLoanLimit > 0) {
-        const needed = Math.ceil((penalty - bot.finance.cash) / 1000) * 1000;
-        const loanAmt = Math.min(needed, bot.finance.maxLoanLimit);
-        if (loanAmt > 0) FinancialEngine.takeLoan(bot, loanAmt);
+      const result = FinancialEngine.payDownsizedExpense(bot);
+      if (result.bankrupt) {
+        this.declareBankruptcy(
+          bot,
+          {
+            th: `ตกช่อง "ตกงาน" ต้องจ่ายรายจ่ายรวม ${result.penalty.toLocaleString()} ฿ แต่เงินสดมี ${result.cashBefore.toLocaleString()} ฿ และวงเงินกู้คงเหลือ ${result.maxLoanLimit.toLocaleString()} ฿ ไม่พอจ่าย`,
+            en: `Landed on Downsized (${result.penalty.toLocaleString()} ฿ due) with ${result.cashBefore.toLocaleString()} ฿ cash and ${result.maxLoanLimit.toLocaleString()} ฿ loan limit`,
+          },
+          result.delta
+        );
+      } else {
+        bot.downsizedTurnsLeft = 2;
+        const loanNoteTh =
+          result.loanAmt > 0
+            ? ` (กู้ธนาคารเพิ่ม ${result.loanAmt.toLocaleString()} ฿ ดอกเบี้ย +${result.loanInterest.toLocaleString()} ฿/เดือน)`
+            : '';
+        const loanNoteEn =
+          result.loanAmt > 0
+            ? ` (borrowed ${result.loanAmt.toLocaleString()} ฿, +${result.loanInterest.toLocaleString()} ฿/mo interest)`
+            : '';
+        this.addLog(
+          bot,
+          'BOT_DOWNSIZED',
+          {
+            th: `⚠️ ${bot.name} (Robot) ตกงาน จ่าย ${result.penalty.toLocaleString()} ฿${loanNoteTh} และหยุดเดิน 2 ตา`,
+            en: `⚠️ ${bot.name} (Robot) Downsized! Paid ${result.penalty.toLocaleString()} ฿${loanNoteEn} and loses 2 turns.`,
+          },
+          result.delta
+        );
       }
-      bot.finance.cash -= penalty;
-      bot.downsizedTurnsLeft = 2;
-      const delta = FinancialEngine.buildDelta(before, bot.finance, {
-        th: `${bot.name} ตกงาน (-${penalty.toLocaleString()} ฿)`,
-        en: `${bot.name} Downsized (-${penalty.toLocaleString()} ฿)`,
-      });
-      this.addLog(
-        bot,
-        'BOT_DOWNSIZED',
-        {
-          th: `⚠️ ${bot.name} (Robot) ตกงาน จ่าย ${penalty.toLocaleString()} ฿ และหยุดเดิน 2 ตา`,
-          en: `⚠️ ${bot.name} (Robot) Downsized! Paid ${penalty.toLocaleString()} ฿ and loses 2 turns.`,
-        },
-        delta
-      );
     } else {
       this.addLog(
         bot,
@@ -2756,17 +2893,31 @@ export class GameRoom {
       const applies = this.doesDealExpenseApply(card, bot);
       if (applies) {
         const cost = card.cost;
-        const before = FinancialEngine.snapshot(bot.finance);
-        if (bot.finance.cash < cost && bot.finance.maxLoanLimit > 0) {
-          const needed = Math.ceil((cost - bot.finance.cash) / 1000) * 1000;
-          const loanAmt = Math.min(needed, bot.finance.maxLoanLimit);
-          if (loanAmt > 0) FinancialEngine.takeLoan(bot, loanAmt);
+        const res = FinancialEngine.payExpenseOrBankrupt(
+          bot,
+          cost,
+          {
+            th: `${bot.name} จ่ายค่า "${card.title.th}" (-${cost.toLocaleString()} ฿)`,
+            en: `${bot.name} paid "${card.title.en}" (-${cost.toLocaleString()} ฿)`,
+          },
+          {
+            th: `ล้มละลายจาก "${card.title.th}" (${cost.toLocaleString()} ฿)`,
+            en: `Bankrupt from "${card.title.en}" (${cost.toLocaleString()} ฿)`,
+          }
+        );
+        if (res.bankrupt) {
+          this.declareBankruptcy(
+            bot,
+            {
+              th: `ต้องจ่ายค่า "${card.title.th}" (${cost.toLocaleString()} ฿) แต่เงินสดมี ${res.cashBefore.toLocaleString()} ฿ และวงเงินกู้คงเหลือ ${res.maxLoanLimit.toLocaleString()} ฿ ไม่พอจ่าย`,
+              en: `Owed ${cost.toLocaleString()} ฿ for "${card.title.en}" with ${res.cashBefore.toLocaleString()} ฿ cash and ${res.maxLoanLimit.toLocaleString()} ฿ loan limit`,
+            },
+            res.delta
+          );
+          this.state.phase = 'BOT_THINKING';
+          this.state.botStepStage = 3;
+          return;
         }
-        bot.finance.cash -= cost;
-        const delta = FinancialEngine.buildDelta(before, bot.finance, {
-          th: `${bot.name} จ่ายค่า "${card.title.th}" (-${cost.toLocaleString()} ฿)`,
-          en: `${bot.name} paid "${card.title.en}" (-${cost.toLocaleString()} ฿)`,
-        });
         this.addLog(
           bot,
           'BOT_DEAL_EXPENSE',
@@ -2774,7 +2925,7 @@ export class GameRoom {
             th: `${bot.name} (Robot) จ่ายเงิน ${cost.toLocaleString()} ฿ สำหรับ "${card.title.th}"`,
             en: `${bot.name} (Robot) paid ${cost.toLocaleString()} ฿ for "${card.title.en}".`,
           },
-          delta
+          res.delta
         );
       } else {
         this.addLog(
@@ -2957,10 +3108,33 @@ export class GameRoom {
     this.state.pendingStockSells = [];
     this.state.lastStepDelta = null;
 
-    this.state.currentTurnIndex = (this.state.currentTurnIndex + 1) % this.state.players.length;
-    if (this.state.currentTurnIndex === 0) {
+    const activePlayers = this.state.players.filter((p) => !p.isBankrupt);
+    if (activePlayers.length === 0) {
+      this.state.phase = 'GAME_OVER';
+      this.state.winnerId = null;
+      this.state.winReason = {
+        th: 'ผู้เล่นทุกคนล้มละลายหมดแล้ว จบการแข่งขัน',
+        en: 'All players went bankrupt. Game Over!',
+      };
+      this.emitChange();
+      return;
+    }
+
+    const total = this.state.players.length;
+    const prevIndex = this.state.currentTurnIndex;
+    let nextIndex = prevIndex;
+    for (let offset = 1; offset <= total; offset++) {
+      const candidate = (prevIndex + offset) % total;
+      if (!this.state.players[candidate].isBankrupt) {
+        nextIndex = candidate;
+        break;
+      }
+    }
+
+    if (nextIndex <= prevIndex) {
       this.state.turnCount += 1;
     }
+    this.state.currentTurnIndex = nextIndex;
 
     const next = this.currentPlayer;
     if (next.isBot) {
