@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { AlertTriangle, Ban, Crown, Rocket, Sparkles } from 'lucide-react';
+import { AlertTriangle, Ban, Crown, Rocket, Sparkles, Trophy } from 'lucide-react';
 import { GameLogEntry, Language, Player } from '../../shared/types';
 import { t } from '../i18n';
 import { PlayerAvatar } from './PlayerAvatar';
@@ -246,5 +246,87 @@ export const BankruptcyAnnouncementModal: React.FC<BankruptcyAnnouncementModalPr
         </button>
       </div>
     </div>
+  );
+};
+
+interface FastTrackWinnerModalProps {
+  log: GameLogEntry;
+  player?: Player;
+  language: Language;
+  onDismiss: () => void;
+}
+
+export const FastTrackWinnerModal: React.FC<FastTrackWinnerModalProps> = ({
+  log,
+  player,
+  language,
+  onDismiss,
+}) => {
+  return (
+    <>
+      <ConfettiBurst variant="victory" />
+      <div className="fixed inset-0 z-50 bg-slate-900/55 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="animate-celebrate-pop max-w-lg w-full bg-white border-4 border-amber-400 rounded-3xl p-7 text-center space-y-4 shadow-2xl relative overflow-hidden">
+          <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-amber-200/45 blur-xl pointer-events-none" />
+          <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-orange-200/45 blur-xl pointer-events-none" />
+
+          <div className="relative flex items-center justify-center gap-3">
+            <span className="w-12 h-12 rounded-2xl bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-600 shadow-xs">
+              <Trophy className="w-6 h-6" />
+            </span>
+            {player && (
+              <PlayerAvatar
+                avatarId={player.avatarId}
+                color={player.color}
+                isBot={player.isBot}
+                isActiveTurn
+                size="lg"
+              />
+            )}
+            <span className="w-12 h-12 rounded-2xl bg-orange-100 border border-orange-300 flex items-center justify-center text-orange-600 shadow-xs">
+              <Crown className="w-6 h-6" />
+            </span>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-50 border border-amber-300 text-amber-800 text-xs font-bold">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>
+                {t(language, 'winnerPopupSub')}
+                {player?.winRank ? ` (#${player.winRank})` : ''}
+              </span>
+            </div>
+            <h2 className="font-display text-lg sm:text-xl font-extrabold text-slate-900 leading-snug">
+              {t(language, 'winnerPopupTitle')}
+            </h2>
+            <p className="text-sm font-bold text-amber-700">
+              {player?.name || log.actorName}
+              {player?.career && (
+                <span className="font-semibold text-slate-600">
+                  {' · '}
+                  {language === 'th' ? `อาชีพ: ${player.career.name.th}` : player.career.name.en}
+                </span>
+              )}
+            </p>
+          </div>
+
+          <p className="text-xs sm:text-sm text-amber-950 bg-amber-50 border border-amber-200 rounded-xl p-3 leading-relaxed font-medium">
+            {log.message[language]}
+          </p>
+
+          <p className="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 leading-relaxed">
+            {t(language, 'winnerPopupNote')}
+          </p>
+
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="w-full py-3 px-5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm transition-colors shadow-sm cursor-pointer"
+          >
+            {t(language, 'winnerPopupBtn')}
+          </button>
+        </div>
+      </div>
+    </>
   );
 };

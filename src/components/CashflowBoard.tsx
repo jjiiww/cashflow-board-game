@@ -1061,7 +1061,7 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
           {/* Player Pawns */}
           {roomState.players.map((p, idx) => {
             const coords = getPawnCoordinates(idx);
-            const isCurrent = idx === roomState.currentTurnIndex && !p.isBankrupt;
+            const isCurrent = idx === roomState.currentTurnIndex && !p.isBankrupt && !p.hasWon;
             return (
               <g
                 key={p.id}
@@ -1078,6 +1078,14 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
                     stroke="#0f172a"
                     strokeWidth="3"
                     strokeDasharray="4 3"
+                  />
+                )}
+                {p.hasWon && (
+                  <circle
+                    r="21"
+                    fill="none"
+                    stroke="#f59e0b"
+                    strokeWidth="3.5"
                   />
                 )}
                 {p.isBankrupt && (

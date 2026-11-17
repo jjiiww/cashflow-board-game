@@ -179,6 +179,7 @@ export class GameRoom {
       hasThreeDiceForever: false,
       downsizedTurnsLeft: 0,
       isBankrupt: false,
+      hasWon: false,
       dreamId: DREAM_OPTIONS[0].id,
       finance: FinancialEngine.createInitialFinance(career),
     };
@@ -217,6 +218,7 @@ export class GameRoom {
       hasThreeDiceForever: false,
       downsizedTurnsLeft: 0,
       isBankrupt: false,
+      hasWon: false,
       dreamId: randomDream.id,
       finance: FinancialEngine.createInitialFinance(career),
     };
@@ -267,7 +269,7 @@ export class GameRoom {
 
     this.state.players.splice(targetIdx, 1);
 
-    if (this.state.players.length === 0 || this.state.players.every((p) => p.isBankrupt)) {
+    if (this.state.players.length === 0 || this.state.players.every((p) => p.isBankrupt || p.hasWon)) {
       this.state.activeCard = null;
       this.state.activeFastTrackSpace = null;
       this.state.auction = null;
@@ -277,11 +279,13 @@ export class GameRoom {
       this.state.botStepStage = 0;
       this.state.currentTurnIndex = 0;
       this.state.phase = 'GAME_OVER';
-      this.state.winnerId = null;
-      this.state.winReason = {
-        th: 'ไม่มีผู้เล่นที่สามารถเล่นต่อได้ จบการแข่งขัน',
-        en: 'No active players remaining. Game Over!',
-      };
+      if (!this.state.winnerId) {
+        this.state.winnerId = null;
+        this.state.winReason = {
+          th: 'ไม่มีผู้เล่นที่สามารถเล่นต่อได้ จบการแข่งขัน',
+          en: 'No active players remaining. Game Over!',
+        };
+      }
       this.addLog(
         target,
         'PLAYER_KICKED',
@@ -309,7 +313,8 @@ export class GameRoom {
       let nextIndex = startIdx;
       for (let offset = 0; offset < total; offset++) {
         const candidate = (startIdx + offset) % total;
-        if (!this.state.players[candidate].isBankrupt) {
+        const cand = this.state.players[candidate];
+        if (!cand.isBankrupt && !cand.hasWon) {
           nextIndex = candidate;
           break;
         }
@@ -716,6 +721,34 @@ export class GameRoom {
     );
   }
 
+  private markPlayerWon(
+    player: Player,
+    winType: 'WIN_DREAM' | 'WIN_CASHFLOW',
+    reason: BilingualText,
+    delta?: FinancialDelta | null
+  ): boolean {
+    player.hasWon = true;
+    const rank = this.state.players.filter((p) => p.hasWon).length;
+    player.winRank = rank;
+    player.winReason = reason;
+
+    if (!this.state.winnerId) {
+      this.state.winnerId = player.id;
+      this.state.winReason = reason;
+    }
+
+    const remainingActive = this.state.players.filter((p) => !p.isBankrupt && !p.hasWon);
+    const allFinished = remainingActive.length === 0;
+    if (allFinished) {
+      this.state.phase = 'GAME_OVER';
+    } else if (!player.isBot) {
+      this.state.phase = 'TURN_COMPLETE';
+    }
+
+    this.addLog(player, winType, reason, delta);
+    return allFinished;
+  }
+
   // ==================== HUMAN DICE & MOVEMENT ====================
 
   public rollDice(playerId: string, diceCount = 1): { success: boolean; error?: BilingualText } {
@@ -727,6 +760,12 @@ export class GameRoom {
       return {
         success: false,
         error: { th: 'คุณล้มละลายแล้ว หมดสิทธิ์ทอยลูกเต่า', en: 'You are bankrupt and can no longer roll.' },
+      };
+    }
+    if (player.hasWon) {
+      return {
+        success: false,
+        error: { th: 'คุณชนะเกมแล้ว หมดสิทธิ์ทอยลูกเต๋าต่อ', en: 'You have already won and can no longer roll.' },
       };
     }
 
@@ -1127,7 +1166,7 @@ export class GameRoom {
     if (card.kind !== 'stock' || !card.symbol) return;
 
     for (const p of this.state.players) {
-      if (p.id === activePlayer.id || p.isBankrupt || p.track !== activePlayer.track) continue;
+      if (p.id === activePlayer.id || p.isBankrupt || p.hasWon || p.track !== activePlayer.track) continue;
       if (p.isBot) continue;
       const holding = p.finance.assets.find((a) => a.category === 'stock' && a.symbol === card.symbol);
       if (holding && (holding.shares || 0) > 0) {
@@ -1400,7 +1439,7 @@ export class GameRoom {
     }
 
     const player = this.state.players.find((p) => p.id === playerId);
-    if (!player || player.isBankrupt) return { success: false };
+    if (!player || player.isBankrupt || player.hasWon) return { success: false };
 
     const symEn = formatStockSymbol(card.symbol, 'en');
     const holding = player.finance.assets.find((a) => a.category === 'stock' && a.symbol === card.symbol);
@@ -1473,7 +1512,7 @@ export class GameRoom {
     // Process any OTHER bot holders of this stock, then ask any remaining unresponded human holders
     const symEn = formatStockSymbol(card.symbol, 'en');
     for (const p of this.state.players) {
-      if (p.id === activePlayer.id || p.isBankrupt || p.track !== activePlayer.track || !p.isBot) continue;
+      if (p.id === activePlayer.id || p.isBankrupt || p.hasWon || p.track !== activePlayer.track || !p.isBot) continue;
       const holding = p.finance.assets.find((a) => a.category === 'stock' && a.symbol === card.symbol);
       if (holding && (holding.shares || 0) > 0) {
         // Bot sells if price >= 250 or >= 1.5x avg cost
@@ -1581,7 +1620,7 @@ export class GameRoom {
       return { success: false };
     }
     const eligibleBidders = this.state.players.filter(
-      (p) => p.id !== player.id && !p.isBankrupt && p.track === player.track
+      (p) => p.id !== player.id && !p.isBankrupt && !p.hasWon && p.track === player.track
     );
     if (eligibleBidders.length < 1) {
       return {
@@ -1646,7 +1685,7 @@ export class GameRoom {
       placedAny = false;
       rounds++;
       for (const p of this.state.players) {
-        if (!p.isBot || p.isBankrupt || p.id === auction.sellerId || p.track !== sellerTrack) continue;
+        if (!p.isBot || p.isBankrupt || p.hasWon || p.id === auction.sellerId || p.track !== sellerTrack) continue;
         if (auction.passedPlayerIds.includes(p.id) || auction.highestBidderId === p.id) continue;
 
         const minNextBid = auction.highestBidderId
@@ -1704,15 +1743,19 @@ export class GameRoom {
 
     const bidder = this.state.players.find((p) => p.id === bidderId);
     const seller = this.state.players.find((p) => p.id === auction.sellerId);
-    if (!bidder || bidder.isBankrupt || (seller && bidder.track !== seller.track)) {
+    if (!bidder || bidder.isBankrupt || bidder.hasWon || (seller && bidder.track !== seller.track)) {
       return {
         success: false,
         error: {
           th: bidder?.isBankrupt
             ? 'ผู้เล่นที่ล้มละลายแล้วไม่สามารถร่วมประมูลได้'
+            : bidder?.hasWon
+            ? 'ผู้เล่นที่ชนะเกมแล้วไม่สามารถร่วมประมูลได้'
             : 'ผู้เล่นวงนอกไม่สามารถเข้าร่วมประมูลการ์ดวงในได้',
           en: bidder?.isBankrupt
             ? 'Bankrupt players cannot bid.'
+            : bidder?.hasWon
+            ? 'Winners cannot bid.'
             : 'Players on another track cannot bid.',
         },
       };
@@ -1788,7 +1831,7 @@ export class GameRoom {
     const seller = this.state.players.find((p) => p.id === auction.sellerId);
     const sellerTrack = seller?.track || 'rat_race';
     const eligibleBidders = this.state.players.filter(
-      (p) => p.id !== auction.sellerId && !p.isBankrupt && p.track === sellerTrack
+      (p) => p.id !== auction.sellerId && !p.isBankrupt && !p.hasWon && p.track === sellerTrack
     );
     const remainingActive = eligibleBidders.filter(
       (p) => !auction.passedPlayerIds.includes(p.id) && p.id !== auction.highestBidderId
@@ -1906,7 +1949,7 @@ export class GameRoom {
       let drawerDelta: FinancialDelta | null = null;
 
       for (const p of this.state.players) {
-        if (p.isBankrupt || p.track !== drawer.track) continue;
+        if (p.isBankrupt || p.hasWon || p.track !== drawer.track) continue;
         const matching = p.finance.assets.filter((a) => card.targetTags.includes(a.tag));
         if (matching.length === 0) continue;
 
@@ -2012,7 +2055,7 @@ export class GameRoom {
     const botSoldMessagesEn: string[] = [];
 
     for (const p of this.state.players) {
-      if (p.isBankrupt || p.track !== drawer.track) continue;
+      if (p.isBankrupt || p.hasWon || p.track !== drawer.track) continue;
       if (card.onlyDrawer && p.id !== drawer.id) continue;
 
       const matchingAssets = p.finance.assets.filter(
@@ -2367,13 +2410,11 @@ export class GameRoom {
           th: `ซื้อความฝันสำเร็จ: ${space.label.th}!`,
           en: `Purchased your Dream: ${space.label.en}!`,
         });
-        this.state.winnerId = player.id;
-        this.state.winReason = {
+        const winMsg: BilingualText = {
           th: `${player.name} ซื้อความฝัน "${space.label.th}" สำเร็จและชนะเกม Cashflow!`,
           en: `${player.name} purchased their Dream "${space.label.en}" and won Cashflow!`,
         };
-        this.state.phase = 'GAME_OVER';
-        this.addLog(player, 'WIN_DREAM', this.state.winReason, delta);
+        this.markPlayerWon(player, 'WIN_DREAM', winMsg, delta);
         return { success: true };
       }
 
@@ -2432,13 +2473,11 @@ export class GameRoom {
       });
 
       if (player.finance.fastTrackAddedCashFlow >= FAST_TRACK_WIN_CASHFLOW_TARGET) {
-        this.state.winnerId = player.id;
-        this.state.winReason = {
+        const winMsg: BilingualText = {
           th: `${player.name} สร้างกระแสเงินสดวงนอกเพิ่มครบ ${FAST_TRACK_WIN_CASHFLOW_TARGET.toLocaleString()} ฿/เดือน และชนะเกม!`,
           en: `${player.name} added ${FAST_TRACK_WIN_CASHFLOW_TARGET.toLocaleString()} ฿/mo Fast Track cashflow and won the game!`,
         };
-        this.state.phase = 'GAME_OVER';
-        this.addLog(player, 'WIN_CASHFLOW', this.state.winReason, delta);
+        this.markPlayerWon(player, 'WIN_CASHFLOW', winMsg, delta);
       } else {
         this.addLog(
           player,
@@ -2484,13 +2523,11 @@ export class GameRoom {
       });
 
       if (player.finance.fastTrackAddedCashFlow >= FAST_TRACK_WIN_CASHFLOW_TARGET) {
-        this.state.winnerId = player.id;
-        this.state.winReason = {
+        const winMsg: BilingualText = {
           th: `${player.name} ทอยได้ ${roll} ทำกำไรวงนอกครบ ${FAST_TRACK_WIN_CASHFLOW_TARGET.toLocaleString()} ฿/เดือน ชนะเกม!`,
           en: `${player.name} rolled ${roll} to reach ${FAST_TRACK_WIN_CASHFLOW_TARGET.toLocaleString()} ฿/mo Fast Track cashflow and won!`,
         };
-        this.state.phase = 'GAME_OVER';
-        this.addLog(player, 'WIN_CASHFLOW', this.state.winReason, delta);
+        this.markPlayerWon(player, 'WIN_CASHFLOW', winMsg, delta);
       } else {
         this.addLog(
           player,
@@ -2556,7 +2593,7 @@ export class GameRoom {
 
   public takeLoan(playerId: string, amount: number): { success: boolean; error?: BilingualText } {
     const player = this.state.players.find((p) => p.id === playerId);
-    if (!player || player.isBankrupt) return { success: false };
+    if (!player || player.isBankrupt || player.hasWon) return { success: false };
     const res = FinancialEngine.takeLoan(player, amount);
     if (res.success && res.delta) {
       this.addLog(
@@ -2574,7 +2611,7 @@ export class GameRoom {
 
   public repayBankLoan(playerId: string, amount: number): { success: boolean; error?: BilingualText } {
     const player = this.state.players.find((p) => p.id === playerId);
-    if (!player || player.isBankrupt) return { success: false };
+    if (!player || player.isBankrupt || player.hasWon) return { success: false };
     const res = FinancialEngine.repayBankLoan(player, amount);
     if (res.success && res.delta) {
       this.addLog(
@@ -2601,7 +2638,7 @@ export class GameRoom {
       | 'otherDebtBalance'
   ): { success: boolean; error?: BilingualText } {
     const player = this.state.players.find((p) => p.id === playerId);
-    if (!player || player.isBankrupt) return { success: false };
+    if (!player || player.isBankrupt || player.hasWon) return { success: false };
     const res = FinancialEngine.payOffLiability(player, key);
     if (res.success && res.delta) {
       this.addLog(
@@ -2634,6 +2671,10 @@ export class GameRoom {
 
     // Stage 0: Roll dice & move
     if (this.state.botStepStage === 0) {
+      if (bot.isBankrupt || bot.hasWon) {
+        this.advanceToNextPlayer();
+        return { success: true };
+      }
       if (bot.downsizedTurnsLeft > 0) {
         bot.downsizedTurnsLeft -= 1;
         this.addLog(
@@ -2733,7 +2774,7 @@ export class GameRoom {
         const space = FAST_TRACK_SPACES[bot.position];
         this.state.activeFastTrackSpace = space;
         this.executeBotFastTrackEffect(bot, space);
-        if (!this.state.winnerId) {
+        if (this.state.players.some((p) => !p.isBankrupt && !p.hasWon)) {
           this.state.botStepStage = 3;
         }
       }
@@ -2938,13 +2979,11 @@ export class GameRoom {
         th: `${bot.name} ซื้อความฝันชนะเกม!`,
         en: `${bot.name} bought Dream and won!`,
       });
-      this.state.winnerId = bot.id;
-      this.state.winReason = {
+      const winMsg: BilingualText = {
         th: `${bot.name} ซื้อความฝัน "${space.label.th}" สำเร็จและชนะเกม!`,
         en: `${bot.name} bought Dream "${space.label.en}" and won!`,
       };
-      this.state.phase = 'GAME_OVER';
-      this.addLog(bot, 'WIN_DREAM', this.state.winReason, delta);
+      this.markPlayerWon(bot, 'WIN_DREAM', winMsg, delta);
       return;
     }
 
@@ -2985,13 +3024,11 @@ export class GameRoom {
         en: `${bot.name} bought Fast Track Business (+${cf.toLocaleString()} ฿/mo)`,
       });
       if (bot.finance.fastTrackAddedCashFlow >= FAST_TRACK_WIN_CASHFLOW_TARGET) {
-        this.state.winnerId = bot.id;
-        this.state.winReason = {
+        const winMsg: BilingualText = {
           th: `${bot.name} ทำกำไรวงนอกครบ ${FAST_TRACK_WIN_CASHFLOW_TARGET.toLocaleString()} ฿/เดือน ชนะเกม!`,
           en: `${bot.name} reached ${FAST_TRACK_WIN_CASHFLOW_TARGET.toLocaleString()} ฿/mo added cashflow and won!`,
         };
-        this.state.phase = 'GAME_OVER';
-        this.addLog(bot, 'WIN_CASHFLOW', this.state.winReason, delta);
+        this.markPlayerWon(bot, 'WIN_CASHFLOW', winMsg, delta);
       } else {
         this.addLog(
           bot,
@@ -3028,13 +3065,11 @@ export class GameRoom {
         en: `${bot.name} invested "${space.label.en}", rolled ${roll}`,
       });
       if (bot.finance.fastTrackAddedCashFlow >= FAST_TRACK_WIN_CASHFLOW_TARGET) {
-        this.state.winnerId = bot.id;
-        this.state.winReason = {
+        const winMsg: BilingualText = {
           th: `${bot.name} ทอยได้ ${roll} ทำกำไรวงนอกครบ ${FAST_TRACK_WIN_CASHFLOW_TARGET.toLocaleString()} ฿/เดือน ชนะเกม!`,
           en: `${bot.name} rolled ${roll} to reach ${FAST_TRACK_WIN_CASHFLOW_TARGET.toLocaleString()} ฿/mo cashflow and won!`,
         };
-        this.state.phase = 'GAME_OVER';
-        this.addLog(bot, 'WIN_CASHFLOW', this.state.winReason, delta);
+        this.markPlayerWon(bot, 'WIN_CASHFLOW', winMsg, delta);
       } else {
         this.addLog(
           bot,
@@ -3163,7 +3198,7 @@ export class GameRoom {
   }
 
   private manageBotFinances(bot: Player): void {
-    if (!bot.isBot || bot.isBankrupt || bot.track !== 'rat_race') return;
+    if (!bot.isBot || bot.isBankrupt || bot.hasWon || bot.track !== 'rat_race') return;
 
     // 1. Repay 10%/mo Bank Loans first (120% APR) when it triggers escape or excess cash builds up
     const totalBankPrincipal = bot.finance.bankLoans.reduce((s, l) => s + l.principal, 0);
@@ -3589,14 +3624,15 @@ export class GameRoom {
     this.state.pendingStockSells = [];
     this.state.lastStepDelta = null;
 
-    const activePlayers = this.state.players.filter((p) => !p.isBankrupt);
+    const activePlayers = this.state.players.filter((p) => !p.isBankrupt && !p.hasWon);
     if (activePlayers.length === 0) {
       this.state.phase = 'GAME_OVER';
-      this.state.winnerId = null;
-      this.state.winReason = {
-        th: 'ผู้เล่นทุกคนล้มละลายหมดแล้ว จบการแข่งขัน',
-        en: 'All players went bankrupt. Game Over!',
-      };
+      if (!this.state.winnerId) {
+        this.state.winReason = {
+          th: 'ผู้เล่นทุกคนล้มละลายหมดแล้ว จบการแข่งขัน',
+          en: 'All players went bankrupt. Game Over!',
+        };
+      }
       this.emitChange();
       return;
     }
@@ -3606,7 +3642,8 @@ export class GameRoom {
     let nextIndex = prevIndex;
     for (let offset = 1; offset <= total; offset++) {
       const candidate = (prevIndex + offset) % total;
-      if (!this.state.players[candidate].isBankrupt) {
+      const cand = this.state.players[candidate];
+      if (!cand.isBankrupt && !cand.hasWon) {
         nextIndex = candidate;
         break;
       }

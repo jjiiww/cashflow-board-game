@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Dices,
   ArrowRight,
@@ -20,6 +20,23 @@ import {
 } from '../../shared/types';
 import { t } from '../i18n';
 import { ActivityLogPanel } from './ActivityLogPanel';
+import { ResizeHandle } from './ResizeHandle';
+
+const DEFAULT_ADMIN_SPLIT_PCT = 56;
+const MIN_ADMIN_SPLIT_PCT = 25;
+const MAX_ADMIN_SPLIT_PCT = 78;
+
+function readStoredSplitPct(key: string, fallback: number, min: number, max: number): number {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) return fallback;
+    return Math.min(max, Math.max(min, parsed));
+  } catch {
+    return fallback;
+  }
+}
 
 interface StepActionPanelProps {
   layoutMode?: 'sidebar' | 'adminBottom';
@@ -76,6 +93,42 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
   const [auctionStartFee, setAuctionStartFee] = useState('1000');
   const [bidAmount, setBidAmount] = useState('1000');
   const [selectedMarketIds, setSelectedMarketIds] = useState<string[]>([]);
+  const [adminSplitPct, setAdminSplitPct] = useState<number>(() =>
+    readStoredSplitPct(
+      'cashflow_admin_bottom_split_pct',
+      DEFAULT_ADMIN_SPLIT_PCT,
+      MIN_ADMIN_SPLIT_PCT,
+      MAX_ADMIN_SPLIT_PCT
+    )
+  );
+  const [adminContainerWidth, setAdminContainerWidth] = useState<number>(800);
+  const adminBottomRef = useRef<HTMLElement | null>(null);
+  const dragStartSplitPctRef = useRef<number>(DEFAULT_ADMIN_SPLIT_PCT);
+
+  const isAdminBottom = layoutMode === 'adminBottom';
+  const isAdminSideBySide = isAdminBottom && adminContainerWidth >= 460;
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('cashflow_admin_bottom_split_pct', String(adminSplitPct));
+    } catch {
+      // ignore storage quota errors
+    }
+  }, [adminSplitPct]);
+
+  useEffect(() => {
+    if (!isAdminBottom) return;
+    const el = adminBottomRef.current;
+    if (!el) return;
+    setAdminContainerWidth(el.clientWidth);
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setAdminContainerWidth(entry.contentRect.width);
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [isAdminBottom]);
 
   const currentPlayer = roomState.players[roomState.currentTurnIndex];
   const localPlayer = roomState.players.find((p) => p.id === localPlayerId);
@@ -457,9 +510,14 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
 
     // 2. Roll Dice
     if (phase === 'ROLL_DICE') {
-      if (!isMyTurn) {
+      if (!isMyTurn || localPlayer?.hasWon || localPlayer?.isBankrupt) {
         return (
           <div className="space-y-2">
+            {localPlayer?.hasWon && (
+              <div className="text-xs font-semibold text-amber-900 bg-amber-50 border border-amber-300 rounded-xl p-3 leading-relaxed">
+                {t(language, 'winnerRetiredBannerMsg')}
+              </div>
+            )}
             {localPlayer?.isBankrupt && (
               <div className="text-xs font-semibold text-rose-800 bg-rose-50 border border-rose-300 rounded-xl p-3 leading-relaxed">
                 {t(language, 'bankruptBannerMsg')}
@@ -591,7 +649,7 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
           ? card.canSellRight
           : !isStock && card.kind !== 'stock_split' && card.kind !== 'cd';
       const sameTrackCount = roomState.players.filter(
-        (p) => !p.isBankrupt && p.track === (currentPlayer?.track || 'rat_race')
+        (p) => !p.isBankrupt && !p.hasWon && p.track === (currentPlayer?.track || 'rat_race')
       ).length;
       const parsedStartFee =
         auctionStartFee.trim() !== '' && Number.isFinite(Number(auctionStartFee))
@@ -781,7 +839,7 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
             </div>
           </div>
 
-          {!isSeller && !localPlayer?.isBankrupt && isSameTrack && !hasPassed && !isHighest && (
+          {!isSeller && !localPlayer?.isBankrupt && !localPlayer?.hasWon && isSameTrack && !hasPassed && !isHighest && (
             <div className="space-y-2">
               <div className="flex items-stretch gap-1.5 min-w-0">
                 <input
@@ -1138,13 +1196,14 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
     return null;
   };
 
-  const isAdminBottom = layoutMode === 'adminBottom';
-
   const narrationZone = (
     <div
+      style={isAdminSideBySide ? { width: `${adminSplitPct}%` } : undefined}
       className={
         isAdminBottom
-          ? 'p-3 space-y-2.5 @[460px]:overflow-y-auto @[460px]:h-full'
+          ? isAdminSideBySide
+            ? 'p-3 space-y-2.5 h-full shrink-0 min-w-0 overflow-y-auto'
+            : 'p-3 space-y-2.5 shrink-0'
           : 'flex-1 min-h-0 p-3.5 space-y-3 overflow-y-auto'
       }
     >
@@ -1264,15 +1323,51 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
   );
 
   if (isAdminBottom) {
+    const resizeHint =
+      language === 'th'
+        ? 'ลากเพื่อปรับขนาด · ดับเบิลคลิกเพื่อรีเซ็ต'
+        : 'Drag to resize · Double-click to reset';
+
     return (
-      <aside className="@container h-full bg-white overflow-hidden">
-        <div className="h-full grid grid-cols-1 @[460px]:grid-cols-[1.25fr_0.95fr] overflow-y-auto @[460px]:overflow-hidden">
+      <aside ref={adminBottomRef} className="h-full bg-white overflow-hidden">
+        <div
+          className={
+            isAdminSideBySide
+              ? 'h-full flex flex-row overflow-hidden'
+              : 'h-full flex flex-col overflow-y-auto'
+          }
+        >
           {narrationZone}
+          {isAdminSideBySide && (
+            <ResizeHandle
+              orientation="vertical"
+              title={resizeHint}
+              className="flex z-20 shrink-0"
+              onDragStart={() => {
+                dragStartSplitPctRef.current = adminSplitPct;
+              }}
+              onDragMove={(deltaPx) => {
+                const totalWidth = adminBottomRef.current?.clientWidth || 0;
+                if (totalWidth <= 0) return;
+                const deltaPct = (deltaPx / totalWidth) * 100;
+                const next = Math.min(
+                  MAX_ADMIN_SPLIT_PCT,
+                  Math.max(MIN_ADMIN_SPLIT_PCT, dragStartSplitPctRef.current + deltaPct)
+                );
+                setAdminSplitPct(Math.round(next * 10) / 10);
+              }}
+              onDoubleClick={() => setAdminSplitPct(DEFAULT_ADMIN_SPLIT_PCT)}
+            />
+          )}
           <ActivityLogPanel
             logs={roomState.logs}
             language={language}
             orientation="vertical"
-            className="min-h-[200px] @[460px]:min-h-0 @[460px]:h-full @[460px]:overflow-hidden border-t @[460px]:border-t-0 @[460px]:border-l border-slate-200"
+            className={
+              isAdminSideBySide
+                ? 'flex-1 min-w-0 h-full overflow-hidden border-l border-slate-200'
+                : 'min-h-[200px] shrink-0 border-t border-slate-200'
+            }
           />
         </div>
       </aside>

@@ -8,6 +8,7 @@ import { CashflowBoard } from './components/CashflowBoard';
 import {
   BankruptcyAnnouncementModal,
   ConfettiBurst,
+  FastTrackWinnerModal,
   RatRaceEscapeCelebration,
 } from './components/CelebrationOverlay';
 import { FinancialStatement } from './components/FinancialStatement';
@@ -108,6 +109,10 @@ export default function App() {
     log: GameLogEntry;
     player?: Player;
   } | null>(null);
+  const [winnerAnnouncement, setWinnerAnnouncement] = useState<{
+    log: GameLogEntry;
+    player?: Player;
+  } | null>(null);
   const [isDesktop, setIsDesktop] = useState<boolean>(() =>
     typeof window !== 'undefined' ? window.matchMedia('(min-width: 1024px)').matches : true
   );
@@ -140,9 +145,11 @@ export default function App() {
   const languageRef = useRef<Language>(language);
   const seenEscapeLogIdsRef = useRef<Set<string>>(new Set());
   const seenBankruptLogIdsRef = useRef<Set<string>>(new Set());
+  const seenWinnerLogIdsRef = useRef<Set<string>>(new Set());
   const seenWinRoomRef = useRef<string | null>(null);
   const escapeTimerRef = useRef<number | null>(null);
   const bankruptTimerRef = useRef<number | null>(null);
+  const winnerTimerRef = useRef<number | null>(null);
 
   playerIdRef.current = playerId;
   languageRef.current = language;
@@ -197,9 +204,36 @@ export default function App() {
     }
   }, []);
 
+  const triggerWinnerAnnouncement = useCallback((state: GameRoomState) => {
+    const newWinLog = state.logs
+      .slice(0, 6)
+      .find(
+        (entry) =>
+          (entry.type === 'WIN_DREAM' || entry.type === 'WIN_CASHFLOW') &&
+          !seenWinnerLogIdsRef.current.has(entry.id)
+      );
+
+    if (newWinLog) {
+      seenWinnerLogIdsRef.current.add(newWinLog.id);
+      if (state.phase === 'GAME_OVER') {
+        return;
+      }
+      const winPlayer = state.players.find((p) => p.id === newWinLog.actorId);
+      setWinnerAnnouncement({ log: newWinLog, player: winPlayer });
+      soundFX.victory();
+
+      if (winnerTimerRef.current) {
+        window.clearTimeout(winnerTimerRef.current);
+      }
+      winnerTimerRef.current = window.setTimeout(() => {
+        setWinnerAnnouncement(null);
+      }, 15000);
+    }
+  }, []);
+
   const playStateSound = useCallback((state: GameRoomState) => {
     if (state.phase === 'GAME_OVER') {
-      const winKey = `${state.roomCode}_${state.winnerId || 'win'}_${state.turnCount}`;
+      const winKey = `${state.roomCode}_GAME_OVER_${state.turnCount}`;
       if (seenWinRoomRef.current !== winKey) {
         seenWinRoomRef.current = winKey;
         soundFX.victory();
@@ -210,11 +244,7 @@ export default function App() {
     if (topLog && topLog.id !== prevLogIdRef.current) {
       prevLogIdRef.current = topLog.id;
       if (topLog.type.includes('WIN')) {
-        const winKey = `${state.roomCode}_${state.winnerId || 'win'}_${state.turnCount}`;
-        if (seenWinRoomRef.current !== winKey) {
-          seenWinRoomRef.current = winKey;
-          soundFX.victory();
-        }
+        // Sound already triggered by triggerWinnerAnnouncement or GAME_OVER handler
       } else if (topLog.type === 'FAST_TRACK_ESCAPE') {
         // Sound already triggered by triggerEscapeCelebration
       } else if (topLog.type === 'PLAYER_BANKRUPT') {
@@ -369,10 +399,16 @@ export default function App() {
         seenBankruptLogIdsRef.current = new Set(
           state.logs.filter((l) => l.type === 'PLAYER_BANKRUPT').map((l) => l.id)
         );
+        seenWinnerLogIdsRef.current = new Set(
+          state.logs
+            .filter((l) => l.type === 'WIN_DREAM' || l.type === 'WIN_CASHFLOW')
+            .map((l) => l.id)
+        );
         seenWinRoomRef.current = null;
         setVictoryModalDismissed(false);
         setEscapeCelebration(null);
         setBankruptAnnouncement(null);
+        setWinnerAnnouncement(null);
         setLanguage(state.language);
       }
     });
@@ -406,6 +442,7 @@ export default function App() {
         setSettledState(state);
         triggerEscapeCelebration(state);
         triggerBankruptcyAnnouncement(state);
+        triggerWinnerAnnouncement(state);
         playStateSound(state);
       }
     });
@@ -421,6 +458,7 @@ export default function App() {
       setShowLeaveConfirm(false);
       setEscapeCelebration(null);
       setBankruptAnnouncement(null);
+      setWinnerAnnouncement(null);
       seenWinRoomRef.current = null;
       setErrorMsg(null);
     });
@@ -436,6 +474,7 @@ export default function App() {
       setShowLeaveConfirm(false);
       setEscapeCelebration(null);
       setBankruptAnnouncement(null);
+      setWinnerAnnouncement(null);
       seenWinRoomRef.current = null;
       const lang = languageRef.current;
       const msg =
@@ -488,11 +527,20 @@ export default function App() {
       if (bankruptTimerRef.current) {
         window.clearTimeout(bankruptTimerRef.current);
       }
+      if (winnerTimerRef.current) {
+        window.clearTimeout(winnerTimerRef.current);
+      }
       document.removeEventListener('visibilitychange', handleResumeSync);
       window.removeEventListener('focus', handleResumeSync);
       socket.disconnect();
     };
-  }, [playStateSound, triggerBankruptcyAnnouncement, triggerEscapeCelebration, updatePlayerId]);
+  }, [
+    playStateSound,
+    triggerBankruptcyAnnouncement,
+    triggerEscapeCelebration,
+    triggerWinnerAnnouncement,
+    updatePlayerId,
+  ]);
 
   const handleAnimationChange = useCallback(
     (animating: boolean) => {
@@ -501,10 +549,16 @@ export default function App() {
         setSettledState(latestRoomRef.current);
         triggerEscapeCelebration(latestRoomRef.current);
         triggerBankruptcyAnnouncement(latestRoomRef.current);
+        triggerWinnerAnnouncement(latestRoomRef.current);
         playStateSound(latestRoomRef.current);
       }
     },
-    [playStateSound, triggerBankruptcyAnnouncement, triggerEscapeCelebration]
+    [
+      playStateSound,
+      triggerBankruptcyAnnouncement,
+      triggerEscapeCelebration,
+      triggerWinnerAnnouncement,
+    ]
   );
 
   const handleToggleLanguage = (lang: Language) => {
@@ -552,6 +606,7 @@ export default function App() {
     setShowLeaveConfirm(false);
     setEscapeCelebration(null);
     setBankruptAnnouncement(null);
+    setWinnerAnnouncement(null);
     seenWinRoomRef.current = null;
     setErrorMsg(null);
   };
@@ -925,68 +980,98 @@ export default function App() {
         />
       )}
 
+      {/* Mid-Game Fast Track Winner Celebration Modal (game continues for remaining players) */}
+      {winnerAnnouncement && !isGameOver && (
+        <FastTrackWinnerModal
+          log={winnerAnnouncement.log}
+          player={winnerAnnouncement.player}
+          language={language}
+          onDismiss={() => setWinnerAnnouncement(null)}
+        />
+      )}
+
       {/* Game Over Victory Modal & Confetti Effect (dismissible so everyone can inspect results; only Admin/Creator can close game) */}
-      {isGameOver && !victoryModalDismissed && (
-        <>
-          <ConfettiBurst variant="victory" />
-          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="animate-celebrate-pop max-w-md w-full bg-white border-4 border-orange-400 rounded-3xl p-8 text-center space-y-5 shadow-2xl relative overflow-hidden">
-              <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-amber-200/40 blur-xl pointer-events-none" />
-              <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-orange-200/40 blur-xl pointer-events-none" />
+      {isGameOver && !victoryModalDismissed && (() => {
+        const rankedWinners = (uiState?.players || [])
+          .filter((p) => p.hasWon)
+          .sort((a, b) => (a.winRank || 999) - (b.winRank || 999));
 
-              <div className="relative flex items-center justify-center gap-3">
-                <div className="w-16 h-16 rounded-full bg-orange-100 border-2 border-orange-300 flex items-center justify-center text-orange-500 shadow-sm">
-                  <Trophy className="w-8 h-8" />
-                </div>
-                {winnerPlayer && (
-                  <PlayerAvatar
-                    avatarId={winnerPlayer.avatarId}
-                    color={winnerPlayer.color}
-                    isBot={winnerPlayer.isBot}
-                    isActiveTurn
-                    size="lg"
-                  />
-                )}
-              </div>
+        return (
+          <>
+            <ConfettiBurst variant="victory" />
+            <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+              <div className="animate-celebrate-pop max-w-md w-full bg-white border-4 border-orange-400 rounded-3xl p-8 text-center space-y-5 shadow-2xl relative overflow-hidden">
+                <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-amber-200/40 blur-xl pointer-events-none" />
+                <div className="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-orange-200/40 blur-xl pointer-events-none" />
 
-              <div>
-                <div className="inline-block px-3 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-900 text-xs font-bold mb-2">
-                  {t(language, 'winnerBadge')}
-                  {winnerPlayer ? ` · ${winnerPlayer.name}` : ''}
+                <div className="relative flex items-center justify-center gap-3">
+                  <div className="w-16 h-16 rounded-2xl bg-orange-100 border-2 border-orange-300 flex items-center justify-center text-orange-500 shadow-sm">
+                    <Trophy className="w-8 h-8" />
+                  </div>
+                  {winnerPlayer && (
+                    <PlayerAvatar
+                      avatarId={winnerPlayer.avatarId}
+                      color={winnerPlayer.color}
+                      isBot={winnerPlayer.isBot}
+                      isActiveTurn
+                      size="lg"
+                    />
+                  )}
                 </div>
-                <h2 className="font-display text-2xl font-extrabold text-slate-900">
-                  {t(language, 'gameOverTitle')}
-                </h2>
-                <p className="text-sm text-slate-700 mt-2 leading-relaxed">
-                  {uiState?.winReason?.[language]}
-                </p>
-              </div>
-              <div className="space-y-2.5">
-                <button
-                  type="button"
-                  onClick={() => setVictoryModalDismissed(true)}
-                  className="w-full py-3 px-5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm transition-colors"
-                >
-                  {t(language, 'reviewGameResults')}
-                </button>
-                {isHost ? (
+
+                <div>
+                  <div className="inline-block px-3 py-1 rounded-lg bg-amber-100 border border-amber-300 text-amber-900 text-xs font-bold mb-2">
+                    {t(language, 'winnerBadge')}
+                    {winnerPlayer ? ` · ${winnerPlayer.name}` : ''}
+                  </div>
+                  <h2 className="font-display text-2xl font-extrabold text-slate-900">
+                    {t(language, 'gameOverTitle')}
+                  </h2>
+                  <p className="text-sm text-slate-700 mt-2 leading-relaxed">
+                    {uiState?.winReason?.[language]}
+                  </p>
+                  {rankedWinners.length > 1 && (
+                    <div className="mt-3 text-left bg-amber-50/80 border border-amber-200 rounded-xl p-2.5 space-y-1.5">
+                      {rankedWinners.map((w, idx) => (
+                        <div key={w.id} className="flex items-start justify-between gap-2 text-xs">
+                          <span className="font-bold text-amber-900 shrink-0">
+                            #{w.winRank || idx + 1} {w.name}
+                          </span>
+                          <span className="text-slate-600 text-right truncate">
+                            {w.winReason?.[language] || ''}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2.5">
                   <button
                     type="button"
-                    onClick={handleCloseGame}
-                    className="w-full py-2.5 px-5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-bold text-sm transition-colors"
+                    onClick={() => setVictoryModalDismissed(true)}
+                    className="w-full py-3 px-5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm transition-colors cursor-pointer"
                   >
-                    {t(language, 'closeGame')}
+                    {t(language, 'reviewGameResults')}
                   </button>
-                ) : (
-                  <p className="text-xs text-slate-500 font-medium pt-1">
-                    {t(language, 'waitingAdminCloseGame')}
-                  </p>
-                )}
+                  {isHost ? (
+                    <button
+                      type="button"
+                      onClick={handleCloseGame}
+                      className="w-full py-2.5 px-5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-bold text-sm transition-colors cursor-pointer"
+                    >
+                      {t(language, 'closeGame')}
+                    </button>
+                  ) : (
+                    <p className="text-xs text-slate-500 font-medium pt-1">
+                      {t(language, 'waitingAdminCloseGame')}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        </>
-      )}
+          </>
+        );
+      })()}
 
       {/* Leave Room Confirmation Modal */}
       {showLeaveConfirm && roomState && (

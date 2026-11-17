@@ -95,12 +95,17 @@ const PlayerAdminFinanceCard: React.FC<{
     { key: 'other', label: t(language, 'otherDebtExp'), balance: f.liabilities.otherDebtBalance },
   ].filter((row) => row.balance > 0);
 
+  const hasWon = Boolean(player.hasWon);
+  const activePlayingTurn = isActiveTurn && !player.isBankrupt && !hasWon;
+
   return (
     <article
       className={`flex flex-col rounded-xl border p-3 shadow-2xs space-y-2.5 text-xs transition-all ${
         player.isBankrupt
           ? 'bg-rose-50/45 border-rose-300'
-          : isActiveTurn
+          : hasWon
+          ? 'bg-amber-50/55 border-amber-400'
+          : activePlayingTurn
           ? 'bg-white border-orange-400 ring-2 ring-orange-200/80'
           : 'bg-white border-slate-200'
       }`}
@@ -112,7 +117,7 @@ const PlayerAdminFinanceCard: React.FC<{
             avatarId={player.avatarId}
             color={player.color}
             isBot={player.isBot}
-            isActiveTurn={isActiveTurn && !player.isBankrupt}
+            isActiveTurn={activePlayingTurn}
             size="sm"
           />
           <div className="min-w-0">
@@ -124,12 +129,17 @@ const PlayerAdminFinanceCard: React.FC<{
               >
                 {player.name}
               </span>
+              {hasWon && (
+                <span className="text-[10px] font-bold text-amber-900 bg-amber-100 border border-amber-300 px-1.5 py-0.5 rounded">
+                  🏆 {t(language, 'winnerBadge')}{player.winRank ? ` #${player.winRank}` : ''}
+                </span>
+              )}
               {player.isBankrupt && (
                 <span className="text-[10px] font-bold text-rose-800 bg-rose-100 border border-rose-300 px-1.5 py-0.5 rounded">
                   {t(language, 'bankruptBadge')}
                 </span>
               )}
-              {isActiveTurn && !player.isBankrupt && (
+              {activePlayingTurn && (
                 <span className="text-[10px] font-bold text-orange-800 bg-orange-100 border border-orange-300 px-1.5 py-0.5 rounded">
                   {t(language, 'activeTurnBadge')}
                 </span>

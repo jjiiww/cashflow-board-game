@@ -266,6 +266,9 @@ export interface Player {
   hasThreeDiceForever: boolean;
   downsizedTurnsLeft: number;
   isBankrupt: boolean;
+  hasWon: boolean;
+  winRank?: number;
+  winReason?: BilingualText;
   dreamId: string | null;
   finance: PlayerFinance;
 }
