@@ -335,6 +335,17 @@ const PlayerAdminFinanceCard: React.FC<{
                 {language === 'th' ? 'รายจ่าย' : 'Exp'} {formatDelta(delta.totalExpensesDelta)}
               </span>
             )}
+            {delta.monthlyCashFlowDelta !== 0 && (
+              <span
+                className={`font-bold ${
+                  delta.monthlyCashFlowDelta > 0 ? 'text-orange-600' : 'text-pink-600'
+                }`}
+              >
+                {language === 'th' ? 'เงินคงเหลือต่อเดือน' : 'Monthly Cash Flow'}{' '}
+                {delta.monthlyCashFlowDelta > 0 ? '+' : ''}
+                {delta.monthlyCashFlowDelta.toLocaleString()} {language === 'th' ? '฿/ด.' : '฿/mo'}
+              </span>
+            )}
           </div>
         </div>
       )}

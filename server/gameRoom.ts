@@ -1073,11 +1073,11 @@ export class GameRoom {
           player.downsizedTurnsLeft = 2;
           const loanNoteTh =
             result.loanAmt > 0
-              ? ` (กู้ธนาคารเพิ่ม ${result.loanAmt.toLocaleString()} ฿ ดอกเบี้ย +${result.loanInterest.toLocaleString()} ฿/เดือน)`
+              ? ` (กู้เงินธนาคาร ${result.loanAmt.toLocaleString()} ฿ ดอกเบี้ย +${result.loanInterest.toLocaleString()} ฿/เดือน)`
               : '';
           const loanNoteEn =
             result.loanAmt > 0
-              ? ` (borrowed ${result.loanAmt.toLocaleString()} ฿, +${result.loanInterest.toLocaleString()} ฿/mo interest)`
+              ? ` (Bank Loan ${result.loanAmt.toLocaleString()} ฿, +${result.loanInterest.toLocaleString()} ฿/mo interest)`
               : '';
           this.addLog(
             player,
@@ -1874,12 +1874,14 @@ export class GameRoom {
       // Winner pays commission + downPayment and gets asset
       const winnerBefore = FinancialEngine.snapshot(winner.finance);
       const totalDue = auction.highestBid + card.downPayment;
+      let winnerLoanAmt = 0;
       if (winner.isBot && winner.finance.cash < totalDue) {
         const shortfall = totalDue - winner.finance.cash;
         const neededLoan = Math.ceil(shortfall / 1000) * 1000;
         const maxBorrowable = FinancialEngine.getMaxBorrowable(winner.finance);
         const loanAmt = Math.min(neededLoan, maxBorrowable);
         if (loanAmt > 0) {
+          winnerLoanAmt = loanAmt;
           winner.finance.cash += loanAmt;
           winner.finance.bankLoans.push({
             id: `loan_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
@@ -1911,9 +1913,13 @@ export class GameRoom {
         units: card.units,
       });
       const cleanTitle = this.getCleanAssetTitle(card.title);
+      const winnerLoanTh =
+        winnerLoanAmt > 0 ? ` (กู้เงินธนาคาร ${winnerLoanAmt.toLocaleString()} ฿)` : '';
+      const winnerLoanEn =
+        winnerLoanAmt > 0 ? ` (Bank Loan ${winnerLoanAmt.toLocaleString()} ฿)` : '';
       FinancialEngine.buildDelta(winnerBefore, winner.finance, {
-        th: `ชนะประมูล ${cleanTitle.th} (ค่านายหน้า ${auction.highestBid.toLocaleString()} + ดาวน์ ${card.downPayment.toLocaleString()} ฿)`,
-        en: `Won auction ${cleanTitle.en}`,
+        th: `ชนะประมูล ${cleanTitle.th} (ค่านายหน้า ${auction.highestBid.toLocaleString()} + ดาวน์ ${card.downPayment.toLocaleString()} ฿)${winnerLoanTh}`,
+        en: `Won auction ${cleanTitle.en}${winnerLoanEn}`,
       });
 
       this.addLog(
@@ -2892,11 +2898,11 @@ export class GameRoom {
           }
           const loanNoteTh =
             res.loanAmt > 0
-              ? ` (กู้ธนาคารเพิ่ม ${res.loanAmt.toLocaleString()} ฿ ดอกเบี้ย +${res.loanInterest.toLocaleString()} ฿/ด.)`
+              ? ` (กู้เงินธนาคาร ${res.loanAmt.toLocaleString()} ฿ ดอกเบี้ย +${res.loanInterest.toLocaleString()} ฿/ด.)`
               : '';
           const loanNoteEn =
             res.loanAmt > 0
-              ? ` (borrowed ${res.loanAmt.toLocaleString()} ฿, +${res.loanInterest.toLocaleString()} ฿/mo interest)`
+              ? ` (Bank Loan ${res.loanAmt.toLocaleString()} ฿, +${res.loanInterest.toLocaleString()} ฿/mo interest)`
               : '';
           this.addLog(
             bot,
@@ -3009,11 +3015,11 @@ export class GameRoom {
         bot.downsizedTurnsLeft = 2;
         const loanNoteTh =
           result.loanAmt > 0
-            ? ` (กู้ธนาคารเพิ่ม ${result.loanAmt.toLocaleString()} ฿ ดอกเบี้ย +${result.loanInterest.toLocaleString()} ฿/เดือน)`
+            ? ` (กู้เงินธนาคาร ${result.loanAmt.toLocaleString()} ฿ ดอกเบี้ย +${result.loanInterest.toLocaleString()} ฿/เดือน)`
             : '';
         const loanNoteEn =
           result.loanAmt > 0
-            ? ` (borrowed ${result.loanAmt.toLocaleString()} ฿, +${result.loanInterest.toLocaleString()} ฿/mo interest)`
+            ? ` (Bank Loan ${result.loanAmt.toLocaleString()} ฿, +${result.loanInterest.toLocaleString()} ฿/mo interest)`
             : '';
         this.addLog(
           bot,
@@ -3391,12 +3397,20 @@ export class GameRoom {
           this.state.botStepStage = 3;
           return;
         }
+        const loanNoteTh =
+          res.loanAmt > 0
+            ? ` (กู้เงินธนาคาร ${res.loanAmt.toLocaleString()} ฿ ดอกเบี้ย +${res.loanInterest.toLocaleString()} ฿/ด.)`
+            : '';
+        const loanNoteEn =
+          res.loanAmt > 0
+            ? ` (Bank Loan ${res.loanAmt.toLocaleString()} ฿, +${res.loanInterest.toLocaleString()} ฿/mo interest)`
+            : '';
         this.addLog(
           bot,
           'BOT_DEAL_EXPENSE',
           {
-            th: `${bot.name} จ่ายเงิน ${cost.toLocaleString()} ฿ สำหรับ "${card.title.th}"`,
-            en: `${bot.name} paid ${cost.toLocaleString()} ฿ for "${card.title.en}".`,
+            th: `${bot.name} จ่ายเงิน ${cost.toLocaleString()} ฿ สำหรับ "${card.title.th}"${loanNoteTh}`,
+            en: `${bot.name} paid ${cost.toLocaleString()} ฿ for "${card.title.en}"${loanNoteEn}.`,
           },
           res.delta
         );
@@ -3500,9 +3514,9 @@ export class GameRoom {
           }
           FinancialEngine.recalculate(bot.finance, bot.career);
           const loanNoteTh =
-            loanForBargain > 0 ? ` (กู้ธนาคาร ${loanForBargain.toLocaleString()} ฿)` : '';
+            loanForBargain > 0 ? ` (กู้เงินธนาคาร ${loanForBargain.toLocaleString()} ฿)` : '';
           const loanNoteEn =
-            loanForBargain > 0 ? ` (borrowed ${loanForBargain.toLocaleString()} ฿)` : '';
+            loanForBargain > 0 ? ` (Bank Loan ${loanForBargain.toLocaleString()} ฿)` : '';
           const delta = FinancialEngine.buildDelta(before, bot.finance, {
             th: `${bot.name} ซื้อหุ้น ${card.symbol} ${qty} หุ้น (-${totalCost.toLocaleString()} ฿)${loanNoteTh}`,
             en: `${bot.name} bought ${qty} shares of ${symEn}${loanNoteEn}`,
@@ -3589,11 +3603,11 @@ export class GameRoom {
       const delta = FinancialEngine.buildDelta(before, bot.finance, {
         th:
           smartLoan.loanAmt > 0
-            ? `${bot.name} กู้ธนาคาร ${smartLoan.loanAmt.toLocaleString()} ฿ ซื้อ ${cleanTitle.th} (สุทธิ ${netSign}${smartLoan.netGain.toLocaleString()} ฿/ด.)`
+            ? `${bot.name} กู้เงินธนาคาร ${smartLoan.loanAmt.toLocaleString()} ฿ ซื้อ ${cleanTitle.th}`
             : `${bot.name} ซื้อ ${cleanTitle.th}`,
         en:
           smartLoan.loanAmt > 0
-            ? `${bot.name} borrowed ${smartLoan.loanAmt.toLocaleString()} ฿ to buy ${cleanTitle.en}`
+            ? `${bot.name} took Bank Loan ${smartLoan.loanAmt.toLocaleString()} ฿ to buy ${cleanTitle.en}`
             : `${bot.name} bought ${cleanTitle.en}`,
       });
       this.addLog(
@@ -3602,11 +3616,11 @@ export class GameRoom {
         {
           th:
             smartLoan.loanAmt > 0
-              ? `🏦 ${bot.name} กู้ธนาคาร ${smartLoan.loanAmt.toLocaleString()} ฿ (ดอกเบี้ย ${smartLoan.loanInterest.toLocaleString()} ฿/ด.) เพื่อซื้อ ${cleanTitle.th} รับรายได้ +${card.cashFlow.toLocaleString()} ฿/ด. (กระแสเงินสดสุทธิ ${netSign}${smartLoan.netGain.toLocaleString()} ฿/ด.)`
+              ? `🏦 ${bot.name} กู้เงินธนาคาร ${smartLoan.loanAmt.toLocaleString()} ฿ (ดอกเบี้ย ${smartLoan.loanInterest.toLocaleString()} ฿/ด.) เพื่อซื้อ ${cleanTitle.th} รับรายได้ +${card.cashFlow.toLocaleString()} ฿/ด. (กระแสเงินสดสุทธิ ${netSign}${smartLoan.netGain.toLocaleString()} ฿/ด.)`
               : `${bot.name} ซื้อ ${cleanTitle.th} (ผลตอบแทน ${Math.round(annualROI)}%/ปี) รับรายได้จากทรัพย์สิน ${card.cashFlow >= 0 ? '+' : ''}${card.cashFlow.toLocaleString()} ฿/เดือน`,
           en:
             smartLoan.loanAmt > 0
-              ? `🏦 ${bot.name} borrowed ${smartLoan.loanAmt.toLocaleString()} ฿ (${smartLoan.loanInterest.toLocaleString()} ฿/mo interest) to buy ${cleanTitle.en} (+${card.cashFlow.toLocaleString()} ฿/mo, net ${netSign}${smartLoan.netGain.toLocaleString()} ฿/mo).`
+              ? `🏦 ${bot.name} took Bank Loan ${smartLoan.loanAmt.toLocaleString()} ฿ (${smartLoan.loanInterest.toLocaleString()} ฿/mo interest) to buy ${cleanTitle.en} (+${card.cashFlow.toLocaleString()} ฿/mo, net ${netSign}${smartLoan.netGain.toLocaleString()} ฿/mo).`
               : `${bot.name} bought ${cleanTitle.en} (${Math.round(annualROI)}% annual ROI, ${card.cashFlow >= 0 ? '+' : ''}${card.cashFlow.toLocaleString()} ฿/mo).`,
         },
         delta

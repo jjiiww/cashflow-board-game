@@ -259,7 +259,14 @@ export class FinancialEngine {
 
     player.finance.cash -= safeCost;
     this.recalculate(player.finance, player.career);
-    const delta = this.buildDelta(before, player.finance, paidReason);
+    const finalReason: BilingualText =
+      loanAmt > 0
+        ? {
+            th: `${paidReason.th} (กู้เงินธนาคาร ${loanAmt.toLocaleString()} ฿)`,
+            en: `${paidReason.en} (Bank Loan ${loanAmt.toLocaleString()} ฿)`,
+          }
+        : paidReason;
+    const delta = this.buildDelta(before, player.finance, finalReason);
     return {
       bankrupt: false,
       cashBefore,
@@ -329,8 +336,8 @@ export class FinancialEngine {
     const reason: BilingualText =
       loanAmt > 0
         ? {
-            th: `ตกงาน! กู้ธนาคาร ${loanAmt.toLocaleString()} ฿ (ดอกเบี้ย +${loanInterest.toLocaleString()} ฿/ด.) แล้วจ่ายรายจ่ายรวม ${penalty.toLocaleString()} ฿`,
-            en: `Downsized! Borrowed ${loanAmt.toLocaleString()} ฿ (+${loanInterest.toLocaleString()} ฿/mo interest) and paid ${penalty.toLocaleString()} ฿ expenses`,
+            th: `ตกงาน! กู้เงินธนาคาร ${loanAmt.toLocaleString()} ฿ (ดอกเบี้ย +${loanInterest.toLocaleString()} ฿/ด.) แล้วจ่ายรายจ่ายรวม ${penalty.toLocaleString()} ฿`,
+            en: `Downsized! Bank Loan ${loanAmt.toLocaleString()} ฿ (+${loanInterest.toLocaleString()} ฿/mo interest) and paid ${penalty.toLocaleString()} ฿ expenses`,
           }
         : {
             th: `ตกงาน! จ่ายรายจ่ายรวม 1 เดือน (${penalty.toLocaleString()} ฿) และหยุดเล่น 2 ตา`,

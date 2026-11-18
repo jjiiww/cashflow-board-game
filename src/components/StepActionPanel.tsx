@@ -1400,6 +1400,17 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
                 {delta.totalExpensesDelta.toLocaleString()} ฿/m
               </span>
             )}
+            {delta.monthlyCashFlowDelta !== 0 && (
+              <span
+                className={
+                  delta.monthlyCashFlowDelta > 0 ? 'text-orange-600 font-bold' : 'text-rose-600 font-bold'
+                }
+              >
+                {language === 'th' ? 'เงินคงเหลือต่อเดือน' : 'Monthly Cash Flow'}{' '}
+                {delta.monthlyCashFlowDelta > 0 ? '+' : ''}
+                {delta.monthlyCashFlowDelta.toLocaleString()} {language === 'th' ? '฿/ด.' : '฿/mo'}
+              </span>
+            )}
           </div>
         );
       })()}
@@ -1424,6 +1435,11 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
           language === 'th'
             ? rawTitle.replace(/^ต้องการขาย/, '').replace(/^ต้องการ/, '').trim()
             : rawTitle.replace(/\s+For Sale$/i, '').trim();
+        const isStockPass =
+          topLog.type === 'BOT_PASS_STOCK' ||
+          (activeCard &&
+            (activeCard.deck === 'small_deal' || activeCard.deck === 'big_deal') &&
+            (activeCard as DealCard).kind === 'stock');
         const summaryText =
           topLog.type === 'AUCTION_NO_BID' || topLog.type === 'FT_PASS'
             ? topLog.message[language]
@@ -1432,7 +1448,11 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
                 .trim()
             : cleanTitle
             ? language === 'th'
-              ? `${topLog.actorName} ตัดสินใจสละสิทธิ์ ${cleanTitle}`
+              ? isStockPass
+                ? `${topLog.actorName} ไม่ซื้อ/สละสิทธิ์ ${cleanTitle}`
+                : `${topLog.actorName} ตัดสินใจสละสิทธิ์ ${cleanTitle}`
+              : isStockPass
+              ? `${topLog.actorName} did not buy/passed on ${cleanTitle}`
               : `${topLog.actorName} passed on ${cleanTitle}`
             : topLog.message[language]
                 .replace(/[\p{Extended_Pictographic}\u2600-\u27BF]\uFE0F?/gu, '')
