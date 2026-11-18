@@ -1402,13 +1402,15 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
         );
       })()}
 
-      {/* Deal Pass Summary Frame (when no financial delta occurred) */}
+      {/* Deal Pass / Auction No-Bid Summary Frame (when no financial delta occurred) */}
       {!isAnimating && !roomState.lastStepDelta && (() => {
         const topLog = roomState.logs[0];
         if (
           topLog?.type !== 'PASS_DEAL' &&
           topLog?.type !== 'BOT_PASS_DEAL' &&
-          topLog?.type !== 'BOT_PASS_STOCK'
+          topLog?.type !== 'BOT_PASS_STOCK' &&
+          topLog?.type !== 'AUCTION_NO_BID' &&
+          topLog?.type !== 'FT_PASS'
         ) {
           return null;
         }
@@ -1420,14 +1422,20 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
           language === 'th'
             ? rawTitle.replace(/^ต้องการขาย/, '').replace(/^ต้องการ/, '').trim()
             : rawTitle.replace(/\s+For Sale$/i, '').trim();
-        const summaryText = cleanTitle
-          ? language === 'th'
-            ? `${topLog.actorName} ตัดสินใจสละสิทธิ์ ${cleanTitle}`
-            : `${topLog.actorName} passed on ${cleanTitle}`
-          : topLog.message[language]
-              .replace(/[\p{Extended_Pictographic}\u2600-\u27BF]\uFE0F?/gu, '')
-              .replace(/\s{2,}/g, ' ')
-              .trim();
+        const summaryText =
+          topLog.type === 'AUCTION_NO_BID' || topLog.type === 'FT_PASS'
+            ? topLog.message[language]
+                .replace(/[\p{Extended_Pictographic}\u2600-\u27BF]\uFE0F?/gu, '')
+                .replace(/\s{2,}/g, ' ')
+                .trim()
+            : cleanTitle
+            ? language === 'th'
+              ? `${topLog.actorName} ตัดสินใจสละสิทธิ์ ${cleanTitle}`
+              : `${topLog.actorName} passed on ${cleanTitle}`
+            : topLog.message[language]
+                .replace(/[\p{Extended_Pictographic}\u2600-\u27BF]\uFE0F?/gu, '')
+                .replace(/\s{2,}/g, ' ')
+                .trim();
 
         return (
           <div className="flex flex-wrap items-center gap-2 px-3 py-2 rounded-lg text-xs bg-slate-100 border border-slate-300 text-slate-800 font-medium">
