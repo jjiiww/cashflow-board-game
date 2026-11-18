@@ -62,6 +62,8 @@ export interface FastTrackAsset {
 
 export interface FastTrackPinkPurchase {
   id: string;
+  spaceIndex?: number;
+  dreamId?: string;
   name: BilingualText;
   cost: number;
   isDreamGoal?: boolean;
@@ -328,6 +330,7 @@ export interface GameRoomState {
   auction: AuctionState | null;
   pendingMarketResponses: PendingMarketResponse[];
   pendingStockSells: PendingStockSell[];
+  marketSummary?: BilingualText[];
   currentStepText: BilingualText;
   lastStepDelta: FinancialDelta | null;
   logs: GameLogEntry[];

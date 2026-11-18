@@ -145,6 +145,18 @@ function describeAnnularSector(
   ].join(' ');
 }
 
+function describeStarPath(cx: number, cy: number, outerR: number, innerR: number): string {
+  const pts: string[] = [];
+  for (let i = 0; i < 10; i++) {
+    const r = i % 2 === 0 ? outerR : innerR;
+    const angle = (-90 + i * 36) * (Math.PI / 180);
+    const x = cx + r * Math.cos(angle);
+    const y = cy + r * Math.sin(angle);
+    pts.push(`${i === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`);
+  }
+  return `${pts.join(' ')} Z`;
+}
+
 function splitVisualClusters(text: string): string[] {
   const clusters: string[] = [];
   const isThaiCombining = /[\u0E31\u0E33\u0E34-\u0E3A\u0E47-\u0E4E]/;
@@ -523,6 +535,22 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
             const rect = getFastTrackRect(space.index);
             const isDreamMatch = Boolean(localPlayer?.dreamId && space.dreamId === localPlayer.dreamId);
             const colors = getFastTrackColors(space.type, isDreamMatch);
+            const isDreamSpace = space.type === 'dream';
+            const matchesPinkPurchase = (p: (typeof roomState.players)[number]) =>
+              Boolean(
+                isDreamSpace &&
+                  p.finance.fastTrackPinkPurchases?.some(
+                    (item) =>
+                      item.spaceIndex === space.index ||
+                      (item.spaceIndex === undefined &&
+                        ((space.dreamId && item.dreamId === space.dreamId) ||
+                          item.name.th === space.label.th))
+                  )
+              );
+            const localPurchasedPink = Boolean(localPlayer && matchesPinkPurchase(localPlayer));
+            const pinkBuyers = !localPlayer
+              ? roomState.players.filter((p) => matchesPinkPurchase(p))
+              : [];
             const visualCurrent = currentPlayer
               ? displayPositions[currentPlayer.id] || {
                   track: currentPlayer.track,
@@ -532,7 +560,6 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
             const isActivePos =
               visualCurrent?.track === 'fast_track' && visualCurrent.position === space.index;
 
-            const isDreamSpace = space.type === 'dream';
             const maxChars = rect.isCorner ? 11 : rect.isSide ? 17 : 10;
             const lines = isDreamSpace
               ? [space.label[language]]
@@ -563,6 +590,8 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
             const totalTextH = lines.length * lineH + (hasSub ? 17 : 0);
             const startY = rect.cy - totalTextH / 2 + lineH / 2;
             const dreamGap = rect.isSide ? 17 : 18;
+            const badgeCx = rect.x + rect.w - 13;
+            const badgeCy = rect.y + 13;
 
             return (
               <g
@@ -575,10 +604,15 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
                         ? 'ทอยลูกเต๋า 1/2/3 ลูกตลอดไป'
                         : 'Roll 1/2/3 Dice Forever'
                       : space.subLabel?.[language];
+                  const purchasedNote = localPurchasedPink
+                    ? language === 'th'
+                      ? ' · ★ ซื้อแล้ว'
+                      : ' · ★ Purchased'
+                    : '';
                   setInspectedSpace(
                     `Fast Track #${space.index + 1}: ${space.label[language]}${
                       inspectSub ? ` (${inspectSub})` : ''
-                    }${space.cost ? ` · ${space.cost.toLocaleString()} ฿` : ''}`
+                    }${space.cost ? ` · ${space.cost.toLocaleString()} ฿` : ''}${purchasedNote}`
                   );
                 }}
               >
@@ -618,6 +652,49 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
                     stroke="#0284c7"
                     strokeWidth="3.5"
                   />
+                )}
+
+                {localPurchasedPink && (
+                  <g aria-label={language === 'th' ? 'ซื้อแล้ว' : 'Purchased'}>
+                    <circle
+                      cx={badgeCx}
+                      cy={badgeCy}
+                      r="9.5"
+                      fill="#0f172a"
+                      fillOpacity="0.72"
+                      stroke="#ffffff"
+                      strokeWidth="1.5"
+                    />
+                    <path
+                      d={describeStarPath(badgeCx, badgeCy + 0.3, 6.2, 2.7)}
+                      fill="#facc15"
+                    />
+                  </g>
+                )}
+
+                {pinkBuyers.length > 0 && (
+                  <g>
+                    {pinkBuyers.slice(0, 4).map((buyer, bIdx) => {
+                      const dotCx = rect.x + rect.w - 11 - bIdx * 12;
+                      const dotCy = rect.y + 11;
+                      return (
+                        <g key={buyer.id}>
+                          <circle
+                            cx={dotCx}
+                            cy={dotCy}
+                            r="6.5"
+                            fill={buyer.color}
+                            stroke="#ffffff"
+                            strokeWidth="1.5"
+                          />
+                          <path
+                            d={describeStarPath(dotCx, dotCy + 0.2, 3.6, 1.6)}
+                            fill="#fef08a"
+                          />
+                        </g>
+                      );
+                    })}
+                  </g>
                 )}
 
                 {rect.isCorner ? (

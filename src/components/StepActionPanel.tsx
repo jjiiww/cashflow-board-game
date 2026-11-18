@@ -88,6 +88,7 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
   onEndTurn,
 }) => {
   const [shareQty, setShareQty] = useState('10');
+  const [otherSellQty, setOtherSellQty] = useState('');
   const [auctionStartFee, setAuctionStartFee] = useState('1000');
   const [bidAmount, setBidAmount] = useState('1000');
   const [selectedMarketIds, setSelectedMarketIds] = useState<string[]>([]);
@@ -134,6 +135,15 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
   const isHost = roomState.hostId === localPlayerId;
 
   const activeCard = roomState.activeCard;
+  const myPendingStockSell = !isMyTurn
+    ? roomState.pendingStockSells.find((s) => s.playerId === localPlayerId && !s.responded)
+    : undefined;
+
+  useEffect(() => {
+    if (myPendingStockSell) {
+      setOtherSellQty(String(myPendingStockSell.sharesOwned));
+    }
+  }, [activeCard?.id, myPendingStockSell?.playerId, myPendingStockSell?.sharesOwned]);
 
   useEffect(() => {
     if (roomState.auction) {
@@ -271,14 +281,6 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
                   </span>
                 </div>
               ) : null}
-              {localStockHolding && (
-                <div className="col-span-2 pt-1 border-t border-slate-100 flex justify-between">
-                  <span className="text-slate-600">{t(language, 'ownedShares')}</span>
-                  <span className="font-mono font-bold text-violet-700 tabular-nums">
-                    {(localStockHolding.shares || 0).toLocaleString()}
-                  </span>
-                </div>
-              )}
             </div>
           ) : isSplit ? (
             <div className="grid grid-cols-2 gap-2 text-xs bg-white p-2.5 rounded-lg border border-emerald-200">
@@ -450,34 +452,79 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
 
     const renderOtherStockSellBox = (
       pending: { sharesOwned: number; pricePerShare: number }
-    ) => (
-      <div className="bg-sky-50 border border-sky-300 rounded-xl p-3 space-y-2.5">
-        <p className="text-xs font-bold text-sky-800">{t(language, 'stockSellPrompt')}</p>
-        <div className="text-xs text-slate-700 font-mono">
-          {t(language, 'ownedShares')}: {pending.sharesOwned.toLocaleString()} ×{' '}
-          {pending.pricePerShare.toLocaleString()} ฿ ={' '}
-          <strong className="text-emerald-600">
-            {(pending.sharesOwned * pending.pricePerShare).toLocaleString()} ฿
-          </strong>
+    ) => {
+      const parsedSellQty = Math.floor(Number(otherSellQty));
+      const isValidSellQty =
+        otherSellQty.trim() !== '' &&
+        Number.isFinite(parsedSellQty) &&
+        parsedSellQty >= 1 &&
+        parsedSellQty <= pending.sharesOwned;
+      const previewQty = isValidSellQty ? parsedSellQty : 0;
+
+      return (
+        <div className="bg-sky-50 border border-sky-300 rounded-xl p-3 space-y-2.5">
+          <p className="text-xs font-bold text-sky-800">{t(language, 'stockSellPrompt')}</p>
+
+          <div className="space-y-2 text-xs text-slate-800 bg-white/85 border border-sky-200 rounded-lg p-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-medium text-slate-600">{t(language, 'sharesOwnedColon')} :</span>
+              <span className="font-mono font-bold text-violet-700 tabular-nums">
+                {pending.sharesOwned.toLocaleString()} {t(language, 'sharesUnit')}
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5">
+              <label className="font-medium text-slate-700 whitespace-nowrap">
+                {t(language, 'sellQuantityLabel')} :
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={pending.sharesOwned}
+                value={otherSellQty}
+                onChange={(e) => setOtherSellQty(e.target.value)}
+                className="w-20 px-2 py-1 rounded-md bg-white border border-sky-300 text-slate-900 font-mono font-bold text-xs tabular-nums"
+              />
+              <span className="text-slate-600 whitespace-nowrap">{t(language, 'sharesUnit')}</span>
+              <button
+                type="button"
+                onClick={() => setOtherSellQty(String(pending.sharesOwned))}
+                className="ml-auto px-2.5 py-1 rounded-md bg-sky-100 hover:bg-sky-200 text-sky-800 border border-sky-300 font-bold text-[11px] transition-colors whitespace-nowrap cursor-pointer"
+              >
+                {t(language, 'sellAllBtn')}
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between gap-2 pt-1 border-t border-sky-100 text-[11px]">
+              <span className="text-slate-500 font-mono tabular-nums">
+                {previewQty.toLocaleString()} × {pending.pricePerShare.toLocaleString()} ฿
+              </span>
+              <span className="font-mono font-bold text-emerald-600 tabular-nums">
+                = {(previewQty * pending.pricePerShare).toLocaleString()} ฿
+              </span>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={!isValidSellQty}
+              onClick={() => isValidSellQty && onSellStock(parsedSellQty)}
+              className="flex-1 py-2.5 px-3 rounded-lg bg-sky-500 hover:bg-sky-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs transition-colors cursor-pointer"
+            >
+              {t(language, 'sellShares')}
+            </button>
+            <button
+              type="button"
+              onClick={onSkipStockSell}
+              className="flex-1 py-2.5 px-3 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold text-xs transition-colors cursor-pointer"
+            >
+              {t(language, 'keepShares')}
+            </button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => onSellStock(pending.sharesOwned)}
-            className="flex-1 py-2.5 px-3 rounded-lg bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs"
-          >
-            {t(language, 'sellAllShares')} ({pending.sharesOwned.toLocaleString()})
-          </button>
-          <button
-            type="button"
-            onClick={onSkipStockSell}
-            className="flex-1 py-2.5 px-3 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold text-xs"
-          >
-            {t(language, 'keepShares')}
-          </button>
-        </div>
-      </div>
-    );
+      );
+    };
 
     // 1. Robot Step-by-Step Control
     if (phase === 'BOT_THINKING') {
@@ -664,6 +711,23 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
       return isMyTurn ? (
         isStock ? (
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2.5">
+            {localHolding && (localHolding.shares || 0) > 0 && (
+              <div className="flex items-center justify-between gap-2 text-xs bg-white border border-slate-200 rounded-lg px-2.5 py-1.5">
+                <div>
+                  <span className="text-slate-600 font-medium">{t(language, 'sharesOwnedColon')} : </span>
+                  <span className="font-mono font-bold text-violet-700 tabular-nums">
+                    {(localHolding.shares || 0).toLocaleString()} {t(language, 'sharesUnit')}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShareQty(String(localHolding.shares || 0))}
+                  className="px-2 py-0.5 rounded-md bg-sky-100 hover:bg-sky-200 text-sky-800 border border-sky-300 font-bold text-[11px] transition-colors whitespace-nowrap cursor-pointer"
+                >
+                  {t(language, 'sellAllBtn')}
+                </button>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <label className="text-xs text-slate-700 font-medium whitespace-nowrap">{t(language, 'sharesQty')}:</label>
               <input
@@ -681,7 +745,7 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
               <button
                 type="button"
                 onClick={() => onBuyDeal(Number(shareQty) || 1)}
-                className="flex-1 py-2.5 px-3 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs whitespace-nowrap"
+                className="flex-1 py-2.5 px-3 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs whitespace-nowrap cursor-pointer"
               >
                 {t(language, 'buyShares')}
               </button>
@@ -689,7 +753,7 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
                 <button
                   type="button"
                   onClick={() => onSellStock(Number(shareQty) || 1)}
-                  className="flex-1 py-2.5 px-3 rounded-lg bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs whitespace-nowrap"
+                  className="flex-1 py-2.5 px-3 rounded-lg bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs whitespace-nowrap cursor-pointer"
                 >
                   {t(language, 'sellShares')}
                 </button>
@@ -697,7 +761,7 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
               <button
                 type="button"
                 onClick={onPassDeal}
-                className="py-2.5 px-4 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold text-xs whitespace-nowrap"
+                className="py-2.5 px-4 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold text-xs whitespace-nowrap cursor-pointer"
               >
                 {t(language, 'passDeal')}
               </button>
@@ -954,7 +1018,11 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
                       onChange={() => toggleAsset(a.id)}
                       className="accent-sky-500"
                     />
-                    <span className="font-semibold text-slate-900">{a.name[language]}</span>
+                    <span className="font-semibold text-slate-900">
+                      {language === 'th'
+                        ? a.name.th.replace(/^ต้องการขาย/, '').replace(/^ต้องการ/, '').trim()
+                        : a.name.en.replace(/\s+For Sale$/i, '').trim()}
+                    </span>
                   </div>
                   {isCashflowAdjust ? (
                     <span className="font-mono font-bold text-pink-600 tabular-nums">
@@ -1232,7 +1300,9 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
                     .trim();
                   const isNoHolderLine =
                     cleanLine.includes('ไม่มีผู้เล่นที่มีทรัพย์สินนี้') ||
-                    cleanLine.includes('No players own this asset');
+                    cleanLine.includes('ไม่มีผู้เล่นขายทรัพย์สินนี้') ||
+                    cleanLine.includes('No players own this asset') ||
+                    cleanLine.includes('No players sold this asset');
                   return (
                     <p
                       key={lineIdx}
@@ -1248,6 +1318,26 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
           )}
         </div>
       </div>
+
+      {/* Market Card Sales Summary Frame (directly below blue Market card) */}
+      {!isAnimating &&
+        activeCard?.deck === 'market' &&
+        roomState.marketSummary &&
+        roomState.marketSummary.length > 0 &&
+        ((activeCard as MarketCard).offerType !== 'cashflow_boost' ||
+          !roomState.lastStepDelta ||
+          roomState.marketSummary.length > 1) && (
+          <div className="px-3 py-2 rounded-lg text-xs bg-sky-50 border border-sky-200 text-slate-800 space-y-1">
+            <div className="font-bold text-sky-800">
+              {language === 'th' ? 'สรุปการซื้อขาย' : 'Market Summary'}
+            </div>
+            <div className="space-y-0.5 font-medium">
+              {roomState.marketSummary.map((entry, idx) => (
+                <div key={idx}>{entry[language]}</div>
+              ))}
+            </div>
+          </div>
+        )}
 
       {/* Last Step Financial Delta Highlight (waits until pawn finishes walking) */}
       {!isAnimating && roomState.lastStepDelta && (() => {
@@ -1308,6 +1398,40 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
                 {delta.totalExpensesDelta.toLocaleString()} ฿/m
               </span>
             )}
+          </div>
+        );
+      })()}
+
+      {/* Deal Pass Summary Frame (when no financial delta occurred) */}
+      {!isAnimating && !roomState.lastStepDelta && (() => {
+        const topLog = roomState.logs[0];
+        if (
+          topLog?.type !== 'PASS_DEAL' &&
+          topLog?.type !== 'BOT_PASS_DEAL' &&
+          topLog?.type !== 'BOT_PASS_STOCK'
+        ) {
+          return null;
+        }
+        const rawTitle =
+          activeCard && (activeCard.deck === 'small_deal' || activeCard.deck === 'big_deal')
+            ? activeCard.title[language]
+            : '';
+        const cleanTitle =
+          language === 'th'
+            ? rawTitle.replace(/^ต้องการขาย/, '').replace(/^ต้องการ/, '').trim()
+            : rawTitle.replace(/\s+For Sale$/i, '').trim();
+        const summaryText = cleanTitle
+          ? language === 'th'
+            ? `${topLog.actorName} ตัดสินใจสละสิทธิ์ ${cleanTitle}`
+            : `${topLog.actorName} passed on ${cleanTitle}`
+          : topLog.message[language]
+              .replace(/[\p{Extended_Pictographic}\u2600-\u27BF]\uFE0F?/gu, '')
+              .replace(/\s{2,}/g, ' ')
+              .trim();
+
+        return (
+          <div className="flex flex-wrap items-center gap-2 px-3 py-2 rounded-lg text-xs bg-slate-100 border border-slate-300 text-slate-800 font-medium">
+            <span>{summaryText}</span>
           </div>
         );
       })()}
