@@ -783,7 +783,7 @@ export const CashflowBoard: React.FC<CashflowBoardProps> = ({
               fontSize="24"
               fontWeight="800"
             >
-              {language === 'th' ? 'เป้าหมายชนะเส้นทางเศรษฐี' : 'FAST TRACK WIN'}
+              {language === 'th' ? 'เป้าหมายชนะทางด่วนการเงิน' : 'FAST TRACK WIN'}
             </text>
             <text
               x="355"

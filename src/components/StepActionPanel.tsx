@@ -6,8 +6,6 @@ import {
   Sparkles,
   CheckCircle2,
   XCircle,
-  TrendingUp,
-  TrendingDown,
 } from 'lucide-react';
 import { DREAM_OPTIONS } from '../../shared/board';
 import { formatStockSymbol } from '../../shared/cards';
@@ -1228,15 +1226,19 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
             <>
               <div className="space-y-1">
                 {roomState.currentStepText[language].split('\n').map((line, lineIdx) => {
+                  const cleanLine = line
+                    .replace(/[\p{Extended_Pictographic}\u2600-\u27BF]\uFE0F?/gu, '')
+                    .replace(/\s{2,}/g, ' ')
+                    .trim();
                   const isNoHolderLine =
-                    line.includes('ไม่มีผู้เล่นที่มีทรัพย์สินนี้') ||
-                    line.includes('No players own this asset');
+                    cleanLine.includes('ไม่มีผู้เล่นที่มีทรัพย์สินนี้') ||
+                    cleanLine.includes('No players own this asset');
                   return (
                     <p
                       key={lineIdx}
                       className={isNoHolderLine ? 'font-extrabold text-slate-950' : undefined}
                     >
-                      {line}
+                      {cleanLine}
                     </p>
                   );
                 })}
@@ -1250,6 +1252,10 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
       {/* Last Step Financial Delta Highlight (waits until pawn finishes walking) */}
       {!isAnimating && roomState.lastStepDelta && (() => {
         const delta = roomState.lastStepDelta;
+        const cleanDeltaReason = delta.reason[language]
+          .replace(/[\p{Extended_Pictographic}\u2600-\u27BF]\uFE0F?/gu, '')
+          .replace(/\s{2,}/g, ' ')
+          .trim();
         const isPenaltyTone =
           roomState.logs[0]?.type === 'PLAYER_BANKRUPT' ||
           roomState.logs[0]?.type === 'FT_PENALTY' ||
@@ -1269,17 +1275,12 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
                 : 'bg-emerald-50 border border-emerald-200'
             }`}
           >
-            {isPenaltyTone ? (
-              <TrendingDown className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-            ) : (
-              <TrendingUp className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-            )}
             <span
               className={`font-sans font-medium ${
                 isPenaltyTone ? 'text-rose-900' : 'text-slate-700'
               }`}
             >
-              {delta.reason[language]}:
+              {cleanDeltaReason}:
             </span>
             {delta.cashDelta !== 0 && (
               <span

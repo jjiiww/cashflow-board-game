@@ -275,7 +275,7 @@ const PlayerAdminFinanceCard: React.FC<{
           <div>
             <div className="flex items-center justify-between text-[11px] mb-1">
               <span className="text-emerald-800 font-semibold">
-                {language === 'th' ? 'เป้าหมายเส้นทางเศรษฐี (+500k)' : 'Fast Track Goal (+500k)'}
+                {language === 'th' ? 'เป้าหมายทางด่วนการเงิน (+500k)' : 'Fast Track Goal (+500k)'}
               </span>
               <span className="font-mono font-bold text-emerald-700 tabular-nums">{ftProgress}%</span>
             </div>

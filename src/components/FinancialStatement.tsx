@@ -650,7 +650,7 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
               {totalBankPrincipal > 0 && (
                 <div className="flex items-center justify-between bg-pink-50 border border-pink-200 rounded-lg px-2.5 py-1.5">
                   <span className="font-semibold text-pink-800">
-                    {language === 'th' ? 'เงินกู้ธนาคาร (10%/ด.)' : 'Bank Loans (10%/mo)'}
+                    {language === 'th' ? 'เงินกู้ธนาคาร' : 'Bank Loans'}
                   </span>
                   <span className="font-mono font-bold text-pink-600 tabular-nums">
                     {totalBankPrincipal.toLocaleString()} ฿
@@ -664,12 +664,12 @@ export const FinancialStatement: React.FC<FinancialStatementProps> = ({
                     key={row.key}
                     className="flex items-center justify-between gap-2 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5"
                   >
-                    <div className="flex items-center gap-1.5 min-w-0 whitespace-nowrap">
-                      <span className="text-slate-700 font-medium">{row.label}</span>
-                      <span className="font-mono font-semibold text-slate-900 tabular-nums">
-                        {row.balance.toLocaleString()} ฿
-                      </span>
-                    </div>
+                    <span className="text-slate-700 font-medium truncate min-w-0 flex-1">
+                      {row.label}
+                    </span>
+                    <span className="font-mono font-semibold text-slate-900 tabular-nums text-right whitespace-nowrap shrink-0">
+                      {row.balance.toLocaleString()} ฿
+                    </span>
                     {isOwnPlayer && (
                       <button
                         type="button"

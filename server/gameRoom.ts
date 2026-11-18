@@ -564,6 +564,13 @@ export class GameRoom {
     return Math.floor(Math.random() * 6) + 1;
   }
 
+  private getCleanAssetTitle(title: BilingualText): BilingualText {
+    return {
+      th: title.th.replace(/^ต้องการขาย/, '').replace(/^ต้องการ/, '').trim(),
+      en: title.en.replace(/\s+For Sale$/i, '').trim(),
+    };
+  }
+
   private formatDealDetails(card: DealCard): BilingualText {
     if (card.kind === 'stock') {
       const price = (card.pricePerShare || card.cost).toLocaleString();
@@ -681,7 +688,7 @@ export class GameRoom {
       player.finance.fastTrackCashFlowDay = ftIncome;
       player.finance.cash += ftIncome;
       const delta = FinancialEngine.buildDelta(before, player.finance, {
-        th: `หลุดจากสนามแข่งหนู! เข้าสู่เส้นทางเศรษฐี รับเงินวันรับกระแสเงินสด ${ftIncome.toLocaleString()} ฿`,
+        th: `หลุดจากสนามแข่งหนู! เข้าสู่ทางด่วนการเงิน รับเงินวันรับกระแสเงินสด ${ftIncome.toLocaleString()} ฿`,
         en: `Escaped the Rat Race! Entered Fast Track with ${ftIncome.toLocaleString()} ฿ Cashflow Day!`,
       });
       this.addLog(
@@ -910,7 +917,7 @@ export class GameRoom {
         player,
         'ROLL_MOVE_FT',
         {
-          th: `${player.name} (เส้นทางเศรษฐี) ทอยได้ ${rollText} ตกช่อง "${space.label.th}"`,
+          th: `${player.name} (ทางด่วนการเงิน) ทอยได้ ${rollText} ตกช่อง "${space.label.th}"`,
           en: `${player.name} (Fast Track) rolled ${rollText} and landed on "${space.label.en}".`,
         },
         cfDelta
@@ -1390,18 +1397,19 @@ export class GameRoom {
     };
 
     const cfSign = card.cashFlow >= 0 ? '+' : '';
+    const cleanTitle = this.getCleanAssetTitle(card.title);
     FinancialEngine.addAsset(player, asset);
     const delta = FinancialEngine.buildDelta(before, player.finance, {
-      th: `ซื้อทรัพย์สิน: ${card.title.th} (เงินดาวน์ ${card.downPayment.toLocaleString()} ฿, กระแสเงินสด ${cfSign}${card.cashFlow.toLocaleString()} ฿/ด.)`,
-      en: `Bought ${card.title.en} (Down ${card.downPayment.toLocaleString()} ฿, Cashflow ${cfSign}${card.cashFlow.toLocaleString()} ฿/mo)`,
+      th: `ซื้อ ${cleanTitle.th} (เงินดาวน์ ${card.downPayment.toLocaleString()} ฿, กระแสเงินสด ${cfSign}${card.cashFlow.toLocaleString()} ฿/ด.)`,
+      en: `Bought ${cleanTitle.en} (Down ${card.downPayment.toLocaleString()} ฿, Cashflow ${cfSign}${card.cashFlow.toLocaleString()} ฿/mo)`,
     });
 
     this.addLog(
       player,
       'BUY_ASSET',
       {
-        th: `${player.name} ซื้อ "${card.title.th}" จ่ายเงินดาวน์ ${card.downPayment.toLocaleString()} ฿ รับรายได้จากทรัพย์สิน ${cfSign}${card.cashFlow.toLocaleString()} ฿/เดือน`,
-        en: `${player.name} bought "${card.title.en}" for ${card.downPayment.toLocaleString()} ฿ down (${cfSign}${card.cashFlow.toLocaleString()} ฿/mo passive income).`,
+        th: `${player.name} ซื้อ ${cleanTitle.th} จ่ายเงินดาวน์ ${card.downPayment.toLocaleString()} ฿ รับรายได้จากทรัพย์สิน ${cfSign}${card.cashFlow.toLocaleString()} ฿/เดือน`,
+        en: `${player.name} bought ${cleanTitle.en} for ${card.downPayment.toLocaleString()} ฿ down (${cfSign}${card.cashFlow.toLocaleString()} ฿/mo passive income).`,
       },
       delta
     );
@@ -1898,31 +1906,31 @@ export class GameRoom {
         cashFlow: card.cashFlow,
         units: card.units,
       });
+      const cleanTitle = this.getCleanAssetTitle(card.title);
       FinancialEngine.buildDelta(winnerBefore, winner.finance, {
-        th: `ชนะประมูล "${card.title.th}" (ค่านายหน้า ${auction.highestBid.toLocaleString()} + ดาวน์ ${card.downPayment.toLocaleString()} ฿)`,
-        en: `Won auction "${card.title.en}"`,
+        th: `ชนะประมูล ${cleanTitle.th} (ค่านายหน้า ${auction.highestBid.toLocaleString()} + ดาวน์ ${card.downPayment.toLocaleString()} ฿)`,
+        en: `Won auction ${cleanTitle.en}`,
       });
 
       this.addLog(
         winner,
         'AUCTION_WON',
         {
-          th: `🏆 ${winner.name} ได้รับสิทธิ์ซื้อ "${card.title.th}" (ค่านายหน้า ${auction.highestBid.toLocaleString()} ฿ ให้ ${seller.name}) สำเร็จ!`,
-          en: `🏆 ${winner.name} won the deal "${card.title.en}" paying ${auction.highestBid.toLocaleString()} ฿ commission to ${seller.name}!`,
+          th: `🏆 ${winner.name} ได้รับสิทธิ์ซื้อ ${cleanTitle.th} (ค่านายหน้า ${auction.highestBid.toLocaleString()} ฿ ให้ ${seller.name}) สำเร็จ!`,
+          en: `🏆 ${winner.name} won the deal ${cleanTitle.en} paying ${auction.highestBid.toLocaleString()} ฿ commission to ${seller.name}!`,
         },
         sellerDelta
       );
 
       this.checkEscapedRatRace(winner);
     } else {
-      const cleanTitleTh = card.title.th.replace(/^ต้องการขาย/, '').replace(/^ต้องการ/, '').trim();
-      const cleanTitleEn = card.title.en.replace(/\s+For Sale$/i, '').trim();
+      const cleanTitle = this.getCleanAssetTitle(card.title);
       this.addLog(
         seller,
         'AUCTION_NO_BID',
         {
-          th: `ไม่มีผู้ประมูลสิทธิ์ ${cleanTitleTh} การ์ดถูกทิ้งลงกอง`,
-          en: `No bids placed for ${cleanTitleEn}. Card discarded.`,
+          th: `ไม่มีผู้ประมูลสิทธิ์ ${cleanTitle.th} การ์ดถูกทิ้งลงกอง`,
+          en: `No bids placed for ${cleanTitle.en}. Card discarded.`,
         },
         null
       );
@@ -2360,7 +2368,7 @@ export class GameRoom {
       player,
       'DREAM_CHOSEN',
       {
-        th: `🌟 ${player.name} เลือกความฝันบนเส้นทางเศรษฐี: "${dream.name.th}" (ราคา ${dream.cost.toLocaleString()} ฿)`,
+        th: `🌟 ${player.name} เลือกความฝันบนทางด่วนการเงิน: "${dream.name.th}" (ราคา ${dream.cost.toLocaleString()} ฿)`,
         en: `🌟 ${player.name} chose their Dream: "${dream.name.en}" (${dream.cost.toLocaleString()} ฿).`,
       },
       null
@@ -3508,16 +3516,17 @@ export class GameRoom {
         units: card.units,
       });
 
+      const cleanTitle = this.getCleanAssetTitle(card.title);
       const netSign = smartLoan.netGain >= 0 ? '+' : '';
       const delta = FinancialEngine.buildDelta(before, bot.finance, {
         th:
           smartLoan.loanAmt > 0
-            ? `${bot.name} กู้ธนาคาร ${smartLoan.loanAmt.toLocaleString()} ฿ ซื้อ "${card.title.th}" (สุทธิ ${netSign}${smartLoan.netGain.toLocaleString()} ฿/ด.)`
-            : `${bot.name} ซื้อ "${card.title.th}"`,
+            ? `${bot.name} กู้ธนาคาร ${smartLoan.loanAmt.toLocaleString()} ฿ ซื้อ ${cleanTitle.th} (สุทธิ ${netSign}${smartLoan.netGain.toLocaleString()} ฿/ด.)`
+            : `${bot.name} ซื้อ ${cleanTitle.th}`,
         en:
           smartLoan.loanAmt > 0
-            ? `${bot.name} borrowed ${smartLoan.loanAmt.toLocaleString()} ฿ to buy "${card.title.en}"`
-            : `${bot.name} bought "${card.title.en}"`,
+            ? `${bot.name} borrowed ${smartLoan.loanAmt.toLocaleString()} ฿ to buy ${cleanTitle.en}`
+            : `${bot.name} bought ${cleanTitle.en}`,
       });
       this.addLog(
         bot,
@@ -3525,12 +3534,12 @@ export class GameRoom {
         {
           th:
             smartLoan.loanAmt > 0
-              ? `🏦 ${bot.name} กู้ธนาคาร ${smartLoan.loanAmt.toLocaleString()} ฿ (ดอกเบี้ย ${smartLoan.loanInterest.toLocaleString()} ฿/ด.) เพื่อซื้อ "${card.title.th}" รับรายได้ +${card.cashFlow.toLocaleString()} ฿/ด. (กระแสเงินสดสุทธิ ${netSign}${smartLoan.netGain.toLocaleString()} ฿/ด.)`
-              : `${bot.name} ตัดสินใจซื้อ "${card.title.th}" (ผลตอบแทน ${Math.round(annualROI)}%/ปี) รับรายได้จากทรัพย์สิน ${card.cashFlow >= 0 ? '+' : ''}${card.cashFlow.toLocaleString()} ฿/เดือน`,
+              ? `🏦 ${bot.name} กู้ธนาคาร ${smartLoan.loanAmt.toLocaleString()} ฿ (ดอกเบี้ย ${smartLoan.loanInterest.toLocaleString()} ฿/ด.) เพื่อซื้อ ${cleanTitle.th} รับรายได้ +${card.cashFlow.toLocaleString()} ฿/ด. (กระแสเงินสดสุทธิ ${netSign}${smartLoan.netGain.toLocaleString()} ฿/ด.)`
+              : `${bot.name} ซื้อ ${cleanTitle.th} (ผลตอบแทน ${Math.round(annualROI)}%/ปี) รับรายได้จากทรัพย์สิน ${card.cashFlow >= 0 ? '+' : ''}${card.cashFlow.toLocaleString()} ฿/เดือน`,
           en:
             smartLoan.loanAmt > 0
-              ? `🏦 ${bot.name} borrowed ${smartLoan.loanAmt.toLocaleString()} ฿ (${smartLoan.loanInterest.toLocaleString()} ฿/mo interest) to buy "${card.title.en}" (+${card.cashFlow.toLocaleString()} ฿/mo, net ${netSign}${smartLoan.netGain.toLocaleString()} ฿/mo).`
-              : `${bot.name} bought "${card.title.en}" (${Math.round(annualROI)}% annual ROI, ${card.cashFlow >= 0 ? '+' : ''}${card.cashFlow.toLocaleString()} ฿/mo).`,
+              ? `🏦 ${bot.name} borrowed ${smartLoan.loanAmt.toLocaleString()} ฿ (${smartLoan.loanInterest.toLocaleString()} ฿/mo interest) to buy ${cleanTitle.en} (+${card.cashFlow.toLocaleString()} ฿/mo, net ${netSign}${smartLoan.netGain.toLocaleString()} ฿/mo).`
+              : `${bot.name} bought ${cleanTitle.en} (${Math.round(annualROI)}% annual ROI, ${card.cashFlow >= 0 ? '+' : ''}${card.cashFlow.toLocaleString()} ฿/mo).`,
         },
         delta
       );
@@ -3547,12 +3556,13 @@ export class GameRoom {
       return;
     }
 
+    const cleanPassTitle = this.getCleanAssetTitle(card.title);
     this.addLog(
       bot,
       'BOT_PASS_DEAL',
       {
-        th: `${bot.name} พิจารณาแล้วไม่คุ้มหรือวงเงินไม่พอ จึงสละสิทธิ์ "${card.title.th}"`,
-        en: `${bot.name} passed on "${card.title.en}".`,
+        th: `${bot.name} พิจารณาแล้วไม่คุ้มหรือวงเงินไม่พอ จึงสละสิทธิ์ ${cleanPassTitle.th}`,
+        en: `${bot.name} passed on ${cleanPassTitle.en}.`,
       },
       null
     );

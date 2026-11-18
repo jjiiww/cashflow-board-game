@@ -29,7 +29,11 @@ export const ActivityLogPanel: React.FC<ActivityLogPanelProps> = ({
             minute: '2-digit',
             second: '2-digit',
           });
-          const flatMessage = entry.message[language].replace(/\s*\n+\s*/g, ' ');
+          const flatMessage = entry.message[language]
+            .replace(/\s*\n+\s*/g, ' ')
+            .replace(/[\p{Extended_Pictographic}\u2600-\u27BF]\uFE0F?/gu, '')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
           return (
             <div
               key={entry.id}
