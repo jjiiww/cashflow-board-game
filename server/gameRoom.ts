@@ -2146,7 +2146,7 @@ export class GameRoom {
       if (this.state.marketSummary.length === 0) {
         this.state.marketSummary = [
           hasAnyEligibleOwner
-            ? { th: 'ไม่มีผู้เล่นขายทรัพย์สินนี้', en: 'No players sold this asset' }
+            ? { th: 'ผู้เล่นที่มีทรัพย์สินนี้ไม่ขาย', en: 'Asset owners chose not to sell' }
             : { th: 'ไม่มีผู้เล่นที่มีทรัพย์สินนี้', en: 'No players own this asset' },
         ];
       }
@@ -2154,13 +2154,13 @@ export class GameRoom {
         botSoldMessagesTh.length > 0
           ? ` (${botSoldMessagesTh.join(', ')})`
           : hasAnyEligibleOwner
-          ? '\n(ไม่มีผู้เล่นขายทรัพย์สินนี้)'
+          ? '\n(ผู้เล่นที่มีทรัพย์สินนี้ไม่ขาย)'
           : '\n(ไม่มีผู้เล่นที่มีทรัพย์สินนี้)';
       const botNoteEn =
         botSoldMessagesEn.length > 0
           ? ` (${botSoldMessagesEn.join(', ')})`
           : hasAnyEligibleOwner
-          ? '\n(No players sold this asset)'
+          ? '\n(Asset owners chose not to sell)'
           : '\n(No players own this asset)';
       this.addLog(
         drawer,
@@ -2288,11 +2288,11 @@ export class GameRoom {
       const active = this.currentPlayer;
       if (this.state.marketSummary.length === 0) {
         this.state.marketSummary = [
-          { th: 'ไม่มีผู้เล่นขายทรัพย์สินนี้', en: 'No players sold this asset' },
+          { th: 'ผู้เล่นที่มีทรัพย์สินนี้ไม่ขาย', en: 'Asset owners chose not to sell' },
         ];
         this.state.currentStepText = {
-          th: `${active.name} เปิดการ์ดซื้อขาย\n(ไม่มีผู้เล่นขายทรัพย์สินนี้)`,
-          en: `${active.name} drew Market Card\n(No players sold this asset)`,
+          th: `${active.name} เปิดการ์ดซื้อขาย\n(ผู้เล่นที่มีทรัพย์สินนี้ไม่ขาย)`,
+          en: `${active.name} drew Market Card\n(Asset owners chose not to sell)`,
         };
       } else {
         this.state.currentStepText = {

@@ -1301,8 +1301,10 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
                   const isNoHolderLine =
                     cleanLine.includes('ไม่มีผู้เล่นที่มีทรัพย์สินนี้') ||
                     cleanLine.includes('ไม่มีผู้เล่นขายทรัพย์สินนี้') ||
+                    cleanLine.includes('ผู้เล่นที่มีทรัพย์สินนี้ไม่ขาย') ||
                     cleanLine.includes('No players own this asset') ||
-                    cleanLine.includes('No players sold this asset');
+                    cleanLine.includes('No players sold this asset') ||
+                    cleanLine.includes('Asset owners chose not to sell');
                   return (
                     <p
                       key={lineIdx}

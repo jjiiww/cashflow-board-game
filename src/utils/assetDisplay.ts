@@ -29,8 +29,9 @@ export function getAssetTypeLabel(asset: Asset, lang: Language): string {
     case 'guesthouse':
       return lang === 'th' ? 'เกสต์เฮ้าส์' : 'Guesthouse';
     case 'carwash':
-    case 'carwash_no_buyer':
       return lang === 'th' ? 'กิจการล้างรถ' : 'Car Wash';
+    case 'carwash_no_buyer':
+      return lang === 'th' ? 'กิจการล้างรถอัตโนมัติ' : 'Automated Car Wash';
     case 'vending_no_buyer':
       return lang === 'th' ? 'กิจการตู้ขายเครื่องดื่ม' : 'Vending Business';
     case 'arcade_no_buyer':
