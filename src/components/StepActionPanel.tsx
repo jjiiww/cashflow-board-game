@@ -1299,11 +1299,11 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
                     .replace(/\s{2,}/g, ' ')
                     .trim();
                   const isNoHolderLine =
+                    cleanLine.includes('ไม่มีผู้เล่นขาย') ||
                     cleanLine.includes('ไม่มีผู้เล่นที่มีทรัพย์สินนี้') ||
-                    cleanLine.includes('ไม่มีผู้เล่นขายทรัพย์สินนี้') ||
                     cleanLine.includes('ผู้เล่นที่มีทรัพย์สินนี้ไม่ขาย') ||
+                    cleanLine.includes('No players sold') ||
                     cleanLine.includes('No players own this asset') ||
-                    cleanLine.includes('No players sold this asset') ||
                     cleanLine.includes('Asset owners chose not to sell');
                   return (
                     <p
@@ -1435,11 +1435,6 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
           language === 'th'
             ? rawTitle.replace(/^ต้องการขาย/, '').replace(/^ต้องการ/, '').trim()
             : rawTitle.replace(/\s+For Sale$/i, '').trim();
-        const isStockPass =
-          topLog.type === 'BOT_PASS_STOCK' ||
-          (activeCard &&
-            (activeCard.deck === 'small_deal' || activeCard.deck === 'big_deal') &&
-            (activeCard as DealCard).kind === 'stock');
         const summaryText =
           topLog.type === 'AUCTION_NO_BID' || topLog.type === 'FT_PASS'
             ? topLog.message[language]
@@ -1448,12 +1443,8 @@ export const StepActionPanel: React.FC<StepActionPanelProps> = ({
                 .trim()
             : cleanTitle
             ? language === 'th'
-              ? isStockPass
-                ? `${topLog.actorName} ไม่ซื้อ/สละสิทธิ์ ${cleanTitle}`
-                : `${topLog.actorName} ตัดสินใจสละสิทธิ์ ${cleanTitle}`
-              : isStockPass
-              ? `${topLog.actorName} did not buy/passed on ${cleanTitle}`
-              : `${topLog.actorName} passed on ${cleanTitle}`
+              ? `${topLog.actorName} ไม่ซื้อ/สละสิทธิ์ ${cleanTitle}`
+              : `${topLog.actorName} did not buy/passed on ${cleanTitle}`
             : topLog.message[language]
                 .replace(/[\p{Extended_Pictographic}\u2600-\u27BF]\uFE0F?/gu, '')
                 .replace(/\s{2,}/g, ' ')
