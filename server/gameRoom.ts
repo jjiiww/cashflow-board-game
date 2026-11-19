@@ -3560,12 +3560,13 @@ export class GameRoom {
             delta
           );
         } else {
+          const cleanStockTitle = this.getCleanAssetTitle(card.title);
           this.addLog(
             bot,
             'BOT_PASS_STOCK',
             {
-              th: `${bot.name} ไม่ซื้อขายหุ้น ${card.symbol}`,
-              en: `${bot.name} passed on ${symEn}.`,
+              th: `${bot.name} ไม่ซื้อ/สละสิทธิ์ ${cleanStockTitle.th}`,
+              en: `${bot.name} did not buy/passed on ${cleanStockTitle.en}.`,
             },
             null
           );
@@ -3672,8 +3673,8 @@ export class GameRoom {
       bot,
       'BOT_PASS_DEAL',
       {
-        th: `${bot.name} พิจารณาแล้วไม่คุ้มหรือวงเงินไม่พอ จึงสละสิทธิ์ ${cleanPassTitle.th}`,
-        en: `${bot.name} passed on ${cleanPassTitle.en}.`,
+        th: `${bot.name} ไม่ซื้อ/สละสิทธิ์ ${cleanPassTitle.th}`,
+        en: `${bot.name} did not buy/passed on ${cleanPassTitle.en}.`,
       },
       null
     );

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowDownRight, ArrowUpRight, Landmark, TrendingUp, Users, UserX } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, Landmark, Layers, TrendingUp, Users, UserX } from 'lucide-react';
 import { DREAM_OPTIONS, FAST_TRACK_WIN_CASHFLOW_TARGET } from '../../shared/board';
 import { GameRoomState, Language, Player } from '../../shared/types';
 import { t } from '../i18n';
@@ -98,6 +98,16 @@ const PlayerAdminFinanceCard: React.FC<{
   const hasWon = Boolean(player.hasWon);
   const activePlayingTurn = isActiveTurn && !player.isBankrupt && !hasWon;
 
+  const [ledgerTab, setLedgerTab] = useState<'fast_track' | 'rat_race'>(
+    player.track === 'fast_track' ? 'fast_track' : 'rat_race'
+  );
+
+  useEffect(() => {
+    setLedgerTab(player.track === 'fast_track' ? 'fast_track' : 'rat_race');
+  }, [player.track]);
+
+  const showingFastTrack = player.track === 'fast_track' && ledgerTab === 'fast_track';
+
   return (
     <article
       className={`flex flex-col rounded-xl border p-3 shadow-2xs space-y-2.5 text-xs transition-all ${
@@ -193,8 +203,37 @@ const PlayerAdminFinanceCard: React.FC<{
         </div>
       )}
 
+      {/* Fast Track vs Rat Race Ledger Tabs */}
+      {player.track === 'fast_track' && (
+        <div className="grid grid-cols-2 gap-1 bg-slate-200/80 p-1 rounded-lg">
+          <button
+            type="button"
+            onClick={() => setLedgerTab('fast_track')}
+            className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded-md text-[11px] font-bold transition-colors cursor-pointer ${
+              ledgerTab === 'fast_track'
+                ? 'bg-emerald-500 text-white shadow-xs'
+                : 'text-slate-700 hover:bg-white/70'
+            }`}
+          >
+            <Layers className="w-3 h-3 shrink-0" />
+            <span className="truncate">{t(language, 'ftLedgerTab')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setLedgerTab('rat_race')}
+            className={`py-1.5 px-2 rounded-md text-[11px] font-bold transition-colors truncate cursor-pointer ${
+              ledgerTab === 'rat_race'
+                ? 'bg-slate-800 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-white/70'
+            }`}
+          >
+            {t(language, 'rrLedgerTab')}
+          </button>
+        </div>
+      )}
+
       {/* Core Metrics */}
-      {player.track === 'rat_race' ? (
+      {!showingFastTrack ? (
         <>
           <div className="grid grid-cols-2 gap-1.5 text-[11px]">
             <div className="bg-slate-50 border border-slate-200/80 rounded-lg px-2 py-1.5">
@@ -290,7 +329,7 @@ const PlayerAdminFinanceCard: React.FC<{
       )}
 
       {/* Bank Loan Badge */}
-      {totalBankPrincipal > 0 && (
+      {!showingFastTrack && totalBankPrincipal > 0 && (
         <div className="flex items-center justify-between bg-pink-50 border border-pink-200 rounded-lg px-2 py-1 text-[11px]">
           <span className="font-semibold text-pink-800 flex items-center gap-1">
             <Landmark className="w-3 h-3 shrink-0" />
@@ -354,16 +393,16 @@ const PlayerAdminFinanceCard: React.FC<{
       <div className="border-t border-slate-100 pt-2 space-y-1">
         <div className="font-bold text-slate-700 text-[11px] flex items-center justify-between">
           <span>
-            {player.track === 'fast_track'
+            {showingFastTrack
               ? t(language, 'ftAssetsTitle')
               : t(language, 'assetsSection')}
           </span>
           <span className="font-mono text-slate-500">
-            ({player.track === 'fast_track' ? f.fastTrackAssets.length : f.assets.length})
+            ({showingFastTrack ? f.fastTrackAssets.length : f.assets.length})
           </span>
         </div>
 
-        {player.track === 'fast_track' ? (
+        {showingFastTrack ? (
           f.fastTrackAssets.length === 0 ? (
             <div className="text-[11px] text-slate-400 italic">{t(language, 'ftNoAssets')}</div>
           ) : (
@@ -420,7 +459,7 @@ const PlayerAdminFinanceCard: React.FC<{
       </div>
 
       {/* Fast Track Pink Space Purchases Frame */}
-      {player.track === 'fast_track' && (
+      {showingFastTrack && (
         <div className="bg-pink-50 border-2 border-pink-300 rounded-lg p-2 space-y-1">
           <div className="font-bold text-pink-800 text-[11px] flex items-center justify-between">
             <span>{t(language, 'ftPinkPurchasesTitle')}</span>
@@ -452,7 +491,7 @@ const PlayerAdminFinanceCard: React.FC<{
       )}
 
       {/* Compact Liabilities List (Rat Race balances > 0) */}
-      {player.track === 'rat_race' && liabilityRows.length > 0 && (
+      {!showingFastTrack && liabilityRows.length > 0 && (
         <div className="border-t border-slate-100 pt-2 space-y-1">
           <div className="font-bold text-slate-700 text-[11px]">{t(language, 'liabilitiesSection')}</div>
           <div className="grid grid-cols-2 gap-1 text-[10px]">
