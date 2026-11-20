@@ -64,7 +64,8 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
       return;
     }
     setLocalError(null);
-    onCreateRoom(playerName, 0, false, adminPassword, false);
+    setPlayerName('Admin');
+    onCreateRoom('Admin', 0, false, adminPassword, false);
   };
 
   const isServerAdminPassError = Boolean(
@@ -98,7 +99,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
               <label className="block text-sm font-semibold text-slate-800">
                 {t(language, 'joinRoom')}
               </label>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-[minmax(0,1fr)_9.25rem] gap-2">
                 <input
                   type="text"
                   value={joinCode}
@@ -111,7 +112,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                   }}
                   placeholder={t(language, 'roomCodePlaceholder')}
                   maxLength={8}
-                  className="flex-1 min-w-0 px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 font-mono tracking-widest uppercase placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:bg-white"
+                  className="w-full min-w-0 px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm font-mono tracking-widest uppercase placeholder:tracking-normal placeholder:font-sans placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:bg-white"
                 />
                 <button
                   type="button"
@@ -120,9 +121,9 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
                     setLocalError(null);
                     onJoinRoom(joinCode, playerName);
                   }}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-sm transition-colors whitespace-nowrap shrink-0"
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-sm transition-colors whitespace-nowrap"
                 >
-                  <UserPlus className="w-4 h-4" />
+                  <UserPlus className="w-4 h-4 shrink-0" />
                   <span>{t(language, 'joinButton')}</span>
                 </button>
               </div>
@@ -148,34 +149,38 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
               </button>
             </div>
 
-            {/* 6. ปุ่มสร้างห้องใหม่ (Admin) & textbox ใส่รหัสผ่าน admin */}
+            {/* 6. สำหรับ Admin: ช่องรหัสผ่าน + ปุ่มสร้างห้องใหม่ */}
             <div className="pt-4 border-t border-slate-100 space-y-2.5">
-              <button
-                type="button"
-                onClick={handleCreateAdminRoom}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm transition-colors whitespace-nowrap shadow-xs"
-              >
-                <Users className="w-4 h-4" />
-                <span>{t(language, 'createRoom')}</span>
-              </button>
-
-              <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  type="password"
-                  value={adminPassword}
-                  onChange={(e) => {
-                    setAdminPassword(e.target.value);
-                    if (localError) setLocalError(null);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleCreateAdminRoom();
-                  }}
-                  placeholder={t(language, 'adminPasswordPlaceholder')}
-                  aria-label={t(language, 'adminPasswordLabel')}
-                  autoComplete="off"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:border-orange-500 focus:bg-white"
-                />
+              <label className="block text-sm font-semibold text-slate-800">
+                {t(language, 'forAdminSection')}
+              </label>
+              <div className="grid grid-cols-[minmax(0,1fr)_9.25rem] gap-2">
+                <div className="relative min-w-0">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="password"
+                    value={adminPassword}
+                    onChange={(e) => {
+                      setAdminPassword(e.target.value);
+                      if (localError) setLocalError(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleCreateAdminRoom();
+                    }}
+                    placeholder={t(language, 'adminPasswordPlaceholder')}
+                    aria-label={t(language, 'adminPasswordLabel')}
+                    autoComplete="off"
+                    className="w-full min-w-0 pl-10 pr-3 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm placeholder-slate-400 focus:outline-none focus:border-orange-500 focus:bg-white"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCreateAdminRoom}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm transition-colors whitespace-nowrap shadow-xs cursor-pointer"
+                >
+                  <Users className="w-4 h-4 shrink-0" />
+                  <span>{t(language, 'createRoom')}</span>
+                </button>
               </div>
 
               {adminError && (
